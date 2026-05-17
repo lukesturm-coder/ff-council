@@ -4,7 +4,8 @@ import JudgeFeed, { type JudgeItem } from "./JudgeFeed";
 
 // /judge — single-card full-screen feed of unvoted scenarios. Mixed feed
 // of trade-court trades + verdict scenarios, ordered by recency. Optimised
-// for high-throughput one-tap voting.
+// for high-throughput one-tap voting. Filters (type, league, scoring)
+// live in URL search params so they survive refresh.
 
 type SidePlayer = {
   player_id: number | null;
@@ -38,31 +39,79 @@ type VerdictRow = {
   created_at: string;
 };
 
-export default async function JudgePage() {
+const TYPE_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "trades", label: "Trades only" },
+  { value: "verdicts", label: "Verdicts only" },
+] as const;
+
+const LEAGUE_OPTIONS = [
+  { value: "all", label: "Any league" },
+  { value: "redraft", label: "Redraft" },
+  { value: "dynasty", label: "Dynasty" },
+  { value: "keeper", label: "Keeper" },
+] as const;
+
+const SCORING_OPTIONS = [
+  { value: "all", label: "Any scoring" },
+  { value: "PPR", label: "PPR" },
+  { value: "Half", label: "Half" },
+  { value: "Standard", label: "Standard" },
+  { value: "Superflex", label: "Superflex" },
+  { value: "TEPremium", label: "TE Prem" },
+] as const;
+
+export default async function JudgePage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    type?: string;
+    league?: string;
+    scoring?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const typeFilter =
+    TYPE_OPTIONS.find((o) => o.value === params.type)?.value ?? "all";
+  const leagueFilter =
+    LEAGUE_OPTIONS.find((o) => o.value === params.league)?.value ?? "all";
+  const scoringFilter =
+    SCORING_OPTIONS.find((o) => o.value === params.scoring)?.value ?? "all";
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Pull the most recent ~50 of each. Authed users also get their existing
-  // votes so we can hide ones they've already weighed in on; anon users
-  // rely on the client localStorage dedup pattern already used elsewhere.
+  // Trade query — server-side filters where columns are real columns.
+  let tradeQuery = supabase
+    .from("trade_submissions")
+    .select("id, league_type, scoring, team_count, side_a, side_b, created_at")
+    .order("created_at", { ascending: false })
+    .limit(80);
+  if (leagueFilter !== "all") tradeQuery = tradeQuery.eq("league_type", leagueFilter);
+  if (scoringFilter !== "all") tradeQuery = tradeQuery.eq("scoring", scoringFilter);
+
+  // Verdict scoring lives in the context jsonb — filter in memory after fetch.
+  const verdictQuery = supabase
+    .from("verdict_scenarios")
+    .select(
+      "id, scenario_type, candidates, roster, context, notes, image_url, created_at",
+    )
+    .order("created_at", { ascending: false })
+    .limit(80);
+
+  // Skip fetches we don't need based on the type filter (saves a round-trip
+  // and keeps the data small for the longest possible feed when one type
+  // is selected).
   const [tradeRes, verdictRes, myTradeVotesRes, myVerdictVotesRes] =
     await Promise.all([
-      supabase
-        .from("trade_submissions")
-        .select(
-          "id, league_type, scoring, team_count, side_a, side_b, created_at",
-        )
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("verdict_scenarios")
-        .select(
-          "id, scenario_type, candidates, roster, context, notes, image_url, created_at",
-        )
-        .order("created_at", { ascending: false })
-        .limit(50),
+      typeFilter === "verdicts"
+        ? Promise.resolve({ data: [] as TradeRow[] })
+        : tradeQuery,
+      typeFilter === "trades"
+        ? Promise.resolve({ data: [] as VerdictRow[] })
+        : verdictQuery,
       user
         ? supabase
             .from("trade_votes")
@@ -91,9 +140,16 @@ export default async function JudgePage() {
   const trades = ((tradeRes.data ?? []) as TradeRow[]).filter(
     (t) => !myTradeIds.has(t.id),
   );
-  const verdicts = ((verdictRes.data ?? []) as VerdictRow[]).filter(
+  let verdicts = ((verdictRes.data ?? []) as VerdictRow[]).filter(
     (v) => !myVerdictIds.has(v.id),
   );
+  // Verdict scoring filter has to happen client-side because scoring lives
+  // inside the context jsonb. Skip when "all".
+  if (scoringFilter !== "all") {
+    verdicts = verdicts.filter(
+      (v) => (v.context as { scoring?: string })?.scoring === scoringFilter,
+    );
+  }
 
   const feed: JudgeItem[] = [
     ...trades.map(
@@ -122,6 +178,9 @@ export default async function JudgePage() {
     ),
   ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
+  const anyFilterActive =
+    typeFilter !== "all" || leagueFilter !== "all" || scoringFilter !== "all";
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
@@ -140,19 +199,52 @@ export default async function JudgePage() {
           </Link>
         </div>
 
+        {/* Filters — pill rows. Each pill is a Link so URL params drive state. */}
+        <div className="mb-4 space-y-2">
+          <FilterRow
+            label="Type"
+            options={TYPE_OPTIONS}
+            current={typeFilter}
+            paramName="type"
+            otherParams={{ league: leagueFilter, scoring: scoringFilter }}
+          />
+          {typeFilter !== "verdicts" && (
+            <FilterRow
+              label="League"
+              options={LEAGUE_OPTIONS}
+              current={leagueFilter}
+              paramName="league"
+              otherParams={{ type: typeFilter, scoring: scoringFilter }}
+            />
+          )}
+          <FilterRow
+            label="Scoring"
+            options={SCORING_OPTIONS}
+            current={scoringFilter}
+            paramName="scoring"
+            otherParams={{ type: typeFilter, league: leagueFilter }}
+          />
+        </div>
+
         {feed.length === 0 ? (
           <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900 p-10 text-center">
             <p className="text-2xl font-bold text-emerald-300">
-              All caught up.
+              {anyFilterActive ? "Nothing matches." : "All caught up."}
             </p>
             <p className="mt-2 text-sm text-zinc-300">
-              You&apos;ve weighed in on every open scenario.
-            </p>
-            <p className="mt-1 text-xs text-zinc-500">
-              Got a tough call of your own? Drop it in and let the council
-              render its verdict.
+              {anyFilterActive
+                ? "Try widening the filters or posting a new tough call."
+                : "You've weighed in on every open scenario."}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {anyFilterActive && (
+                <Link
+                  href="/judge"
+                  className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
+                >
+                  Clear filters
+                </Link>
+              )}
               <Link
                 href="/verdict/new"
                 className="rounded-md bg-emerald-500/20 px-4 py-2 text-xs font-medium text-emerald-200 hover:bg-emerald-500/30"
@@ -172,5 +264,53 @@ export default async function JudgePage() {
         )}
       </div>
     </main>
+  );
+}
+
+function FilterRow({
+  label,
+  options,
+  current,
+  paramName,
+  otherParams,
+}: {
+  label: string;
+  options: readonly { value: string; label: string }[];
+  current: string;
+  paramName: string;
+  otherParams: Record<string, string>;
+}) {
+  // Build a URL with this pill's value applied + other filters preserved.
+  // Default values ("all") are omitted to keep URLs short and clean.
+  function hrefFor(value: string): string {
+    const params: Record<string, string> = { ...otherParams, [paramName]: value };
+    const entries = Object.entries(params).filter(([, v]) => v && v !== "all");
+    if (entries.length === 0) return "/judge";
+    const qs = new URLSearchParams(entries).toString();
+    return `/judge?${qs}`;
+  }
+
+  return (
+    <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 text-xs [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <span className="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        {label}
+      </span>
+      {options.map((opt) => {
+        const isActive = opt.value === current;
+        return (
+          <Link
+            key={opt.value}
+            href={hrefFor(opt.value)}
+            className={`shrink-0 whitespace-nowrap rounded-md border px-3 py-1.5 transition ${
+              isActive
+                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
+                : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+            }`}
+          >
+            {opt.label}
+          </Link>
+        );
+      })}
+    </div>
   );
 }
