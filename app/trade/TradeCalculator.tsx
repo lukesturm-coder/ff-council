@@ -1,8 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeftRight, Plus, Send, X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  ArrowLeftRight,
+  Check,
+  Link2,
+  Plus,
+  Send,
+  X,
+} from "lucide-react";
 import type {
   FantasyPosition,
   ScoringSystem,
@@ -19,6 +27,8 @@ export type TradePlayer = {
   fpAdp: Partial<Record<ScoringSystem, number>>;
   councilRank: Partial<Record<ScoringSystem, number>>;
 };
+
+type Pick = { year: number; round: number; slot: number | null };
 
 const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
 
@@ -49,12 +59,122 @@ function sumOrZero(values: number[]): number {
   return values.reduce((a, b) => a + b, 0);
 }
 
+// Parse free-form pick phrases like "2027 mid 2nd", "2027 1.05", "2028 early
+// 1st", "2027 Rd 3". Requires a year (20xx) and a round; slot is optional.
+// Ported from app/trades/new/TradeSubmissionForm.tsx so the calculator can
+// handle dynasty picks too.
+function parsePick(input: string): Pick | null {
+  const s = input.trim().toLowerCase();
+  if (!s) return null;
+
+  const yearMatch = s.match(/\b(20\d{2})\b/);
+  if (!yearMatch) return null;
+  const year = Number(yearMatch[1]);
+  const rest = s.replace(yearMatch[1], " ").replace(/\s+/g, " ");
+
+  const dotMatch = rest.match(/(?<![\d.])([1-9])\.(\d{1,2})(?![\d.])/);
+  if (dotMatch) {
+    return {
+      year,
+      round: Number(dotMatch[1]),
+      slot: Number(dotMatch[2]),
+    };
+  }
+
+  let round: number | null = null;
+  const ordMatch = rest.match(/\b([1-9])(?:st|nd|rd|th)\b/);
+  if (ordMatch) round = Number(ordMatch[1]);
+  else {
+    const rMatch = rest.match(/\b(?:r|rd|round)\s*([1-9])\b/);
+    if (rMatch) round = Number(rMatch[1]);
+  }
+  if (!round) return null;
+
+  let slot: number | null = null;
+  if (/\bearly\b/.test(rest)) slot = 3;
+  else if (/\bmid(?:dle)?\b/.test(rest)) slot = 6;
+  else if (/\blate\b/.test(rest)) slot = 10;
+
+  return { year, round, slot };
+}
+
+function formatPick(p: Pick): string {
+  const slotPart = p.slot != null ? `.${String(p.slot).padStart(2, "0")}` : "";
+  return `${p.year} R${p.round}${slotPart}`;
+}
+
+// Convert a dynasty rookie pick into an approximate ADP-equivalent so it can
+// participate in the verdict math. Numbers are rough but ordered correctly:
+// 1.01 ≈ overall ADP 8, 1.06 ≈ 14, 2.01 ≈ 36, 3.01 ≈ 72, 4.01 ≈ 110.
+// A pick one year out is discounted ~15%, two years out ~30%.
+function pickAdpEquivalent(p: Pick, currentYear: number): number {
+  const slot = p.slot ?? 6;
+  const roundBase = (p.round - 1) * 24;
+  // First round picks are tighter (1.01 ≈ 8, 1.12 ≈ 22)
+  const slotOffset =
+    p.round === 1 ? 6 + slot * 1.4 : 12 + slot * 1.0;
+  const baseAdp = roundBase + slotOffset;
+
+  const yearsOut = Math.max(0, p.year - currentYear);
+  // Discount future picks by inflating ADP (worse rank)
+  const discount = 1 + yearsOut * 0.18;
+  return baseAdp * discount;
+}
+
+// Serialize / deserialize picks for the URL: "2027-1-5,2028-2"
+function serializePicks(picks: Pick[]): string {
+  return picks
+    .map((p) => `${p.year}-${p.round}${p.slot != null ? `-${p.slot}` : ""}`)
+    .join(",");
+}
+function parsePicksParam(s: string | null): Pick[] {
+  if (!s) return [];
+  return s
+    .split(",")
+    .map((tok) => {
+      const parts = tok.split("-").map((n) => Number(n));
+      if (parts.length < 2) return null;
+      const [year, round, slot] = parts;
+      if (!Number.isFinite(year) || !Number.isFinite(round)) return null;
+      return {
+        year,
+        round,
+        slot: Number.isFinite(slot) ? slot : null,
+      } as Pick;
+    })
+    .filter((p): p is Pick => p != null);
+}
+
 export default function TradeCalculator({ players }: { players: TradePlayer[] }) {
-  const [scoring, setScoring] = useState<ScoringSystem>("PPR");
-  const [sideA, setSideA] = useState<number[]>([]);
-  const [sideB, setSideB] = useState<number[]>([]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Initialize state from URL params on first render so refresh + share work.
+  const [scoring, setScoring] = useState<ScoringSystem>(() => {
+    const s = searchParams?.get("scoring");
+    return s === "Half" || s === "Standard" ? s : "PPR";
+  });
+  const [sideA, setSideA] = useState<number[]>(() =>
+    (searchParams?.get("a") ?? "")
+      .split(",")
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n) && n > 0),
+  );
+  const [sideB, setSideB] = useState<number[]>(() =>
+    (searchParams?.get("b") ?? "")
+      .split(",")
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n) && n > 0),
+  );
+  const [picksA, setPicksA] = useState<Pick[]>(() =>
+    parsePicksParam(searchParams?.get("pa") ?? null),
+  );
+  const [picksB, setPicksB] = useState<Pick[]>(() =>
+    parsePicksParam(searchParams?.get("pb") ?? null),
+  );
   const [searchA, setSearchA] = useState("");
   const [searchB, setSearchB] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const playerById = useMemo(() => {
     const m = new Map<number, TradePlayer>();
@@ -69,9 +189,27 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
     .map((id) => playerById.get(id))
     .filter((p): p is TradePlayer => !!p);
 
-  // Verdict metrics for each side
-  const aMetrics = computeMetrics(aPlayers, scoring);
-  const bMetrics = computeMetrics(bPlayers, scoring);
+  // Sync state → URL (replace, not push, so back button isn't polluted).
+  // Skip the first render — initialization already matches the URL.
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    const sp = new URLSearchParams();
+    if (sideA.length) sp.set("a", sideA.join(","));
+    if (sideB.length) sp.set("b", sideB.join(","));
+    if (picksA.length) sp.set("pa", serializePicks(picksA));
+    if (picksB.length) sp.set("pb", serializePicks(picksB));
+    if (scoring !== "PPR") sp.set("scoring", scoring);
+    const qs = sp.toString();
+    router.replace(qs ? `/trade?${qs}` : "/trade", { scroll: false });
+  }, [sideA, sideB, picksA, picksB, scoring, router]);
+
+  const currentYear = new Date().getFullYear();
+  const aMetrics = computeMetrics(aPlayers, picksA, scoring, currentYear);
+  const bMetrics = computeMetrics(bPlayers, picksB, scoring, currentYear);
 
   function addToSide(side: "A" | "B", playerId: number) {
     if (side === "A") {
@@ -83,24 +221,73 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
     }
   }
 
+  function addPickToSide(side: "A" | "B", pick: Pick) {
+    if (side === "A") {
+      setPicksA([...picksA, pick]);
+      setSearchA("");
+    } else {
+      setPicksB([...picksB, pick]);
+      setSearchB("");
+    }
+  }
+
   function removeFromSide(side: "A" | "B", playerId: number) {
     if (side === "A") setSideA(sideA.filter((id) => id !== playerId));
     else setSideB(sideB.filter((id) => id !== playerId));
   }
 
+  function removePickFromSide(side: "A" | "B", idx: number) {
+    if (side === "A") setPicksA(picksA.filter((_, i) => i !== idx));
+    else setPicksB(picksB.filter((_, i) => i !== idx));
+  }
+
   function swapSides() {
     setSideA(sideB);
     setSideB(sideA);
+    setPicksA(picksB);
+    setPicksB(picksA);
   }
 
   function clearAll() {
     setSideA([]);
     setSideB([]);
+    setPicksA([]);
+    setPicksB([]);
   }
+
+  const copyShareLink = useCallback(() => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      },
+      () => {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      },
+    );
+  }, []);
+
+  const hasAnything =
+    sideA.length > 0 ||
+    sideB.length > 0 ||
+    picksA.length > 0 ||
+    picksB.length > 0;
+
+  // Submit-to-court link: picks aren't carried over (court form re-parses
+  // them on its own) but selected players prefill cleanly.
+  const submitHref = `/trades/new?a=${sideA.join(",")}&b=${sideB.join(",")}`;
 
   return (
     <div className="space-y-6">
-      {/* Scoring toggle */}
+      {/* Scoring toggle + actions */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
           <span className="px-2 text-xs uppercase tracking-wider text-zinc-500">
@@ -127,7 +314,26 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
           <ArrowLeftRight className="h-3.5 w-3.5" />
           Swap sides
         </button>
-        {(sideA.length > 0 || sideB.length > 0) && (
+        {hasAnything && (
+          <button
+            onClick={copyShareLink}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+            aria-label="Copy shareable link"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-400" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Link2 className="h-3.5 w-3.5" />
+                Share
+              </>
+            )}
+          </button>
+        )}
+        {hasAnything && (
           <button
             onClick={clearAll}
             className="shrink-0 text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
@@ -142,47 +348,54 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
         <TradeSide
           label="Team A gives"
           players={aPlayers}
+          picks={picksA}
           search={searchA}
           onSearchChange={setSearchA}
           allPlayers={players}
           onAdd={(id) => addToSide("A", id)}
+          onAddPick={(pk) => addPickToSide("A", pk)}
           onRemove={(id) => removeFromSide("A", id)}
+          onRemovePick={(idx) => removePickFromSide("A", idx)}
           excludeIds={[...sideA, ...sideB]}
           scoring={scoring}
         />
         <TradeSide
           label="Team B gives"
           players={bPlayers}
+          picks={picksB}
           search={searchB}
           onSearchChange={setSearchB}
           allPlayers={players}
           onAdd={(id) => addToSide("B", id)}
+          onAddPick={(pk) => addPickToSide("B", pk)}
           onRemove={(id) => removeFromSide("B", id)}
+          onRemovePick={(idx) => removePickFromSide("B", idx)}
           excludeIds={[...sideA, ...sideB]}
           scoring={scoring}
         />
       </div>
 
       {/* Verdict */}
-      {(aPlayers.length > 0 || bPlayers.length > 0) && (
+      {hasAnything && (
         <VerdictPanel a={aMetrics} b={bMetrics} scoring={scoring} />
       )}
 
       {/* Send to Trade Court */}
-      {aPlayers.length > 0 && bPlayers.length > 0 && (
-        <div className="flex flex-col items-stretch gap-3 border-t border-zinc-800 pt-4 sm:flex-row sm:items-center sm:justify-end">
-          <p className="text-xs text-zinc-500">
-            Want the council&apos;s take instead of just the math?
-          </p>
-          <Link
-            href={`/trades/new?a=${sideA.join(",")}&b=${sideB.join(",")}`}
-            className="inline-flex items-center justify-center gap-1.5 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 sm:py-1.5"
-          >
-            <Send className="h-3.5 w-3.5" />
-            Submit to Trade Court
-          </Link>
-        </div>
-      )}
+      {(aPlayers.length > 0 || picksA.length > 0) &&
+        (bPlayers.length > 0 || picksB.length > 0) && (
+          <div className="flex flex-col items-stretch gap-3 border-t border-zinc-800 pt-4 sm:flex-row sm:items-center sm:justify-end">
+            <p className="text-xs text-zinc-500">
+              Want the council&apos;s take instead of just the math?
+            </p>
+            <Link
+              href={submitHref}
+              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 sm:py-1.5"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Submit to Trade Court
+            </Link>
+          </div>
+        )}
     </div>
   );
 }
@@ -190,21 +403,27 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
 function TradeSide({
   label,
   players,
+  picks,
   search,
   onSearchChange,
   allPlayers,
   onAdd,
+  onAddPick,
   onRemove,
+  onRemovePick,
   excludeIds,
   scoring,
 }: {
   label: string;
   players: TradePlayer[];
+  picks: Pick[];
   search: string;
   onSearchChange: (s: string) => void;
   allPlayers: TradePlayer[];
   onAdd: (id: number) => void;
+  onAddPick: (pick: Pick) => void;
   onRemove: (id: number) => void;
+  onRemovePick: (idx: number) => void;
   excludeIds: number[];
   scoring: ScoringSystem;
 }) {
@@ -222,6 +441,9 @@ function TradeSide({
       .slice(0, 8);
   }, [search, allPlayers, excludeIds, scoring]);
 
+  const parsedPick = parsePick(search);
+  const showDropdown = filtered.length > 0 || parsedPick != null;
+
   const sideFpts = sumOrZero(players.map((p) => p.fantasyPoints[scoring]));
   const sideVbd = sumOrZero(players.map((p) => p.vbd[scoring]));
 
@@ -232,14 +454,18 @@ function TradeSide({
           {label}
         </p>
         <p className="font-mono text-xs text-zinc-400">
-          {players.length} player{players.length === 1 ? "" : "s"}
+          {players.length + picks.length} item
+          {players.length + picks.length === 1 ? "" : "s"}
         </p>
       </div>
 
-      {/* Selected players */}
+      {/* Selected players + picks */}
       <div className="space-y-1.5">
-        {players.length === 0 && (
-          <p className="text-xs text-zinc-600">No players yet — add some below</p>
+        {players.length === 0 && picks.length === 0 && (
+          <p className="text-xs text-zinc-600">
+            No players yet — search a name, or type a pick (e.g. &ldquo;2027
+            mid 2nd&rdquo;)
+          </p>
         )}
         {players.map((p) => (
           <div
@@ -265,6 +491,26 @@ function TradeSide({
               onClick={() => onRemove(p.playerId)}
               className="text-zinc-500 transition hover:text-rose-400"
               aria-label={`Remove ${p.name}`}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+        {picks.map((pk, idx) => (
+          <div
+            key={`pick-${idx}`}
+            className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-2.5 py-2 text-sm sm:px-3"
+          >
+            <span className="flex-1 truncate font-mono text-zinc-100">
+              {formatPick(pk)}
+            </span>
+            <span className="inline-flex items-center rounded bg-zinc-800/80 px-1.5 py-0.5 text-xs font-semibold text-zinc-300 ring-1 ring-inset ring-zinc-700">
+              PICK
+            </span>
+            <button
+              onClick={() => onRemovePick(idx)}
+              className="text-zinc-500 transition hover:text-rose-400"
+              aria-label={`Remove ${formatPick(pk)}`}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -296,12 +542,26 @@ function TradeSide({
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Add player (search by name or team)"
+            placeholder="Add player or pick (e.g. 2027 1.05)"
             className="block w-full rounded-md border border-zinc-800 bg-zinc-950 py-2 pl-8 pr-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
           />
         </div>
-        {filtered.length > 0 && (
+        {showDropdown && (
           <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-900 shadow-lg">
+            {parsedPick && (
+              <button
+                key="pick-suggestion"
+                onClick={() => onAddPick(parsedPick)}
+                className="flex w-full items-center gap-2 border-b border-zinc-800/60 bg-zinc-900 px-2.5 py-2 text-left text-sm transition hover:bg-zinc-800 sm:px-3"
+              >
+                <span className="flex-1 font-mono text-zinc-100">
+                  Add {formatPick(parsedPick)}
+                </span>
+                <span className="inline-flex items-center rounded bg-zinc-800 px-1.5 py-0.5 text-xs font-semibold text-zinc-300 ring-1 ring-inset ring-zinc-700">
+                  PICK
+                </span>
+              </button>
+            )}
             {filtered.map((p) => (
               <button
                 key={p.playerId}
@@ -342,16 +602,29 @@ type SideMetrics = {
 
 function computeMetrics(
   players: TradePlayer[],
+  picks: Pick[],
   scoring: ScoringSystem,
+  currentYear: number,
 ): SideMetrics {
   const vegasFpts = sumOrZero(players.map((p) => p.fantasyPoints[scoring]));
   const vegasVbd = sumOrZero(players.map((p) => p.vbd[scoring]));
 
-  const espnAdpAvg = averageOrNull(
-    players.map((p) => p.espnAdp[scoring] ?? p.espnAdp.PPR),
-  );
-  const fpAdpAvg = averageOrNull(players.map((p) => p.fpAdp[scoring]));
-  const councilAvg = averageOrNull(players.map((p) => p.councilRank[scoring]));
+  // Picks contribute as ADP-equivalents to the ADP-style sources only —
+  // they have no Vegas projection, but they DO have rough ADP value.
+  const pickAdps = picks.map((pk) => pickAdpEquivalent(pk, currentYear));
+
+  const espnAdpAvg = averageOrNull([
+    ...players.map((p) => p.espnAdp[scoring] ?? p.espnAdp.PPR),
+    ...pickAdps,
+  ]);
+  const fpAdpAvg = averageOrNull([
+    ...players.map((p) => p.fpAdp[scoring]),
+    ...pickAdps,
+  ]);
+  const councilAvg = averageOrNull([
+    ...players.map((p) => p.councilRank[scoring]),
+    ...pickAdps,
+  ]);
 
   return {
     vegasFpts,
@@ -359,17 +632,31 @@ function computeMetrics(
     espnAdpAvg,
     fpAdpAvg,
     councilAvg,
-    espnValue: averageOrNull(
-      players.map((p) => adpValue(p.espnAdp[scoring] ?? p.espnAdp.PPR)),
-    ),
-    fpValue: averageOrNull(
-      players.map((p) => adpValue(p.fpAdp[scoring])),
-    ),
-    councilValue: averageOrNull(
-      players.map((p) => adpValue(p.councilRank[scoring])),
-    ),
+    espnValue: averageOrNull([
+      ...players.map((p) => adpValue(p.espnAdp[scoring] ?? p.espnAdp.PPR)),
+      ...pickAdps.map((adp) => adpValue(adp)),
+    ]),
+    fpValue: averageOrNull([
+      ...players.map((p) => adpValue(p.fpAdp[scoring])),
+      ...pickAdps.map((adp) => adpValue(adp)),
+    ]),
+    councilValue: averageOrNull([
+      ...players.map((p) => adpValue(p.councilRank[scoring])),
+      ...pickAdps.map((adp) => adpValue(adp)),
+    ]),
   };
 }
+
+type Row = {
+  label: string;
+  aValue: number | null;
+  bValue: number | null;
+  aDisplay: string;
+  bDisplay: string;
+  /** Whose value wins. "lower" means lower is better (ADP), "higher" means higher is better (FPts). */
+  direction: "higher" | "lower";
+  color: string;
+};
 
 function VerdictPanel({
   a,
@@ -380,17 +667,6 @@ function VerdictPanel({
   b: SideMetrics;
   scoring: ScoringSystem;
 }) {
-  type Row = {
-    label: string;
-    aValue: number | null;
-    bValue: number | null;
-    aDisplay: string;
-    bDisplay: string;
-    /** Whose value wins. "lower" means lower is better (ADP), "higher" means higher is better (FPts). */
-    direction: "higher" | "lower";
-    color: string;
-  };
-
   const rows: Row[] = [
     {
       label: "Vegas FPts",
@@ -439,47 +715,99 @@ function VerdictPanel({
     },
   ];
 
-  // Overall verdict: across all sources where both sides have data, who wins more often?
+  // Overall verdict: across all sources where both sides have data, who wins
+  // more often? Also track the average % gap so we can label fairness.
   let aWins = 0;
   let bWins = 0;
+  const gaps: number[] = [];
   for (const r of rows) {
     if (r.aValue == null || r.bValue == null) continue;
+    const aV = r.aValue;
+    const bV = r.bValue;
     if (r.direction === "higher") {
-      if (r.aValue > r.bValue) aWins++;
-      else if (r.bValue > r.aValue) bWins++;
+      if (aV > bV) aWins++;
+      else if (bV > aV) bWins++;
     } else {
-      if (r.aValue < r.bValue) aWins++;
-      else if (r.bValue < r.aValue) bWins++;
+      if (aV < bV) aWins++;
+      else if (bV < aV) bWins++;
+    }
+    // Symmetric percent gap relative to the mean of the two sides.
+    const mean = (Math.abs(aV) + Math.abs(bV)) / 2;
+    if (mean > 0) {
+      const diff = Math.abs(aV - bV);
+      gaps.push((diff / mean) * 100);
     }
   }
 
-  const verdict =
-    aWins === 0 && bWins === 0
-      ? "Add players to both sides to see a verdict"
-      : aWins > bWins
-        ? `Team A wins ${aWins}–${bWins} across sources`
-        : bWins > aWins
-          ? `Team B wins ${bWins}–${aWins} across sources`
-          : `Even split ${aWins}–${bWins}`;
+  const totalCompared = aWins + bWins;
+  const avgGap =
+    gaps.length > 0 ? gaps.reduce((s, g) => s + g, 0) / gaps.length : 0;
+
+  let winner: "A" | "B" | "even" = "even";
+  if (totalCompared > 0) {
+    if (aWins > bWins) winner = "A";
+    else if (bWins > aWins) winner = "B";
+  }
+
+  // Fairness label: how lopsided is this? Thresholds on the average % gap
+  // across sources. Tuned for the kind of trades people actually run.
+  let fairness: "even" | "slight" | "clear" | "lopsided" = "even";
+  if (totalCompared === 0) fairness = "even";
+  else if (avgGap < 8) fairness = "even";
+  else if (avgGap < 20) fairness = "slight";
+  else if (avgGap < 40) fairness = "clear";
+  else fairness = "lopsided";
+
+  const winnerColor =
+    winner === "A"
+      ? "text-rose-300"
+      : winner === "B"
+        ? "text-sky-300"
+        : "text-zinc-300";
+  const winnerBg =
+    winner === "A"
+      ? "bg-rose-500/10 border-rose-500/30"
+      : winner === "B"
+        ? "bg-sky-500/10 border-sky-500/30"
+        : "bg-zinc-900 border-zinc-800";
+
+  const headline =
+    totalCompared === 0
+      ? "Add players to both sides"
+      : winner === "even"
+        ? "Even trade"
+        : `Team ${winner} wins`;
+
+  const fairnessCopy =
+    totalCompared === 0
+      ? "Need at least one comparable source on both sides."
+      : fairness === "even"
+        ? `Looks fair — ${aWins}–${bWins} across sources, ~${avgGap.toFixed(0)}% gap.`
+        : fairness === "slight"
+          ? `Slight edge — ${aWins}–${bWins} across sources, ~${avgGap.toFixed(0)}% gap.`
+          : fairness === "clear"
+            ? `Clear winner — ${aWins}–${bWins} across sources, ~${avgGap.toFixed(0)}% gap.`
+            : `Lopsided — ${aWins}–${bWins} across sources, ~${avgGap.toFixed(0)}% gap.`;
 
   return (
     <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-          Verdict ({scoring})
-        </h3>
-        <p
-          className={`text-sm font-semibold ${
-            aWins > bWins
-              ? "text-rose-300"
-              : bWins > aWins
-                ? "text-sky-300"
-                : "text-zinc-400"
-          }`}
-        >
-          {verdict}
+      {/* Winner banner */}
+      <div
+        className={`rounded-md border px-3 py-3 sm:px-4 sm:py-4 ${winnerBg}`}
+      >
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+          <p className={`text-lg font-semibold sm:text-xl ${winnerColor}`}>
+            {headline}
+          </p>
+          <p className="text-xs uppercase tracking-wider text-zinc-500">
+            Verdict · {scoring}
+          </p>
+        </div>
+        <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
+          {fairnessCopy}
         </p>
       </div>
+
       <table className="w-full text-xs sm:text-sm">
         <thead className="text-xs uppercase tracking-wider text-zinc-500">
           <tr className="text-left">
@@ -491,19 +819,16 @@ function VerdictPanel({
         </thead>
         <tbody>
           {rows.map((r) => {
-            let winner: "A" | "B" | "tie" | "none" = "none";
+            let rowWinner: "A" | "B" | "tie" | "none" = "none";
             let diffText = "—";
             if (r.aValue != null && r.bValue != null) {
               const diff =
                 r.direction === "higher"
                   ? r.aValue - r.bValue
                   : r.bValue - r.aValue;
-              if (Math.abs(diff) < 0.05) winner = "tie";
-              else winner = diff > 0 ? "A" : "B";
-              diffText =
-                r.direction === "higher"
-                  ? `${diff > 0 ? "+" : ""}${diff.toFixed(1)}`
-                  : `${diff > 0 ? "+" : ""}${diff.toFixed(1)}`;
+              if (Math.abs(diff) < 0.05) rowWinner = "tie";
+              else rowWinner = diff > 0 ? "A" : "B";
+              diffText = `${diff > 0 ? "+" : ""}${diff.toFixed(1)}`;
             }
             return (
               <tr
@@ -519,18 +844,18 @@ function VerdictPanel({
                 </td>
                 <td
                   className={`py-2 pl-2 text-right font-mono tabular-nums ${
-                    winner === "A"
+                    rowWinner === "A"
                       ? "text-rose-300"
-                      : winner === "B"
+                      : rowWinner === "B"
                         ? "text-sky-300"
                         : "text-zinc-600"
                   }`}
                 >
-                  {winner === "A"
+                  {rowWinner === "A"
                     ? `A ${diffText}`
-                    : winner === "B"
+                    : rowWinner === "B"
                       ? `B ${diffText}`
-                      : winner === "tie"
+                      : rowWinner === "tie"
                         ? "≈ tie"
                         : "—"}
                 </td>

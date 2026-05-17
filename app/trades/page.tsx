@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import Header from "@/app/_components/Header";
+import TradeListClient, { type TradeCardData } from "./TradeListClient";
 
 type SidePlayer = {
   player_id: number | null;
@@ -12,34 +13,13 @@ type SidePlayer = {
 type SidePick = { year: number; round: number; slot: number | null };
 type Side = { players: SidePlayer[]; picks: SidePick[] };
 
+// Summary fields used by the list page. Tier counts are fetched for potential
+// future use but the list only needs vote counts for sorting / verdict copy.
 type Summary = {
   total_votes: number;
   votes_a: number;
   votes_b: number;
   votes_even: number;
-  tier_balanced: number;
-  tier_slight_edge: number;
-  tier_clear_advantage: number;
-  tier_major_advantage: number;
-  tier_extreme_imbalance: number;
-};
-
-type TradeListRow = {
-  id: string;
-  league_type: string;
-  scoring: string;
-  team_count: number;
-  side_a: Side;
-  side_b: Side;
-  created_at: string;
-  summary: Summary | null;
-};
-
-const POSITION_STYLES: Record<string, string> = {
-  QB: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
-  RB: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-  WR: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
-  TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
 };
 
 type SortMode = "recent" | "controversial" | "lopsided" | "popular";
@@ -112,17 +92,12 @@ export default async function TradesIndexPage({
           votes_a: Number(s.votes_a),
           votes_b: Number(s.votes_b),
           votes_even: Number(s.votes_even),
-          tier_balanced: Number(s.tier_balanced),
-          tier_slight_edge: Number(s.tier_slight_edge),
-          tier_clear_advantage: Number(s.tier_clear_advantage),
-          tier_major_advantage: Number(s.tier_major_advantage),
-          tier_extreme_imbalance: Number(s.tier_extreme_imbalance),
         },
       ]),
     );
   }
 
-  const rows: TradeListRow[] = (trades ?? []).map((t) => ({
+  const rows: TradeCardData[] = (trades ?? []).map((t) => ({
     id: t.id as string,
     league_type: t.league_type as string,
     scoring: t.scoring as string,
@@ -219,11 +194,7 @@ export default async function TradesIndexPage({
             No trades match these filters yet.
           </div>
         ) : (
-          <div className="space-y-3">
-            {rows.map((t) => (
-              <TradeListCard key={t.id} trade={t} />
-            ))}
-          </div>
+          <TradeListClient trades={rows} />
         )}
       </div>
     </main>
@@ -267,92 +238,6 @@ function FilterDropdown({
           </Link>
         );
       })}
-    </div>
-  );
-}
-
-function TradeListCard({ trade }: { trade: TradeListRow }) {
-  const total = trade.summary?.total_votes ?? 0;
-  const aPct =
-    total > 0 ? Math.round(((trade.summary?.votes_a ?? 0) / total) * 100) : 0;
-  const bPct =
-    total > 0 ? Math.round(((trade.summary?.votes_b ?? 0) / total) * 100) : 0;
-  const evenPct = total > 0 ? 100 - aPct - bPct : 0;
-
-  const verdict =
-    total === 0
-      ? "No votes yet"
-      : aPct > bPct && aPct > evenPct
-        ? `${aPct}% favor Team A`
-        : bPct > aPct && bPct > evenPct
-          ? `${bPct}% favor Team B`
-          : `${evenPct}% even`;
-
-  return (
-    <Link
-      href={`/trades/${trade.id}`}
-      className="block rounded-lg border border-zinc-800 bg-zinc-900 p-3 transition hover:border-zinc-700 hover:bg-zinc-900/60 sm:p-4"
-    >
-      <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
-        <SidePreview side={trade.side_a} accent="rose" />
-        <div className="flex items-center justify-center text-xs text-zinc-500">
-          ↔
-        </div>
-        <SidePreview side={trade.side_b} accent="sky" />
-        <div className="col-span-3 flex flex-row items-center justify-between gap-1 border-t border-zinc-800 pt-2 text-xs md:col-span-1 md:flex-col md:items-end md:justify-center md:border-t-0 md:pt-0">
-          <span className="font-medium text-zinc-200">{verdict}</span>
-          <span className="text-zinc-500">
-            {total} vote{total === 1 ? "" : "s"}
-          </span>
-        </div>
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
-        <span>{trade.league_type}</span>
-        <span>·</span>
-        <span>{trade.scoring}</span>
-        <span>·</span>
-        <span>{trade.team_count} teams</span>
-        <span>·</span>
-        <span>{new Date(trade.created_at).toLocaleDateString()}</span>
-      </div>
-    </Link>
-  );
-}
-
-function SidePreview({ side, accent }: { side: Side; accent: "rose" | "sky" }) {
-  const color = accent === "rose" ? "text-rose-300" : "text-sky-300";
-  return (
-    <div className="space-y-1">
-      {side.players.slice(0, 3).map((p, idx) => (
-        <div key={`p-${idx}`} className="flex items-center gap-2 text-sm">
-          {p.position && POSITION_STYLES[p.position] && (
-            <span
-              className={`inline-flex rounded px-1 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${POSITION_STYLES[p.position]}`}
-            >
-              {p.position}
-            </span>
-          )}
-          <span className="truncate text-zinc-100">{p.name}</span>
-          <span className="ml-auto font-mono text-[10px] text-zinc-500">
-            {p.team}
-          </span>
-        </div>
-      ))}
-      {side.picks.slice(0, 2).map((pk, idx) => (
-        <div key={`pk-${idx}`} className="flex items-center gap-2 text-sm">
-          <span className={`text-[10px] uppercase tracking-wider ${color}`}>
-            pick
-          </span>
-          <span className="font-mono text-xs text-zinc-300">
-            {pk.year} R{pk.round}
-          </span>
-        </div>
-      ))}
-      {side.players.length + side.picks.length > 5 && (
-        <p className="text-xs text-zinc-600">
-          + {side.players.length + side.picks.length - 5} more
-        </p>
-      )}
     </div>
   );
 }

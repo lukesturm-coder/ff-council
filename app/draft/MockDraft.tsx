@@ -2,15 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { RotateCcw, Zap } from "lucide-react";
-import type { FantasyPosition } from "@/lib/types";
+import type { FantasyPosition, ScoringSystem } from "@/lib/types";
 
 export type DraftablePlayer = {
   player_id: number;
   name: string;
   team: string;
   position: FantasyPosition;
-  fptsPPR: number;
-  vbdPPR: number;
+  fpts: Record<ScoringSystem, number>;
+  vbd: Record<ScoringSystem, number>;
 };
 
 type Pick = {
@@ -28,9 +28,15 @@ const POSITION_STYLES: Record<FantasyPosition, string> = {
   TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
 };
 
-const TEAM_COUNT = 12;
 const ROUNDS = 8;
-const TOTAL_PICKS = TEAM_COUNT * ROUNDS;
+const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
+const SCORING_LABELS: Record<ScoringSystem, string> = {
+  PPR: "PPR",
+  Half: "Half",
+  Standard: "Std",
+};
+const TEAM_COUNT_OPTIONS = [8, 10, 12, 14, 16] as const;
+type TeamCount = (typeof TEAM_COUNT_OPTIONS)[number];
 
 // Position needs for AI: how many at each position before bonus drops off
 const TARGET_PER_POS: Record<FantasyPosition, number> = {
@@ -40,18 +46,22 @@ const TARGET_PER_POS: Record<FantasyPosition, number> = {
   TE: 2,
 };
 
-function pickToSlot(pickNumber: number): { round: number; slot: number } {
-  const round = Math.ceil(pickNumber / TEAM_COUNT);
-  const positionInRound = ((pickNumber - 1) % TEAM_COUNT) + 1;
+function pickToSlot(
+  pickNumber: number,
+  teamCount: number,
+): { round: number; slot: number } {
+  const round = Math.ceil(pickNumber / teamCount);
+  const positionInRound = ((pickNumber - 1) % teamCount) + 1;
   const slot = round % 2 === 1
     ? positionInRound
-    : TEAM_COUNT - positionInRound + 1;
+    : teamCount - positionInRound + 1;
   return { round, slot };
 }
 
 function aiPick(
   available: DraftablePlayer[],
   teamRoster: DraftablePlayer[],
+  scoring: ScoringSystem,
 ): DraftablePlayer | null {
   if (available.length === 0) return null;
 
@@ -74,7 +84,7 @@ function aiPick(
     const need = Math.max(0, target - have);
     // Bonus per "need slot" — diminishing
     const needBonus = need * 12;
-    const score = p.vbdPPR + needBonus;
+    const score = p.vbd[scoring] + needBonus;
     if (score > bestScore) {
       bestScore = score;
       best = p;
@@ -89,6 +99,19 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
   const [positionFilter, setPositionFilter] = useState<"ALL" | FantasyPosition>(
     "ALL",
   );
+  const [scoring, setScoring] = useState<ScoringSystem>("PPR");
+  const [teamCount, setTeamCount] = useState<TeamCount>(12);
+
+  const totalPicks = teamCount * ROUNDS;
+
+  // Changing team count mid-draft invalidates pick slot positions and the
+  // user's chosen draft slot (which might no longer exist). Reset everything.
+  function changeTeamCount(next: TeamCount) {
+    if (next === teamCount) return;
+    setTeamCount(next);
+    setPicks([]);
+    setDraftSlot(null);
+  }
 
   const playerById = useMemo(() => {
     const m = new Map<number, DraftablePlayer>();
@@ -106,18 +129,18 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
       players
         .filter((p) => !draftedIds.has(p.player_id))
         .filter((p) => positionFilter === "ALL" || p.position === positionFilter)
-        .sort((a, b) => b.vbdPPR - a.vbdPPR),
-    [players, draftedIds, positionFilter],
+        .sort((a, b) => b.vbd[scoring] - a.vbd[scoring]),
+    [players, draftedIds, positionFilter, scoring],
   );
 
   const nextPickNumber = picks.length + 1;
   const isDraftOver =
-    nextPickNumber > TOTAL_PICKS ||
+    nextPickNumber > totalPicks ||
     nextPickNumber > players.length ||
     draftSlot == null;
 
   const nextSlot = !isDraftOver
-    ? pickToSlot(nextPickNumber)
+    ? pickToSlot(nextPickNumber, teamCount)
     : { round: ROUNDS + 1, slot: 0 };
 
   const isUserTurn = draftSlot != null && nextSlot.slot === draftSlot;
@@ -130,7 +153,7 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
       .map((p) => playerById.get(p.playerId))
       .filter((p): p is DraftablePlayer => !!p);
     const available = players.filter((p) => !draftedIds.has(p.player_id));
-    const chosen = aiPick(available, teamRoster);
+    const chosen = aiPick(available, teamRoster, scoring);
     if (chosen) {
       // small delay so the user can follow along
       const timer = setTimeout(() => {
@@ -158,6 +181,7 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
     players,
     playerById,
     draftedIds,
+    scoring,
   ]);
 
   function makePick(playerId: number) {
@@ -181,7 +205,7 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
       .map((p) => playerById.get(p.playerId))
       .filter((p): p is DraftablePlayer => !!p);
     const available = players.filter((p) => !draftedIds.has(p.player_id));
-    const chosen = aiPick(available, teamRoster);
+    const chosen = aiPick(available, teamRoster, scoring);
     if (chosen) makePick(chosen.player_id);
   }
 
@@ -190,24 +214,46 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
     setDraftSlot(null);
   }
 
+  const controlBar = (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <ControlGroup
+        label="Scoring"
+        options={SCORING_OPTIONS}
+        value={scoring}
+        onChange={setScoring}
+        labels={SCORING_LABELS}
+      />
+      <ControlGroup
+        label="Teams"
+        options={TEAM_COUNT_OPTIONS}
+        value={teamCount}
+        onChange={changeTeamCount}
+      />
+    </div>
+  );
+
   // Show draft slot selector if not chosen
   if (draftSlot == null) {
     return (
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-8">
-        <h3 className="mb-2 text-lg font-semibold">Pick your draft slot</h3>
-        <p className="mb-4 text-sm text-zinc-400">
-          12-team snake draft, {ROUNDS} rounds. Where are you picking?
-        </p>
-        <div className="grid grid-cols-6 gap-2">
-          {Array.from({ length: TEAM_COUNT }, (_, i) => i + 1).map((slot) => (
-            <button
-              key={slot}
-              onClick={() => setDraftSlot(slot)}
-              className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm font-mono text-zinc-200 transition hover:border-emerald-500/40 hover:bg-emerald-500/10"
-            >
-              #{slot}
-            </button>
-          ))}
+      <div className="space-y-4">
+        {controlBar}
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-8">
+          <h3 className="mb-2 text-lg font-semibold">Pick your draft slot</h3>
+          <p className="mb-4 text-sm text-zinc-400">
+            {teamCount}-team snake draft, {ROUNDS} rounds. Where are you
+            picking?
+          </p>
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
+            {Array.from({ length: teamCount }, (_, i) => i + 1).map((slot) => (
+              <button
+                key={slot}
+                onClick={() => setDraftSlot(slot)}
+                className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm font-mono text-zinc-200 transition hover:border-emerald-500/40 hover:bg-emerald-500/10"
+              >
+                #{slot}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -215,7 +261,7 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
 
   // Build per-team rosters
   const rostersBySlot = new Map<number, DraftablePlayer[]>();
-  for (let slot = 1; slot <= TEAM_COUNT; slot++) {
+  for (let slot = 1; slot <= teamCount; slot++) {
     rostersBySlot.set(
       slot,
       picks
@@ -227,6 +273,7 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
 
   return (
     <div className="space-y-4">
+      {controlBar}
       {/* Pick header */}
       <div className="flex flex-wrap items-baseline gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
         {isDraftOver ? (
@@ -239,7 +286,7 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
               On the clock
             </span>
             <span className="font-mono text-lg font-semibold text-zinc-100">
-              Pick {nextPickNumber} / {Math.min(TOTAL_PICKS, players.length)}
+              Pick {nextPickNumber} / {Math.min(totalPicks, players.length)}
             </span>
             <span className="text-sm text-zinc-400">
               Round {nextSlot.round} · Slot {nextSlot.slot}
@@ -307,8 +354,8 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
                       {p.team}
                     </td>
                     <td className="py-1.5 px-2 text-right font-mono text-xs text-zinc-300">
-                      {p.vbdPPR > 0 ? "+" : ""}
-                      {p.vbdPPR.toFixed(1)}
+                      {p.vbd[scoring] > 0 ? "+" : ""}
+                      {p.vbd[scoring].toFixed(1)}
                     </td>
                     <td className="py-1.5 pr-4 text-right">
                       <button
@@ -382,7 +429,7 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
           All teams
         </h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: TEAM_COUNT }, (_, i) => i + 1).map((slot) => {
+          {Array.from({ length: teamCount }, (_, i) => i + 1).map((slot) => {
             const r = rostersBySlot.get(slot) ?? [];
             return (
               <div
@@ -418,6 +465,41 @@ export default function MockDraft({ players }: { players: DraftablePlayer[] }) {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ControlGroup<T extends string | number>({
+  label,
+  options,
+  value,
+  onChange,
+  labels,
+}: {
+  label: string;
+  options: readonly T[];
+  value: T;
+  onChange: (v: T) => void;
+  labels?: Partial<Record<T, string>>;
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+      <span className="px-2 text-xs uppercase tracking-wider text-zinc-500">
+        {label}
+      </span>
+      {options.map((opt) => (
+        <button
+          key={String(opt)}
+          onClick={() => onChange(opt)}
+          className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium transition ${
+            value === opt
+              ? "bg-emerald-500/20 text-emerald-200"
+              : "text-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          {labels?.[opt] ?? String(opt)}
+        </button>
+      ))}
     </div>
   );
 }

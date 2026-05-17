@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import {
@@ -97,7 +98,9 @@ export default async function TradePage() {
             the Council Consensus.
           </p>
         </div>
-        <TradeCalculator players={players} />
+        <Suspense fallback={null}>
+          <TradeCalculator players={players} />
+        </Suspense>
       </div>
     </main>
   );
