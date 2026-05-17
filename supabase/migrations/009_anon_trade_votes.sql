@@ -21,12 +21,14 @@ alter table public.trade_votes
 alter table public.trade_votes
   add constraint trade_votes_pkey primary key (id);
 
--- Re-enforce one-vote-per-trade for signed-in users only. Anon votes are
--- dedup'd at the client via localStorage; we accept some sloppiness for
--- engagement.
-create unique index if not exists trade_votes_authed_unique
-  on public.trade_votes (trade_id, voter_id)
-  where voter_id is not null;
+-- Re-enforce one-vote-per-trade for signed-in users. NULL voter_ids (anon
+-- votes) are treated as distinct by Postgres uniqueness, so multiple anon
+-- votes per trade are still allowed. Anon dedup happens client-side via
+-- localStorage. Using a real constraint (not a partial index) so PostgREST
+-- upsert can target it via `onConflict`.
+alter table public.trade_votes
+  add constraint trade_votes_authed_unique
+  unique (trade_id, voter_id);
 
 -- Replace the auth-only insert policy with one that allows anonymous too.
 drop policy if exists "trade_votes: authenticated cast own"

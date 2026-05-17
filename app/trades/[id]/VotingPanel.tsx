@@ -92,7 +92,7 @@ export default function VotingPanel({
   }
 
   return (
-    <div className="space-y-5 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+    <div className="space-y-5 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
       <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
         Your verdict
       </h3>
@@ -143,15 +143,15 @@ export default function VotingPanel({
                 }`}
               >
                 <span
-                  className={
+                  className={`block sm:inline ${
                     magnitude === t.value
                       ? "text-emerald-200"
                       : "text-zinc-200"
-                  }
+                  }`}
                 >
                   {t.label}
                 </span>
-                <span className="ml-2 text-xs text-zinc-500">
+                <span className="block text-xs text-zinc-500 sm:ml-2 sm:inline">
                   {t.description}
                 </span>
               </button>
@@ -168,7 +168,7 @@ export default function VotingPanel({
       )}
 
       {/* Submit */}
-      <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-4">
+      <div className="flex flex-col items-stretch gap-3 border-t border-zinc-800 pt-4 sm:flex-row sm:items-center sm:justify-end">
         {msg && (
           <span
             className={`inline-flex items-center gap-1.5 text-xs ${

@@ -35,11 +35,11 @@ export default async function DraftPage() {
   const players = await loadDraftablePlayers();
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-7xl px-6 py-6">
+      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
         <Header />
 
         <div className="mb-4 border-b border-zinc-800 pb-3">
-          <h2 className="text-2xl font-semibold">Mock Draft</h2>
+          <h2 className="text-xl font-semibold sm:text-2xl">Mock Draft</h2>
           <p className="mt-1 text-sm text-zinc-400">
             12-team snake draft. AI opponents pick by Edge + position need. Test
             your strategy before the real thing.

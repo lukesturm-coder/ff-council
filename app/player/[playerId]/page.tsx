@@ -148,14 +148,14 @@ export default async function PlayerDetailPage({
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
         <Header />
 
         {/* Player header */}
-        <div className="mb-4 flex items-baseline justify-between border-b border-zinc-800 pb-3">
+        <div className="mb-4 flex flex-col gap-2 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-0">
           <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-semibold">{player.name}</h2>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h2 className="text-xl font-semibold sm:text-2xl">{player.name}</h2>
               <span
                 className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[player.position]}`}
               >
@@ -205,7 +205,7 @@ export default async function PlayerDetailPage({
         </div>
 
         {/* Source comparison chart */}
-        <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+        <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
             Rank across sources (PPR)
           </h3>
@@ -263,7 +263,7 @@ export default async function PlayerDetailPage({
 
         {/* Markets feeding the projection */}
         {player.markets.length > 0 && (
-          <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+          <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
               Vegas markets feeding this projection
             </h3>
@@ -272,8 +272,8 @@ export default async function PlayerDetailPage({
                 <tr className="text-left">
                   <th className="py-1">Market</th>
                   <th className="py-1 text-right">Line</th>
-                  <th className="py-1 text-right">Over</th>
-                  <th className="py-1 text-right">Under</th>
+                  <th className="hidden py-1 text-right sm:table-cell">Over</th>
+                  <th className="hidden py-1 text-right sm:table-cell">Under</th>
                   <th className="py-1 text-right">Per week</th>
                 </tr>
               </thead>
@@ -284,11 +284,11 @@ export default async function PlayerDetailPage({
                     <td className="py-1.5 text-right font-mono tabular-nums">
                       {m.line}
                     </td>
-                    <td className="py-1.5 text-right font-mono text-xs text-zinc-400">
+                    <td className="hidden py-1.5 text-right font-mono text-xs text-zinc-400 sm:table-cell">
                       {m.overPayout > 0 ? "+" : ""}
                       {m.overPayout}
                     </td>
-                    <td className="py-1.5 text-right font-mono text-xs text-zinc-400">
+                    <td className="hidden py-1.5 text-right font-mono text-xs text-zinc-400 sm:table-cell">
                       {m.underPayout > 0 ? "+" : ""}
                       {m.underPayout}
                     </td>
@@ -303,7 +303,7 @@ export default async function PlayerDetailPage({
         )}
 
         {/* Trades involving this player */}
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
             Trade Court appearances
           </h3>
@@ -329,13 +329,13 @@ export default async function PlayerDetailPage({
                     href={`/trades/${t.id}`}
                     className="block hover:bg-zinc-900/30"
                   >
-                    <div className="flex items-baseline justify-between">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
                       <span className="text-zinc-200">
                         {t.side_a.players.map((p) => p.name).join(" + ") || "—"}{" "}
                         ↔{" "}
                         {t.side_b.players.map((p) => p.name).join(" + ") || "—"}
                       </span>
-                      <span className="font-mono text-xs text-zinc-500">
+                      <span className="shrink-0 font-mono text-xs text-zinc-500">
                         {t.total_votes} vote{t.total_votes === 1 ? "" : "s"}
                       </span>
                     </div>

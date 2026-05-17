@@ -275,7 +275,7 @@ export default function RankingsTable({
             <tr>
               <th className="w-8 py-3 pl-3"></th>
               <th className="w-10 py-3 pr-2 text-right">#</th>
-              <th className="min-w-[200px] py-3 pl-4 whitespace-nowrap">Player</th>
+              <th className="min-w-[140px] py-3 pl-2 whitespace-nowrap sm:min-w-[200px] sm:pl-4">Player</th>
               <th className="w-12 py-3 text-center">Pos</th>
               <SortHeader
                 label="Vegas"
@@ -313,6 +313,7 @@ export default function RankingsTable({
                   title="FantasyPros consensus ADP — aggregated across multiple platforms"
                   active={sortKey}
                   onClick={toggleSort}
+                  extraClass="hidden sm:table-cell"
                 />
               )}
               {EXTRA_PLATFORMS.map((pf) => (
@@ -324,6 +325,7 @@ export default function RankingsTable({
                   title={`${pf.label} ${pf.type === "adp" ? "ADP" : "editorial rank"} (mock data until 2026 preseason rankings publish)`}
                   active={sortKey}
                   onClick={toggleSort}
+                  extraClass="hidden sm:table-cell"
                 />
               ))}
               <SortHeader
@@ -497,7 +499,7 @@ function RankRow({
           )}
         </td>
         <td className="py-3 pr-2 text-right font-mono text-zinc-500">{rank}</td>
-        <td className="py-3 pl-4 font-medium whitespace-nowrap">
+        <td className="py-3 pl-2 font-medium whitespace-nowrap sm:pl-4">
           <Link
             href={`/player/${player.playerId}`}
             onClick={(e) => e.stopPropagation()}
@@ -547,7 +549,7 @@ function RankRow({
           </td>
         )}
         {hasFp && (
-          <td className="py-3 text-center font-mono text-xs tabular-nums">
+          <td className="hidden py-3 text-center font-mono text-xs tabular-nums sm:table-cell">
             <span className="text-teal-400">
               {fpRank != null ? fpRank.toFixed(0) : "—"}
             </span>
@@ -556,7 +558,7 @@ function RankRow({
         {extraRanks.map((r, idx) => (
           <td
             key={EXTRA_PLATFORMS[idx].key}
-            className="py-3 text-center font-mono text-xs tabular-nums"
+            className="hidden py-3 text-center font-mono text-xs tabular-nums sm:table-cell"
           >
             <span className={EXTRA_PLATFORMS[idx].accent}>
               {r != null ? r.toFixed(0) : "—"}
@@ -580,7 +582,7 @@ function RankRow({
               (hasCouncil ? 1 : 0) +
               EXTRA_PLATFORMS.length
             }
-            className="px-12 py-4"
+            className="px-3 py-4 sm:px-12"
           >
             <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
               <div className="text-xs uppercase tracking-wider text-zinc-500">

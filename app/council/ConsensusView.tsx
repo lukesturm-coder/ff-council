@@ -99,33 +99,35 @@ export default function ConsensusView({
         <table className="w-full text-sm">
           <thead className="border-b border-zinc-800 bg-zinc-900/50 text-left text-xs uppercase tracking-wider text-zinc-500">
             <tr>
-              <th className="w-12 py-3 pl-4 text-right">#</th>
-              <th className="py-3 pl-4">Player</th>
+              <th className="w-10 py-3 pl-2 text-right sm:w-12 sm:pl-4">#</th>
+              <th className="py-3 pl-2 sm:pl-4">Player</th>
               <th className="py-3 pl-2">Pos</th>
-              <th className="py-3 pl-2">Team</th>
-              <th className="py-3 pr-4 text-right" title="Average council rank">
+              <th className="hidden py-3 pl-2 sm:table-cell">Team</th>
+              <th className="py-3 pr-2 text-right sm:pr-4" title="Average council rank">
                 Avg
               </th>
-              <th className="py-3 pr-4 text-right" title="Median council rank">
+              <th className="hidden py-3 pr-4 text-right sm:table-cell" title="Median council rank">
                 Med
               </th>
               <th
-                className="py-3 pr-4 text-right"
+                className="py-3 pr-2 text-right sm:pr-4"
                 title="Standard deviation of council ranks — high = disagreement"
               >
-                Std Dev
+                <span className="sm:hidden">Spr</span>
+                <span className="hidden sm:inline">Std Dev</span>
               </th>
               <th
-                className="py-3 pr-4 text-right"
+                className="hidden py-3 pr-4 text-right sm:table-cell"
                 title="Number of council members who ranked this player"
               >
                 Rankers
               </th>
               <th
-                className="py-3 pr-4 text-right"
+                className="py-3 pr-2 text-right sm:pr-4"
                 title="Council rank vs Vegas VBD rank"
               >
-                Edge vs Vegas
+                <span className="sm:hidden">Edge</span>
+                <span className="hidden sm:inline">Edge vs Vegas</span>
               </th>
             </tr>
           </thead>
@@ -152,10 +154,10 @@ export default function ConsensusView({
                   key={row.playerId}
                   className="border-t border-zinc-800/60 transition hover:bg-zinc-800/30"
                 >
-                  <td className="py-3 pl-4 text-right font-mono text-zinc-500">
+                  <td className="py-3 pl-2 text-right font-mono text-zinc-500 sm:pl-4">
                     {rank}
                   </td>
-                  <td className="py-3 pl-4 font-medium">{row.name}</td>
+                  <td className="py-3 pl-2 font-medium sm:pl-4">{row.name}</td>
                   <td className="py-3 pl-2">
                     <span
                       className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[row.position]}`}
@@ -163,24 +165,24 @@ export default function ConsensusView({
                       {row.position}
                     </span>
                   </td>
-                  <td className="py-3 pl-2 font-mono text-xs text-zinc-400">
+                  <td className="hidden py-3 pl-2 font-mono text-xs text-zinc-400 sm:table-cell">
                     {row.team}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono tabular-nums">
+                  <td className="py-3 pr-2 text-right font-mono tabular-nums sm:pr-4">
                     {row.avgRank.toFixed(1)}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-400">
+                  <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-400 sm:table-cell">
                     {row.medianRank.toFixed(0)}
                   </td>
                   <td
-                    className={`py-3 pr-4 text-right font-mono text-xs tabular-nums ${spreadColor}`}
+                    className={`py-3 pr-2 text-right font-mono text-xs tabular-nums sm:pr-4 ${spreadColor}`}
                   >
                     {stddevDisplay}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs text-zinc-500">
+                  <td className="hidden py-3 pr-4 text-right font-mono text-xs text-zinc-500 sm:table-cell">
                     {row.rankerCount}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums">
+                  <td className="py-3 pr-2 text-right font-mono text-xs tabular-nums sm:pr-4">
                     {edge == null ? (
                       <span className="text-zinc-500">—</span>
                     ) : edge > 0 ? (
@@ -224,8 +226,8 @@ function Controls({
   setPosition: (p: PositionFilter) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
         <span className="px-2 text-xs uppercase tracking-wider text-zinc-500">
           Scoring
         </span>
@@ -233,7 +235,7 @@ function Controls({
           <button
             key={s}
             onClick={() => setScoring(s)}
-            className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+            className={`rounded-md px-2 py-1 text-sm font-medium transition sm:px-3 ${
               scoring === s
                 ? "bg-emerald-500/20 text-emerald-200"
                 : "text-zinc-400 hover:text-zinc-200"
@@ -243,7 +245,7 @@ function Controls({
           </button>
         ))}
       </div>
-      <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+      <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
         <span className="px-2 text-xs uppercase tracking-wider text-zinc-500">
           Pos
         </span>
@@ -251,7 +253,7 @@ function Controls({
           <button
             key={p}
             onClick={() => setPosition(p)}
-            className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+            className={`rounded-md px-2 py-1 text-sm font-medium transition sm:px-3 ${
               position === p
                 ? "bg-emerald-500/20 text-emerald-200"
                 : "text-zinc-400 hover:text-zinc-200"

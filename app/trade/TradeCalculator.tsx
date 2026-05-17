@@ -101,8 +101,8 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
   return (
     <div className="space-y-6">
       {/* Scoring toggle */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
           <span className="px-2 text-xs uppercase tracking-wider text-zinc-500">
             Scoring
           </span>
@@ -110,7 +110,7 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
             <button
               key={s}
               onClick={() => setScoring(s)}
-              className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+              className={`rounded-md px-2.5 py-1 text-sm font-medium transition sm:px-3 ${
                 scoring === s
                   ? "bg-emerald-500/20 text-emerald-200"
                   : "text-zinc-400 hover:text-zinc-200"
@@ -122,7 +122,7 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
         </div>
         <button
           onClick={swapSides}
-          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
         >
           <ArrowLeftRight className="h-3.5 w-3.5" />
           Swap sides
@@ -130,7 +130,7 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
         {(sideA.length > 0 || sideB.length > 0) && (
           <button
             onClick={clearAll}
-            className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+            className="shrink-0 text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
           >
             Clear all
           </button>
@@ -138,7 +138,7 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
       </div>
 
       {/* Two sides */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TradeSide
           label="Team A gives"
           players={aPlayers}
@@ -170,13 +170,13 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
 
       {/* Send to Trade Court */}
       {aPlayers.length > 0 && bPlayers.length > 0 && (
-        <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-4">
+        <div className="flex flex-col items-stretch gap-3 border-t border-zinc-800 pt-4 sm:flex-row sm:items-center sm:justify-end">
           <p className="text-xs text-zinc-500">
             Want the council&apos;s take instead of just the math?
           </p>
           <Link
             href={`/trades/new?a=${sideA.join(",")}&b=${sideB.join(",")}`}
-            className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+            className="inline-flex items-center justify-center gap-1.5 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 sm:py-1.5"
           >
             <Send className="h-3.5 w-3.5" />
             Submit to Trade Court
@@ -226,7 +226,7 @@ function TradeSide({
   const sideVbd = sumOrZero(players.map((p) => p.vbd[scoring]));
 
   return (
-    <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+    <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-4">
       <div className="flex items-baseline justify-between">
         <p className="text-xs uppercase tracking-wider text-zinc-500">
           {label}
@@ -244,19 +244,19 @@ function TradeSide({
         {players.map((p) => (
           <div
             key={p.playerId}
-            className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
+            className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-2.5 py-2 text-sm sm:px-3"
           >
-            <span className="flex-1 font-medium text-zinc-100">{p.name}</span>
+            <span className="flex-1 truncate font-medium text-zinc-100">{p.name}</span>
             <span
               className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[p.position]}`}
             >
               {p.position}
             </span>
-            <span className="w-10 font-mono text-xs text-zinc-400">
+            <span className="hidden w-10 font-mono text-xs text-zinc-400 sm:inline">
               {p.team}
             </span>
             <span
-              className="w-16 text-right font-mono text-xs text-zinc-300"
+              className="w-14 text-right font-mono text-xs text-zinc-300 sm:w-16"
               title="Vegas season FPts"
             >
               {p.fantasyPoints[scoring].toFixed(1)}
@@ -306,7 +306,7 @@ function TradeSide({
               <button
                 key={p.playerId}
                 onClick={() => onAdd(p.playerId)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-zinc-800"
+                className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-sm transition hover:bg-zinc-800 sm:px-3"
               >
                 <span className="flex-1 truncate">{p.name}</span>
                 <span
@@ -314,7 +314,7 @@ function TradeSide({
                 >
                   {p.position}
                 </span>
-                <span className="w-10 font-mono text-xs text-zinc-500">
+                <span className="hidden w-10 font-mono text-xs text-zinc-500 sm:inline">
                   {p.team}
                 </span>
                 <span className="w-14 text-right font-mono text-xs text-zinc-400">
@@ -463,8 +463,8 @@ function VerdictPanel({
           : `Even split ${aWins}–${bWins}`;
 
   return (
-    <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
           Verdict ({scoring})
         </h3>
@@ -480,12 +480,12 @@ function VerdictPanel({
           {verdict}
         </p>
       </div>
-      <table className="w-full text-sm">
+      <table className="w-full text-xs sm:text-sm">
         <thead className="text-xs uppercase tracking-wider text-zinc-500">
           <tr className="text-left">
             <th className="py-1">Source</th>
-            <th className="py-1 text-right">Team A</th>
-            <th className="py-1 text-right">Team B</th>
+            <th className="py-1 text-right">A</th>
+            <th className="py-1 text-right">B</th>
             <th className="py-1 text-right">Edge</th>
           </tr>
         </thead>
@@ -510,7 +510,7 @@ function VerdictPanel({
                 key={r.label}
                 className="border-t border-zinc-800/60 text-zinc-300"
               >
-                <td className={`py-2 ${r.color}`}>{r.label}</td>
+                <td className={`py-2 pr-2 ${r.color}`}>{r.label}</td>
                 <td className="py-2 text-right font-mono tabular-nums">
                   {r.aDisplay}
                 </td>
@@ -518,7 +518,7 @@ function VerdictPanel({
                   {r.bDisplay}
                 </td>
                 <td
-                  className={`py-2 text-right font-mono tabular-nums ${
+                  className={`py-2 pl-2 text-right font-mono tabular-nums ${
                     winner === "A"
                       ? "text-rose-300"
                       : winner === "B"

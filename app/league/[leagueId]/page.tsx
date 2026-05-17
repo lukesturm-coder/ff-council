@@ -252,9 +252,9 @@ export default async function LeagueAnalysisPage({
   } catch (err) {
     return (
       <main className="min-h-screen bg-zinc-950 text-zinc-100">
-        <div className="mx-auto max-w-3xl px-6 py-6">
+        <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
           <Header />
-          <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-6">
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-rose-200">
               Couldn&apos;t load that league
             </h2>
@@ -454,12 +454,12 @@ export default async function LeagueAnalysisPage({
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
         <Header />
 
-        <div className="mb-4 flex items-baseline justify-between border-b border-zinc-800 pb-3">
+        <div className="mb-4 flex flex-col gap-2 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-0">
           <div>
-            <h2 className="text-2xl font-semibold">{league.name}</h2>
+            <h2 className="text-xl font-semibold sm:text-2xl">{league.name}</h2>
             <p className="text-sm text-zinc-400">
               {league.season} · {teamRows.length} teams · scoring{" "}
               <span className="text-zinc-200">{scoring}</span>
@@ -478,42 +478,42 @@ export default async function LeagueAnalysisPage({
           <table className="w-full text-sm">
             <thead className="border-b border-zinc-800 bg-zinc-900/50 text-left text-xs uppercase tracking-wider text-zinc-500">
               <tr>
-                <th className="w-12 py-3 pl-4 text-right">#</th>
-                <th className="py-3 pl-4">Team</th>
-                <th className="py-3 pl-2">Owner</th>
+                <th className="w-10 py-3 pl-2 text-right sm:w-12 sm:pl-4">#</th>
+                <th className="py-3 pl-2 sm:pl-4">Team</th>
+                <th className="hidden py-3 pl-2 sm:table-cell">Owner</th>
                 <th
-                  className="py-3 pr-4 text-right"
+                  className="py-3 pr-2 text-right sm:pr-4"
                   title="Sum of optimal-lineup Vegas FPts (season)"
                 >
-                  Vegas Score
+                  Vegas
                 </th>
-                <th className="py-3 pr-4 text-right text-zinc-600">/wk</th>
+                <th className="hidden py-3 pr-4 text-right text-zinc-600 sm:table-cell">/wk</th>
                 <th
-                  className="py-3 pr-4 text-right"
+                  className="hidden py-3 pr-4 text-right sm:table-cell"
                   title="Average age of optimal starters — informational, not a ranking factor"
                 >
                   Avg Age
                 </th>
                 <th
-                  className="py-3 pr-4 text-right"
+                  className="hidden py-3 pr-4 text-right sm:table-cell"
                   title="Average ESPN ADP across starters"
                 >
                   <span className="text-rose-300">ESPN</span> avg
                 </th>
                 <th
-                  className="py-3 pr-4 text-right"
+                  className="hidden py-3 pr-4 text-right sm:table-cell"
                   title="Average FantasyPros ADP across starters"
                 >
                   <span className="text-sky-300">FP</span> avg
                 </th>
                 <th
-                  className="py-3 pr-4 text-right"
+                  className="hidden py-3 pr-4 text-right sm:table-cell"
                   title="Average Council Consensus rank across starters"
                 >
                   <span className="text-emerald-300">Council</span> avg
                 </th>
                 <th
-                  className="py-3 pr-4 text-right"
+                  className="hidden py-3 pr-4 text-right sm:table-cell"
                   title="How many of the team's players we have rankings for"
                 >
                   Cov
@@ -526,32 +526,32 @@ export default async function LeagueAnalysisPage({
                   key={t.rosterId}
                   className="border-t border-zinc-800/60"
                 >
-                  <td className="py-3 pl-4 text-right font-mono text-zinc-500">
+                  <td className="py-3 pl-2 text-right font-mono text-zinc-500 sm:pl-4">
                     {idx + 1}
                   </td>
-                  <td className="py-3 pl-4 font-medium">{t.teamName}</td>
-                  <td className="py-3 pl-2 text-zinc-400">{t.ownerName}</td>
-                  <td className="py-3 pr-4 text-right font-mono font-semibold tabular-nums">
+                  <td className="py-3 pl-2 font-medium sm:pl-4">{t.teamName}</td>
+                  <td className="hidden py-3 pl-2 text-zinc-400 sm:table-cell">{t.ownerName}</td>
+                  <td className="py-3 pr-2 text-right font-mono font-semibold tabular-nums sm:pr-4">
                     {t.vegasFpts.toFixed(1)}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-500">
+                  <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-500 sm:table-cell">
                     {t.vegasFptsPerWeek.toFixed(1)}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-400">
+                  <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-400 sm:table-cell">
                     {t.avgAge != null ? t.avgAge.toFixed(1) : "—"}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-300">
+                  <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-300 sm:table-cell">
                     {t.avgEspnAdp != null ? t.avgEspnAdp.toFixed(1) : "—"}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-300">
+                  <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-300 sm:table-cell">
                     {t.avgFpAdp != null ? t.avgFpAdp.toFixed(1) : "—"}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-300">
+                  <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-300 sm:table-cell">
                     {t.avgCouncilRank != null
                       ? t.avgCouncilRank.toFixed(1)
                       : "—"}
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-500">
+                  <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-500 sm:table-cell">
                     {t.coverage.matched}/{t.coverage.total}
                   </td>
                 </tr>
@@ -562,11 +562,11 @@ export default async function LeagueAnalysisPage({
 
         {/* Position strength matrix */}
         <div className="mb-8">
-          <div className="mb-3 flex items-baseline justify-between">
+          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
               Position Strength
             </h3>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-zinc-500 sm:max-w-md sm:text-right">
               Each cell: sum of top players&apos; Vegas FPts at that position
               (QB×2, RB×4, WR×5, TE×2). Color shows relative strength within
               the league.
@@ -576,17 +576,17 @@ export default async function LeagueAnalysisPage({
             <table className="w-full text-sm">
               <thead className="border-b border-zinc-800 bg-zinc-900/50 text-left text-xs uppercase tracking-wider text-zinc-500">
                 <tr>
-                  <th className="py-3 pl-4">Team</th>
-                  <th className="py-3 pr-4 text-right">
+                  <th className="py-3 pl-2 sm:pl-4">Team</th>
+                  <th className="py-3 pr-2 text-right sm:pr-4">
                     <span className="text-rose-300">QB</span>
                   </th>
-                  <th className="py-3 pr-4 text-right">
+                  <th className="py-3 pr-2 text-right sm:pr-4">
                     <span className="text-emerald-300">RB</span>
                   </th>
-                  <th className="py-3 pr-4 text-right">
+                  <th className="py-3 pr-2 text-right sm:pr-4">
                     <span className="text-sky-300">WR</span>
                   </th>
-                  <th className="py-3 pr-4 text-right">
+                  <th className="py-3 pr-2 text-right sm:pr-4">
                     <span className="text-amber-300">TE</span>
                   </th>
                 </tr>
@@ -597,7 +597,7 @@ export default async function LeagueAnalysisPage({
                     key={t.rosterId}
                     className="border-t border-zinc-800/60"
                   >
-                    <td className="py-2.5 pl-4">
+                    <td className="py-2.5 pl-2 sm:pl-4">
                       <div className="font-medium text-zinc-100">
                         {t.teamName}
                       </div>
@@ -621,11 +621,11 @@ export default async function LeagueAnalysisPage({
         {/* Free Agents */}
         {freeAgents.length > 0 && (
           <div className="mb-8">
-            <div className="mb-3 flex items-baseline justify-between">
+            <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
                 Top Free Agents
               </h3>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-zinc-500 sm:max-w-md sm:text-right">
                 Players in our pool that aren&apos;t rostered in this league —
                 sorted by Vegas FPts. Waiver targets ordered by our model.
               </p>
@@ -634,21 +634,21 @@ export default async function LeagueAnalysisPage({
               <table className="w-full text-sm">
                 <thead className="border-b border-zinc-800 bg-zinc-900/50 text-left text-xs uppercase tracking-wider text-zinc-500">
                   <tr>
-                    <th className="w-10 py-3 pl-4 text-right">#</th>
-                    <th className="py-3 pl-4">Player</th>
+                    <th className="w-8 py-3 pl-2 text-right sm:w-10 sm:pl-4">#</th>
+                    <th className="py-3 pl-2 sm:pl-4">Player</th>
                     <th className="py-3 pl-2">Pos</th>
-                    <th className="py-3 pl-2">Team</th>
-                    <th className="py-3 pr-4 text-right">Vegas FPts</th>
-                    <th className="py-3 pr-4 text-right">Edge</th>
+                    <th className="hidden py-3 pl-2 sm:table-cell">Team</th>
+                    <th className="py-3 pr-2 text-right sm:pr-4">Vegas FPts</th>
+                    <th className="hidden py-3 pr-4 text-right sm:table-cell">Edge</th>
                   </tr>
                 </thead>
                 <tbody>
                   {freeAgents.map((p, idx) => (
                     <tr key={p.playerId} className="border-t border-zinc-800/60">
-                      <td className="py-2 pl-4 text-right font-mono text-zinc-500">
+                      <td className="py-2 pl-2 text-right font-mono text-zinc-500 sm:pl-4">
                         {idx + 1}
                       </td>
-                      <td className="py-2 pl-4 font-medium">{p.name}</td>
+                      <td className="py-2 pl-2 font-medium sm:pl-4">{p.name}</td>
                       <td className="py-2 pl-2">
                         <span
                           className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[p.position]}`}
@@ -656,13 +656,13 @@ export default async function LeagueAnalysisPage({
                           {p.position}
                         </span>
                       </td>
-                      <td className="py-2 pl-2 font-mono text-xs text-zinc-400">
+                      <td className="hidden py-2 pl-2 font-mono text-xs text-zinc-400 sm:table-cell">
                         {p.team}
                       </td>
-                      <td className="py-2 pr-4 text-right font-mono font-semibold tabular-nums">
+                      <td className="py-2 pr-2 text-right font-mono font-semibold tabular-nums sm:pr-4">
                         {p.fantasyPoints[scoring].toFixed(1)}
                       </td>
-                      <td className="py-2 pr-4 text-right font-mono text-xs tabular-nums text-zinc-400">
+                      <td className="hidden py-2 pr-4 text-right font-mono text-xs tabular-nums text-zinc-400 sm:table-cell">
                         {p.vbd[scoring] > 0 ? "+" : ""}
                         {p.vbd[scoring].toFixed(1)}
                       </td>
@@ -676,7 +676,7 @@ export default async function LeagueAnalysisPage({
 
         {/* Per-team rosters */}
         <div className="space-y-3">
-          <div className="mb-3 flex items-baseline justify-between">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
               Rosters
             </h3>
@@ -693,10 +693,12 @@ export default async function LeagueAnalysisPage({
               key={t.rosterId}
               className="group rounded-lg border border-zinc-800 bg-zinc-900 open:bg-zinc-900/60"
             >
-              <summary className="flex cursor-pointer items-center gap-4 px-4 py-3 transition hover:bg-zinc-800/30">
-                <span className="font-medium">{t.teamName}</span>
-                <span className="text-xs text-zinc-500">{t.ownerName}</span>
-                <span className="ml-auto font-mono text-xs text-zinc-400">
+              <summary className="flex cursor-pointer flex-col gap-1 px-3 py-3 transition hover:bg-zinc-800/30 sm:flex-row sm:items-center sm:gap-4 sm:px-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-medium">{t.teamName}</span>
+                  <span className="text-xs text-zinc-500">{t.ownerName}</span>
+                </div>
+                <span className="font-mono text-xs text-zinc-400 sm:ml-auto">
                   Vegas {t.vegasFpts.toFixed(1)} ·{" "}
                   {t.avgAge != null
                     ? `avg age ${t.avgAge.toFixed(1)}`
@@ -704,7 +706,7 @@ export default async function LeagueAnalysisPage({
                   · coverage {t.coverage.matched}/{t.coverage.total}
                 </span>
               </summary>
-              <div className="px-4 pb-4">
+              <div className="px-3 pb-4 sm:px-4">
                 <PlayerTable players={t.starters} label="Starters" scoring={scoring} />
                 {t.bench.length > 0 && (
                   <PlayerTable players={t.bench} label="Bench" scoring={scoring} />
@@ -749,7 +751,7 @@ function PositionCell({
           ? "text-zinc-400"
           : "text-rose-300";
   return (
-    <td className="py-2.5 pr-4 text-right font-mono font-semibold tabular-nums">
+    <td className="py-2.5 pr-2 text-right font-mono font-semibold tabular-nums sm:pr-4">
       <span className={className}>{value.toFixed(1)}</span>
     </td>
   );
@@ -774,12 +776,12 @@ function PlayerTable({
           <tr className="text-left">
             <th className="py-1">Player</th>
             <th className="py-1">Pos</th>
-            <th className="py-1">Team</th>
-            <th className="py-1 text-right">Age</th>
+            <th className="hidden py-1 sm:table-cell">Team</th>
+            <th className="hidden py-1 text-right sm:table-cell">Age</th>
             <th className="py-1 text-right">Vegas FPts</th>
-            <th className="py-1 text-right">Edge</th>
-            <th className="py-1 text-right">ESPN ADP</th>
-            <th className="py-1 text-right">FP ADP</th>
+            <th className="hidden py-1 text-right sm:table-cell">Edge</th>
+            <th className="hidden py-1 text-right sm:table-cell">ESPN ADP</th>
+            <th className="hidden py-1 text-right sm:table-cell">FP ADP</th>
             <th className="py-1 text-right">Council</th>
           </tr>
         </thead>
@@ -810,8 +812,8 @@ function PlayerTable({
                   <span className="text-[10px] text-zinc-600">—</span>
                 )}
               </td>
-              <td className="py-1 font-mono text-zinc-500">{p.team ?? "—"}</td>
-              <td className="py-1 text-right font-mono tabular-nums">
+              <td className="hidden py-1 font-mono text-zinc-500 sm:table-cell">{p.team ?? "—"}</td>
+              <td className="hidden py-1 text-right font-mono tabular-nums sm:table-cell">
                 {p.age != null ? (
                   <span
                     className={
@@ -833,13 +835,13 @@ function PlayerTable({
                   ? p.projection.fantasyPoints[scoring].toFixed(1)
                   : "—"}
               </td>
-              <td className="py-1 text-right font-mono tabular-nums text-zinc-400">
+              <td className="hidden py-1 text-right font-mono tabular-nums text-zinc-400 sm:table-cell">
                 {p.projection ? p.projection.vbd[scoring].toFixed(1) : "—"}
               </td>
-              <td className="py-1 text-right font-mono tabular-nums text-zinc-400">
+              <td className="hidden py-1 text-right font-mono tabular-nums text-zinc-400 sm:table-cell">
                 {p.espnAdp != null ? p.espnAdp.toFixed(1) : "—"}
               </td>
-              <td className="py-1 text-right font-mono tabular-nums text-zinc-400">
+              <td className="hidden py-1 text-right font-mono tabular-nums text-zinc-400 sm:table-cell">
                 {p.fpAdp != null ? p.fpAdp.toFixed(1) : "—"}
               </td>
               <td className="py-1 text-right font-mono tabular-nums text-zinc-400">

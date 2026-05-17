@@ -87,11 +87,11 @@ export default async function TradePage() {
   const players = await loadAllPlayers();
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
         <Header />
         <div className="mb-4 space-y-1">
-          <h2 className="text-2xl font-semibold">Trade Calculator</h2>
-          <p className="text-sm text-zinc-400">
+          <h2 className="text-xl font-semibold sm:text-2xl">Trade Calculator</h2>
+          <p className="text-xs text-zinc-400 sm:text-sm">
             Add players to each side. See whether the trade is fair through
             four lenses: Vegas season points, ESPN ADP, FantasyPros ADP, and
             the Council Consensus.

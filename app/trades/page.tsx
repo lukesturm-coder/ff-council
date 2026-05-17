@@ -161,19 +161,19 @@ export default async function TradesIndexPage({
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
         <Header />
 
-        <div className="mb-4 flex items-baseline justify-between border-b border-zinc-800 pb-3">
+        <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Trade Court</h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
               Submit a fantasy trade. The council weighs in. Consensus emerges.
             </p>
           </div>
           <Link
             href="/trades/new"
-            className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/20 px-3 py-1.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30"
+            className="inline-flex items-center justify-center gap-1.5 self-start rounded-md bg-emerald-500/20 px-3 py-1.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 sm:self-auto"
           >
             <Send className="h-3.5 w-3.5" />
             Submit a trade
@@ -181,7 +181,7 @@ export default async function TradesIndexPage({
         </div>
 
         {/* Filters + sort */}
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+        <div className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto text-xs sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <FilterDropdown
             label="Sort"
             options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
@@ -209,7 +209,7 @@ export default async function TradesIndexPage({
             param="league"
             otherParams={{ sort: sortMode, scoring: scoringFilter }}
           />
-          <span className="ml-auto text-zinc-500">
+          <span className="ml-auto shrink-0 text-zinc-500">
             {rows.length} trade{rows.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -245,7 +245,7 @@ function FilterDropdown({
 }) {
   // Simple link-based filter — each option is its own URL.
   return (
-    <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
+    <div className="flex shrink-0 items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
       <span className="px-1.5 text-xs uppercase tracking-wider text-zinc-500">
         {label}
       </span>
@@ -291,22 +291,22 @@ function TradeListCard({ trade }: { trade: TradeListRow }) {
   return (
     <Link
       href={`/trades/${trade.id}`}
-      className="block rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition hover:border-zinc-700 hover:bg-zinc-900/60"
+      className="block rounded-lg border border-zinc-800 bg-zinc-900 p-3 transition hover:border-zinc-700 hover:bg-zinc-900/60 sm:p-4"
     >
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
+      <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
         <SidePreview side={trade.side_a} accent="rose" />
         <div className="flex items-center justify-center text-xs text-zinc-500">
           ↔
         </div>
         <SidePreview side={trade.side_b} accent="sky" />
-        <div className="flex flex-col items-end justify-center gap-1 text-xs">
+        <div className="col-span-3 flex flex-row items-center justify-between gap-1 border-t border-zinc-800 pt-2 text-xs md:col-span-1 md:flex-col md:items-end md:justify-center md:border-t-0 md:pt-0">
           <span className="font-medium text-zinc-200">{verdict}</span>
           <span className="text-zinc-500">
             {total} vote{total === 1 ? "" : "s"}
           </span>
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-3 text-xs text-zinc-500">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
         <span>{trade.league_type}</span>
         <span>·</span>
         <span>{trade.scoring}</span>

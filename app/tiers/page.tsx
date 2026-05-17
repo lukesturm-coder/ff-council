@@ -125,11 +125,11 @@ export default async function TiersPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
         <Header />
 
         <div className="mb-4 border-b border-zinc-800 pb-3">
-          <h2 className="text-2xl font-semibold">Tiers</h2>
+          <h2 className="text-xl font-semibold sm:text-2xl">Tiers</h2>
           <p className="mt-1 text-sm text-zinc-400">
             Players grouped into <span className="text-zinc-200">S / A / B / C / D</span>{" "}
             tiers based on natural cliffs in Vegas-projected fantasy points.
@@ -159,53 +159,53 @@ export default async function TiersPage() {
                       key={letter}
                       className={`rounded-lg border bg-zinc-900 ${style.row}`}
                     >
-                      <div className="flex items-center gap-3 border-b border-zinc-800/40 px-4 py-2.5">
+                      <div className="flex items-center gap-2 border-b border-zinc-800/40 px-3 py-2.5 sm:gap-3 sm:px-4">
                         <span
-                          className={`inline-flex h-7 w-7 items-center justify-center rounded font-mono text-sm font-bold ring-1 ring-inset ${style.badge}`}
+                          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded font-mono text-sm font-bold ring-1 ring-inset ${style.badge}`}
                         >
                           {letter}
                         </span>
                         <span className="text-sm font-medium text-zinc-200">
                           Tier {letter}
                         </span>
-                        <span className="text-xs text-zinc-500">
+                        <span className="hidden text-xs text-zinc-500 sm:inline">
                           · {style.label}
                         </span>
-                        <span className="ml-auto text-xs text-zinc-500">
-                          {players.length} player
-                          {players.length === 1 ? "" : "s"} ·{" "}
+                        <span className="ml-auto text-right text-xs text-zinc-500">
+                          {players.length}p ·{" "}
                           {players[0].fantasyPoints.PPR.toFixed(0)}–
-                          {players[players.length - 1].fantasyPoints.PPR.toFixed(0)} FPts
+                          {players[players.length - 1].fantasyPoints.PPR.toFixed(0)}
+                          <span className="hidden sm:inline"> FPts</span>
                         </span>
                       </div>
                       <ul className="divide-y divide-zinc-800/40">
                         {players.map((p) => (
                           <li
                             key={p.playerId}
-                            className="flex items-center gap-3 px-4 py-1.5"
+                            className="flex items-center gap-2 px-3 py-1.5 sm:gap-3 sm:px-4"
                           >
-                            <span className="w-8 text-right font-mono text-xs text-zinc-500">
+                            <span className="w-6 shrink-0 text-right font-mono text-xs text-zinc-500 sm:w-8">
                               #{p.rank}
                             </span>
                             <Link
                               href={`/player/${p.playerId}`}
-                              className="font-medium text-zinc-100 hover:text-emerald-300 hover:underline underline-offset-4"
+                              className="truncate font-medium text-zinc-100 hover:text-emerald-300 hover:underline underline-offset-4"
                             >
                               {p.name}
                             </Link>
                             <span
-                              className={`inline-flex rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[p.position]}`}
+                              className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[p.position]}`}
                             >
                               {p.position}
                             </span>
-                            <span className="font-mono text-xs text-zinc-400">
+                            <span className="hidden font-mono text-xs text-zinc-400 sm:inline">
                               {p.team}
                             </span>
-                            <span className="ml-auto font-mono text-sm tabular-nums text-zinc-300">
+                            <span className="ml-auto shrink-0 font-mono text-sm tabular-nums text-zinc-300">
                               {p.fantasyPoints.PPR.toFixed(1)}
-                              <span className="ml-1 text-xs text-zinc-500">FPts</span>
+                              <span className="ml-1 hidden text-xs text-zinc-500 sm:inline">FPts</span>
                             </span>
-                            <span className="w-16 text-right font-mono text-xs tabular-nums text-zinc-500">
+                            <span className="hidden w-16 shrink-0 text-right font-mono text-xs tabular-nums text-zinc-500 sm:inline">
                               {p.vbd.PPR > 0 ? "+" : ""}
                               {p.vbd.PPR.toFixed(1)} Edge
                             </span>

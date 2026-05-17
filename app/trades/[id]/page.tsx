@@ -56,9 +56,9 @@ export default async function TradeDetailPage({
   if (!trade) {
     return (
       <main className="min-h-screen bg-zinc-950 text-zinc-100">
-        <div className="mx-auto max-w-3xl px-6 py-6">
+        <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
           <Header />
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-6 text-center">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-center sm:p-6">
             <p className="text-sm text-zinc-400">Trade not found.</p>
             <Link
               href="/trades"
@@ -98,10 +98,10 @@ export default async function TradeDetailPage({
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
         <Header />
 
-        <div className="mb-4 flex items-baseline justify-between border-b border-zinc-800 pb-3">
+        <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Trade Review</h2>
             <p className="mt-1 text-xs text-zinc-500">
@@ -122,13 +122,13 @@ export default async function TradeDetailPage({
         </div>
 
         {/* The two sides */}
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TradeSide label="Team A receives" side={t.side_a} accent="rose" />
           <TradeSide label="Team B receives" side={t.side_b} accent="sky" />
         </div>
 
         {/* Crowd consensus */}
-        <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+        <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
             FF Council Verdict
           </h3>
@@ -217,15 +217,15 @@ function TradeSide({
 }) {
   const color = accent === "rose" ? "text-rose-300" : "text-sky-300";
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-4">
       <p className={`text-xs uppercase tracking-wider ${color}`}>{label}</p>
       <div className="mt-3 space-y-2">
         {side.players.map((p, idx) => (
           <div
             key={`p-${idx}`}
-            className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
+            className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-2.5 py-2 text-sm sm:px-3"
           >
-            <span className="flex-1 font-medium text-zinc-100">{p.name}</span>
+            <span className="flex-1 truncate font-medium text-zinc-100">{p.name}</span>
             {p.position && POSITION_STYLES[p.position] && (
               <span
                 className={`inline-flex rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[p.position]}`}
@@ -241,7 +241,7 @@ function TradeSide({
         {side.picks.map((pk, idx) => (
           <div
             key={`pk-${idx}`}
-            className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
+            className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-2.5 py-2 text-sm sm:px-3"
           >
             <span className="flex-1 font-mono text-zinc-100">
               {pk.year} {pk.round}

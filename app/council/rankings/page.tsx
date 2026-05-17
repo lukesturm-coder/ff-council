@@ -74,11 +74,11 @@ export default async function MyRankingsPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
         <Header />
         <div className="mb-4 space-y-1">
-          <h2 className="text-xl font-semibold">My Rankings</h2>
-          <p className="text-sm text-zinc-400">
+          <h2 className="text-lg font-semibold sm:text-xl">My Rankings</h2>
+          <p className="text-xs text-zinc-400 sm:text-sm">
             Submit your personal draft rankings. They start pre-populated from
             the Vegas Edge baseline — use the ↑/↓ buttons to bump players up
             or down. Click <span className="text-zinc-200">Save</span> when

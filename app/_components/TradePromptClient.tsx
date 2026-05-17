@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
-import VotingPanel from "@/app/trades/[id]/VotingPanel";
+import { castVote } from "@/app/trades/[id]/actions";
 
 const DISMISS_KEY = "ffc-trade-prompt-dismissed-until";
 const VOTED_KEY = "ffc-trade-prompt-voted-trades";
@@ -84,6 +84,8 @@ export default function TradePromptClient({
 }) {
   const [open, setOpen] = useState(false);
   const [voted, setVoted] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   // Decide whether to open on mount (client-only so SSR can render without
   // flicker, then the modal pops in once we read localStorage).
@@ -143,17 +145,38 @@ export default function TradePromptClient({
     setTimeout(() => setOpen(false), 3500);
   }
 
+  function quickVote(winner: "A" | "B" | "EVEN") {
+    if (!tradeId || pending) return;
+    setError(null);
+    startTransition(async () => {
+      // Home-modal verdict is one-tap: no magnitude picker. Non-Even defaults
+      // to slight_edge so the data model stays consistent; users can refine on
+      // the full /trades/[id] page if they want to dial in the magnitude.
+      const res = await castVote({
+        tradeId,
+        winner,
+        fairnessTier: winner === "EVEN" ? "balanced" : "slight_edge",
+        fairnessLean: winner === "EVEN" ? null : winner,
+      });
+      if (res.ok) {
+        markVoted();
+      } else {
+        setError(res.error);
+      }
+    });
+  }
+
   if (!open || !tradeId || !sideA || !sideB) return null;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6"
       onClick={dismiss}
     >
       <div
-        className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-700/60 bg-zinc-900 p-6 shadow-2xl shadow-emerald-900/10"
+        className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-700/60 bg-zinc-900 p-4 shadow-2xl shadow-emerald-900/10 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -193,7 +216,36 @@ export default function TradePromptClient({
               <SidePanel label="Team B" side={sideB} accent="text-sky-300" />
             </div>
 
-            <VotingPanel tradeId={tradeId} myVote={null} onVoted={markVoted} />
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+              <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Who won? · tap to lock in your verdict
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <VerdictButton
+                  onClick={() => quickVote("A")}
+                  color="rose"
+                  label="Team A"
+                  disabled={pending}
+                />
+                <VerdictButton
+                  onClick={() => quickVote("EVEN")}
+                  color="zinc"
+                  label="Even"
+                  disabled={pending}
+                />
+                <VerdictButton
+                  onClick={() => quickVote("B")}
+                  color="sky"
+                  label="Team B"
+                  disabled={pending}
+                />
+              </div>
+              {error && (
+                <p className="mt-3 text-center text-xs text-rose-300">
+                  Error: {error}
+                </p>
+              )}
+            </div>
 
             <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-500">
               <button
@@ -208,12 +260,43 @@ export default function TradePromptClient({
                 className="underline-offset-4 hover:text-zinc-300 hover:underline"
                 onClick={() => setOpen(false)}
               >
-                See full trade →
+                <span className="sm:hidden">Full trade →</span>
+                <span className="hidden sm:inline">Add detail on full trade page →</span>
               </Link>
             </div>
           </>
         )}
       </div>
     </div>
+  );
+}
+
+function VerdictButton({
+  onClick,
+  color,
+  label,
+  disabled,
+}: {
+  onClick: () => void;
+  color: "rose" | "sky" | "zinc";
+  label: string;
+  disabled?: boolean;
+}) {
+  const colorClasses: Record<typeof color, string> = {
+    rose:
+      "border-rose-500/30 bg-rose-500/5 text-rose-200 hover:border-rose-500/60 hover:bg-rose-500/15",
+    sky: "border-sky-500/30 bg-sky-500/5 text-sky-200 hover:border-sky-500/60 hover:bg-sky-500/15",
+    zinc:
+      "border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-800",
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`rounded-md border px-3 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${colorClasses[color]}`}
+    >
+      {label}
+    </button>
   );
 }

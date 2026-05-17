@@ -91,11 +91,11 @@ export default async function CouncilConsensusPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
         <Header />
         <div className="mb-4 space-y-1">
-          <h2 className="text-xl font-semibold">Council Consensus</h2>
-          <p className="text-sm text-zinc-400">
+          <h2 className="text-lg font-semibold sm:text-xl">Council Consensus</h2>
+          <p className="text-xs text-zinc-400 sm:text-sm">
             Average ranking across {totalApprovedMembers} council member
             {totalApprovedMembers === 1 ? "" : "s"}&apos; current submissions.
             The <span className="text-zinc-200">spread</span> column shows

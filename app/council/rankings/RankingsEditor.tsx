@@ -126,8 +126,8 @@ export default function RankingsEditor({
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
           <span className="px-2 text-xs uppercase tracking-wider text-zinc-500">
             Scoring
           </span>
@@ -138,7 +138,7 @@ export default function RankingsEditor({
                 setScoring(s);
                 setSaveMsg(null);
               }}
-              className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+              className={`rounded-md px-2 py-1 text-sm font-medium transition sm:px-3 ${
                 scoring === s
                   ? "bg-emerald-500/20 text-emerald-200"
                   : "text-zinc-400 hover:text-zinc-200"
@@ -154,14 +154,15 @@ export default function RankingsEditor({
 
         <button
           onClick={resetToVegas}
-          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
           title="Reset to Vegas Edge baseline for this scoring system"
         >
           <RotateCcw className="h-3.5 w-3.5" />
-          Reset to Vegas baseline
+          <span className="hidden sm:inline">Reset to Vegas baseline</span>
+          <span className="sm:hidden">Reset</span>
         </button>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 sm:ml-auto sm:w-auto">
           {saveMsg && (
             <span
               className={`inline-flex items-center gap-1.5 text-xs ${
@@ -179,7 +180,7 @@ export default function RankingsEditor({
           <button
             onClick={handleSave}
             disabled={saving || !dirty[scoring]}
-            className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/20 px-3 py-1.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-emerald-500/20 px-3 py-1.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50 sm:ml-0"
           >
             <Save className="h-3.5 w-3.5" />
             {saving
@@ -224,20 +225,20 @@ export default function RankingsEditor({
 
           <DragOverlay>
             {activePlayer ? (
-              <div className="flex items-center gap-3 rounded-md border border-emerald-500/40 bg-zinc-800 px-4 py-2 shadow-2xl">
+              <div className="flex items-center gap-2 rounded-md border border-emerald-500/40 bg-zinc-800 px-3 py-2 shadow-2xl sm:gap-3 sm:px-4">
                 <GripVertical className="h-4 w-4 text-emerald-300" />
-                <span className="w-8 text-right font-mono text-sm text-zinc-400">
+                <span className="w-6 text-right font-mono text-sm text-zinc-400 sm:w-8">
                   {currentOrder.indexOf(activePlayer.playerId) + 1}
                 </span>
-                <span className="font-medium text-zinc-100">
+                <span className="truncate font-medium text-zinc-100">
                   {activePlayer.name}
                 </span>
                 <span
-                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[activePlayer.position]}`}
+                  className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[activePlayer.position]}`}
                 >
                   {activePlayer.position}
                 </span>
-                <span className="font-mono text-xs text-zinc-400">
+                <span className="hidden font-mono text-xs text-zinc-400 sm:inline">
                   {activePlayer.team}
                 </span>
               </div>
@@ -287,17 +288,17 @@ function SortableRow({
     <li
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 bg-zinc-900 px-4 py-2 transition hover:bg-zinc-800/30"
+      className="flex items-center gap-2 bg-zinc-900 px-2 py-1 transition hover:bg-zinc-800/30 sm:gap-3 sm:px-4 sm:py-2"
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab touch-none text-zinc-600 transition hover:text-zinc-300 active:cursor-grabbing"
+        className="flex h-11 w-11 cursor-grab touch-none items-center justify-center text-zinc-600 transition hover:text-zinc-300 active:cursor-grabbing sm:h-auto sm:w-auto"
         aria-label={`Drag ${player.name}`}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-5 w-5 sm:h-4 sm:w-4" />
       </button>
-      <span className="w-8 text-right font-mono text-sm text-zinc-500">
+      <span className="w-6 text-right font-mono text-sm text-zinc-500 sm:w-8">
         {rank}
       </span>
       <span className="min-w-0 flex-1 truncate font-medium text-zinc-100">
@@ -308,11 +309,11 @@ function SortableRow({
       >
         {player.position}
       </span>
-      <span className="w-10 font-mono text-xs text-zinc-400">
+      <span className="hidden w-10 font-mono text-xs text-zinc-400 sm:inline">
         {player.team}
       </span>
       <span
-        className="w-14 text-right font-mono text-xs"
+        className="w-10 text-right font-mono text-xs sm:w-14"
         title={`Vegas rank: ${rank - delta}`}
       >
         {delta === 0 ? (
