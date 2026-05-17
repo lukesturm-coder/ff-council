@@ -7,7 +7,7 @@ import TradeListClient, { type TradeCardData } from "./TradeListClient";
 export const metadata: Metadata = {
   title: "Trade Court · FF Council",
   description:
-    "Crowdsourced fantasy football trade verdicts — submit a trade and let the council weigh in on who wins.",
+    "Submit a trade. The council weighs in. Consensus emerges from the crowd.",
 };
 
 type SidePlayer = {

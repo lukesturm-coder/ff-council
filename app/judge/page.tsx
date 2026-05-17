@@ -114,10 +114,12 @@ export default async function JudgePage({
   if (scoringFilter !== "all") tradeQuery = tradeQuery.eq("scoring", scoringFilter);
 
   // Verdict scoring lives in the context jsonb — filter in memory after fetch.
+  // actual_winner_player_id / resolved_at pulled through so downstream
+  // surfaces can flag already-graded scenarios; not displayed here yet.
   const verdictQuery = supabase
     .from("verdict_scenarios")
     .select(
-      "id, scenario_type, candidates, roster, context, notes, image_url, created_at",
+      "id, scenario_type, candidates, roster, context, notes, image_url, created_at, actual_winner_player_id, resolved_at",
     )
     .order("created_at", { ascending: false })
     .limit(80);

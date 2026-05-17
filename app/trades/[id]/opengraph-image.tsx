@@ -57,9 +57,13 @@ function fallback() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
           backgroundColor: "#09090b",
+          // Stronger radial emerald glow centered on the card so the
+          // fallback feels intentional rather than empty.
           backgroundImage:
-            "radial-gradient(ellipse at top, rgba(16,185,129,0.18), transparent 60%)",
+            "radial-gradient(ellipse at center, rgba(16,185,129,0.22), transparent 65%)",
           padding: "60px",
           color: "#fafafa",
           fontFamily:
@@ -70,8 +74,9 @@ function fallback() {
           style={{
             display: "flex",
             color: "#34d399",
-            fontSize: 36,
-            letterSpacing: 4,
+            fontSize: 120,
+            letterSpacing: 10,
+            fontWeight: 800,
             fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
           }}
         >
@@ -80,21 +85,21 @@ function fallback() {
         <div
           style={{
             display: "flex",
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 72,
-            fontWeight: 700,
+            marginTop: 24,
+            fontSize: 40,
+            color: "#d4d4d8",
+            fontWeight: 500,
           }}
         >
-          Crowd-judged trades
+          Crowdsourced fantasy verdicts. Tap in.
         </div>
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-end",
+            marginTop: 36,
             color: "#71717a",
-            fontSize: 28,
+            fontSize: 24,
+            letterSpacing: 2,
           }}
         >
           ffcouncil.com

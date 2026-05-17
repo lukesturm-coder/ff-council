@@ -112,6 +112,11 @@ type ScenarioRow = {
   notes: string | null;
   image_url: string | null;
   created_at: string;
+  // Outcome columns added in migration 014 — set by admins via
+  // /council/admin/verdicts once the real-world result is known.
+  actual_winner_player_id: number | null;
+  resolved_at: string | null;
+  resolution_note: string | null;
 };
 
 export default async function VerdictDetailPage({
@@ -129,7 +134,7 @@ export default async function VerdictDetailPage({
     supabase
       .from("verdict_scenarios")
       .select(
-        "id, asker_id, scenario_type, candidates, roster, context, notes, image_url, created_at",
+        "id, asker_id, scenario_type, candidates, roster, context, notes, image_url, created_at, actual_winner_player_id, resolved_at, resolution_note",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -292,6 +297,95 @@ export default async function VerdictDetailPage({
             </div>
           </div>
         )}
+
+        {/* Result callout — only shown once an admin has graded the scenario.
+           Sits above the consensus block so the page reads top-down:
+           "Here's what actually happened" → "Here's what the council said"
+           → "Vote yourself". Frame turns emerald when the council's top
+           pick matched reality, amber when it didn't. */}
+        {scenario.actual_winner_player_id != null && (() => {
+          const winner = candidates.find(
+            (c) => c.player_id === scenario.actual_winner_player_id,
+          );
+          const councilTop =
+            topPlayerId != null
+              ? candidates.find((c) => c.player_id === topPlayerId) ?? null
+              : null;
+          const councilPct =
+            total > 0 && topPlayerId != null
+              ? Math.round((topCount / total) * 100)
+              : 0;
+          // "Right" means the council had a top pick AND it matched the
+          // actual winner. No votes → no judgement is rendered (we just
+          // show the result and the actual winner).
+          const councilWasRight =
+            councilTop != null &&
+            councilTop.player_id === scenario.actual_winner_player_id;
+          const resolvedRel = scenario.resolved_at
+            ? relativeTimeShort(scenario.resolved_at)
+            : "";
+          const frame = councilWasRight
+            ? "border-emerald-500/40 bg-gradient-to-b from-emerald-500/15 to-zinc-900"
+            : councilTop != null
+              ? "border-amber-500/40 bg-gradient-to-b from-amber-500/15 to-zinc-900"
+              : "border-emerald-500/30 bg-gradient-to-b from-emerald-500/10 to-zinc-900";
+          return (
+            <div className={`mb-4 overflow-hidden rounded-lg border p-4 sm:p-5 ${frame}`}>
+              <div className="flex items-baseline justify-between gap-2">
+                <h3
+                  className={`text-sm font-semibold uppercase tracking-wider ${
+                    councilTop != null && !councilWasRight
+                      ? "text-amber-300/90"
+                      : "text-emerald-300/90"
+                  }`}
+                >
+                  Result
+                </h3>
+                {resolvedRel && (
+                  <span className="text-xs text-zinc-500">
+                    marked {resolvedRel}
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-lg font-bold text-zinc-100 sm:text-xl">
+                {winner?.name ?? `Player #${scenario.actual_winner_player_id}`}
+                {winner?.position ? (
+                  <span className="ml-2 align-middle text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    {winner.position}
+                    {winner.team ? ` · ${winner.team}` : ""}
+                  </span>
+                ) : null}
+              </p>
+              {councilTop && total > 0 ? (
+                <p className="mt-1 text-sm text-zinc-300">
+                  Council voted{" "}
+                  <span className="font-semibold text-zinc-100">
+                    {councilTop.name}
+                  </span>{" "}
+                  ({councilPct}% agreement) →{" "}
+                  {councilWasRight ? (
+                    <span className="font-semibold text-emerald-300">
+                      Council was right ✓
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-amber-300">
+                      Council was wrong ✗
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-zinc-400">
+                  No council votes were cast on this one.
+                </p>
+              )}
+              {scenario.resolution_note && (
+                <p className="mt-2 whitespace-pre-wrap text-xs text-zinc-400">
+                  {scenario.resolution_note}
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* FF Council Verdict — aggregate counts + top pick highlight.
            The headline result is the anchor of the page when votes exist,

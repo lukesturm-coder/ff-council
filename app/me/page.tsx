@@ -125,7 +125,9 @@ export default async function MePage() {
       .limit(50),
     supabase
       .from("verdict_scenarios")
-      .select("id, scenario_type, candidates, notes, created_at")
+      .select(
+        "id, scenario_type, candidates, notes, created_at, actual_winner_player_id, resolved_at",
+      )
       .eq("asker_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50),
@@ -262,6 +264,63 @@ export default async function MePage() {
     }
   }
 
+  // ----- Council accuracy (global, across all resolved verdicts) -----
+  // Pulled separately from user-specific data because it's a site-wide stat:
+  // "of every scenario an admin has graded, how often did the council's
+  // top pick match the actual winner?". Skipped silently when there are
+  // zero resolved scenarios so the card just doesn't render.
+  let councilAccuracyPct: number | null = null;
+  let resolvedCount = 0;
+  let councilCorrect = 0;
+  {
+    const { data: resolvedScenarios } = await supabase
+      .from("verdict_scenarios")
+      .select("id, actual_winner_player_id")
+      .not("actual_winner_player_id", "is", null)
+      .limit(500);
+    const resolvedRows = (resolvedScenarios ?? []) as {
+      id: string;
+      actual_winner_player_id: number;
+    }[];
+    if (resolvedRows.length > 0) {
+      const resolvedIds = resolvedRows.map((r) => r.id);
+      const { data: allVotes } = await supabase
+        .from("verdict_votes")
+        .select("scenario_id, pick_player_id")
+        .in("scenario_id", resolvedIds);
+      const tallies = new Map<string, Map<number, number>>();
+      for (const v of allVotes ?? []) {
+        const sid = v.scenario_id as string;
+        const pid = v.pick_player_id as number;
+        const t = tallies.get(sid) ?? new Map<number, number>();
+        t.set(pid, (t.get(pid) ?? 0) + 1);
+        tallies.set(sid, t);
+      }
+      for (const r of resolvedRows) {
+        const t = tallies.get(r.id);
+        if (!t || t.size === 0) continue;
+        // Only count scenarios where the council actually voted (otherwise
+        // "did the council's top pick match reality?" is undefined).
+        let topPid: number | null = null;
+        let topCount = -1;
+        t.forEach((c, pid) => {
+          if (c > topCount) {
+            topCount = c;
+            topPid = pid;
+          }
+        });
+        if (topPid == null) continue;
+        resolvedCount += 1;
+        if (topPid === r.actual_winner_player_id) councilCorrect += 1;
+      }
+      if (resolvedCount > 0) {
+        councilAccuracyPct = Math.round(
+          (councilCorrect / resolvedCount) * 100,
+        );
+      }
+    }
+  }
+
   // ----- Aggregate stats -----
   const totalVotes = myTradeVotes.length + myVerdictVotes.length;
   const totalScenarios = myTrades.length + myVerdicts.length;
@@ -371,8 +430,17 @@ export default async function MePage() {
           </p>
         </div>
 
-        {/* Hero stats */}
-        <section className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+        {/* Hero stats — 4 cards always, with an optional 5th "Council
+           accuracy" card once we have resolved verdicts. The accuracy
+           stat is the retention moat: vote vs. consensus is the daily
+           hook, vote vs. reality is the long-term trust. */}
+        <section
+          className={`mb-6 grid grid-cols-2 gap-2 sm:gap-3 ${
+            councilAccuracyPct != null
+              ? "sm:grid-cols-3 lg:grid-cols-5"
+              : "sm:grid-cols-4"
+          }`}
+        >
           <StatCard
             label="Votes cast"
             value={totalVotes.toLocaleString()}
@@ -391,6 +459,13 @@ export default async function MePage() {
                 : "Vote on a few to see this"
             }
           />
+          {councilAccuracyPct != null && (
+            <StatCard
+              label="Council accuracy"
+              value={`${councilAccuracyPct}%`}
+              sub={`${councilCorrect}/${resolvedCount} resolved calls correct`}
+            />
+          )}
           <StatCard
             label="Scenarios posted"
             value={totalScenarios.toLocaleString()}

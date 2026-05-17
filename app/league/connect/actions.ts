@@ -120,3 +120,37 @@ export async function linkSleeperLeague(
 
   return { ok: true };
 }
+
+/**
+ * Nulls out all three sleeper_* columns on the signed-in member's row,
+ * fully unlinking the Sleeper account. Distinct from `linkSleeperLeague`,
+ * which only swaps the league/user. Used by the Step 3 "Disconnect" link.
+ */
+export async function disconnectSleeper(): Promise<LinkResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, error: "You need to sign in first." };
+  }
+
+  const { error } = await supabase
+    .from("council_members")
+    .update({
+      sleeper_username: null,
+      sleeper_user_id: null,
+      sleeper_league_id: null,
+    })
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/league/connect");
+  revalidatePath("/me");
+  revalidatePath("/league");
+
+  return { ok: true };
+}

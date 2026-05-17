@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { SleeperLeague, SleeperUser } from "@/lib/sleeper";
-import { linkSleeperLeague, lookupSleeperUser } from "./actions";
+import {
+  disconnectSleeper,
+  linkSleeperLeague,
+  lookupSleeperUser,
+} from "./actions";
 
 export type ConnectedLeagueSummary = {
   leagueId: string;
@@ -35,7 +39,16 @@ export default function LeagueConnectClient({
   );
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [disconnectNotice, setDisconnectNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Clear the "Disconnected." confirmation ~2s after it's shown so the
+  // username step looks clean if the user lingers.
+  useEffect(() => {
+    if (!disconnectNotice) return;
+    const t = setTimeout(() => setDisconnectNotice(null), 2000);
+    return () => clearTimeout(t);
+  }, [disconnectNotice]);
 
   function handleLookup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,12 +64,9 @@ export default function LeagueConnectClient({
         setError(result.error);
         return;
       }
-      if (result.leagues.length === 0) {
-        setError(
-          `Found "${result.user.display_name}" on Sleeper, but they aren't in any ${season} NFL leagues yet.`,
-        );
-        return;
-      }
+      // Empty leagues → still advance to the picker step; LeaguePicker
+      // renders a helpful empty-state card explaining the late-summer
+      // draft cycle and pointing at the manual flows.
       setStep({ kind: "pick-league", user: result.user, leagues: result.leagues });
     });
   }
@@ -123,6 +133,7 @@ export default function LeagueConnectClient({
             onPick={handlePick}
             isPending={isPending}
             error={error}
+            season={season}
           />
         )}
 
@@ -133,8 +144,28 @@ export default function LeagueConnectClient({
               setError(null);
               setStep({ kind: "username" });
             }}
+            onDisconnect={() => {
+              setError(null);
+              startTransition(async () => {
+                const result = await disconnectSleeper();
+                if (!result.ok) {
+                  setError(result.error);
+                  return;
+                }
+                setDisconnectNotice("Disconnected.");
+                setUsername("");
+                setStep({ kind: "username" });
+              });
+            }}
+            isPending={isPending}
           />
         )}
+
+        {step.kind === "username" && disconnectNotice ? (
+          <p className="mt-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300">
+            {disconnectNotice}
+          </p>
+        ) : null}
       </div>
     </main>
   );
@@ -245,6 +276,7 @@ function LeaguePicker({
   onPick,
   isPending,
   error,
+  season,
 }: {
   user: SleeperUser;
   leagues: SleeperLeague[];
@@ -252,6 +284,7 @@ function LeaguePicker({
   onPick: (league: SleeperLeague, user: SleeperUser) => void;
   isPending: boolean;
   error: string | null;
+  season: string;
 }) {
   return (
     <div className="space-y-4">
@@ -279,6 +312,32 @@ function LeaguePicker({
           {error}
         </p>
       )}
+
+      {leagues.length === 0 ? (
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 sm:p-6">
+          <p className="text-sm font-semibold text-emerald-200">
+            No {season} leagues yet.
+          </p>
+          <p className="mt-2 text-xs text-zinc-300 sm:text-sm">
+            Drafts kick off in late August — come back then, or use the
+            manual flow at{" "}
+            <Link
+              href="/trades/new"
+              className="text-emerald-300 underline-offset-4 hover:underline"
+            >
+              /trades/new
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/verdict/new"
+              className="text-emerald-300 underline-offset-4 hover:underline"
+            >
+              /verdict/new
+            </Link>
+            .
+          </p>
+        </div>
+      ) : null}
 
       <ul className="space-y-2">
         {leagues.map((league) => {
@@ -320,9 +379,13 @@ function LeaguePicker({
 function ConnectedView({
   summary,
   onChangeLeague,
+  onDisconnect,
+  isPending,
 }: {
   summary: ConnectedLeagueSummary;
   onChangeLeague: () => void;
+  onDisconnect: () => void;
+  isPending: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -403,13 +466,24 @@ function ConnectedView({
         </ul>
       </div>
 
-      <button
-        type="button"
-        onClick={onChangeLeague}
-        className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
-      >
-        Connect a different league
-      </button>
+      <div className="flex flex-col items-start gap-1">
+        <button
+          type="button"
+          onClick={onChangeLeague}
+          disabled={isPending}
+          className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline disabled:opacity-50"
+        >
+          Connect a different league
+        </button>
+        <button
+          type="button"
+          onClick={onDisconnect}
+          disabled={isPending}
+          className="text-xs text-rose-300 underline-offset-4 hover:text-rose-200 hover:underline disabled:opacity-50"
+        >
+          Disconnect Sleeper
+        </button>
+      </div>
     </div>
   );
 }
