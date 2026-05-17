@@ -71,15 +71,7 @@ function pickLabel(p: SidePick): string {
   }`;
 }
 
-export default function JudgeFeed({
-  feed,
-  // signedIn is unused for now — kept so the page can pass it along if we
-  // later want to gate features (e.g. streak tracking server-side).
-  signedIn: _signedIn,
-}: {
-  feed: JudgeItem[];
-  signedIn: boolean;
-}) {
+export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
   const [index, setIndex] = useState(0);
   const [judged, setJudged] = useState(0);
   const [skipped, setSkipped] = useState(0);

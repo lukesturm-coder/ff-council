@@ -168,7 +168,7 @@ export default async function JudgePage() {
             </div>
           </div>
         ) : (
-          <JudgeFeed feed={feed} signedIn={Boolean(user)} />
+          <JudgeFeed feed={feed} />
         )}
       </div>
     </main>
