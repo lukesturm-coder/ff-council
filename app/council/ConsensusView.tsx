@@ -6,6 +6,7 @@ import type {
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
+import { TIER_STYLES, computeTiersByPlayer } from "@/lib/tiers";
 
 export type ConsensusRow = {
   playerId: number;
@@ -43,6 +44,11 @@ export default function ConsensusView({
 }) {
   const [scoring, setScoring] = useState<ScoringSystem>("PPR");
   const [position, setPosition] = useState<PositionFilter>("ALL");
+
+  const tierByPlayer = useMemo(
+    () => computeTiersByPlayer(projections, scoring),
+    [projections, scoring],
+  );
 
   const view = useMemo(() => {
     const rows = consensusByScoring[scoring];
@@ -102,6 +108,12 @@ export default function ConsensusView({
               <th className="w-10 py-3 pl-2 text-right sm:w-12 sm:pl-4">#</th>
               <th className="py-3 pl-2 sm:pl-4">Player</th>
               <th className="py-3 pl-2">Pos</th>
+              <th
+                className="py-3 pl-2"
+                title="Per-position tier (S/A/B/C/D) based on natural FPts gaps in Vegas projections"
+              >
+                Tier
+              </th>
               <th className="hidden py-3 pl-2 sm:table-cell">Team</th>
               <th className="py-3 pr-2 text-right sm:pr-4" title="Average council rank">
                 Avg
@@ -164,6 +176,21 @@ export default function ConsensusView({
                     >
                       {row.position}
                     </span>
+                  </td>
+                  <td className="py-3 pl-2">
+                    {(() => {
+                      const tier = tierByPlayer.get(row.playerId);
+                      return tier ? (
+                        <span
+                          className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset ${TIER_STYLES[tier].badge}`}
+                          title={`Tier ${tier} · ${TIER_STYLES[tier].label}`}
+                        >
+                          {tier}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-600">—</span>
+                      );
+                    })()}
                   </td>
                   <td className="hidden py-3 pl-2 font-mono text-xs text-zinc-400 sm:table-cell">
                     {row.team}
