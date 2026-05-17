@@ -10,7 +10,6 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import Header from "@/app/_components/Header";
 import ConsensusView, { type ConsensusRow } from "./ConsensusView";
 
 async function loadProjections(): Promise<PlayerProjection[]> {
@@ -92,7 +91,6 @@ export default async function CouncilConsensusPage() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
-        <Header />
         <div className="mb-4 space-y-1">
           <h2 className="text-lg font-semibold sm:text-xl">Council Consensus</h2>
           <p className="text-xs text-zinc-400 sm:text-sm">

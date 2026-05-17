@@ -9,7 +9,6 @@ import type {
   FuturesResponse,
   PlayerProjection,
 } from "@/lib/types";
-import Header from "@/app/_components/Header";
 import MockDraft, { type DraftablePlayer } from "./MockDraft";
 
 async function loadDraftablePlayers(): Promise<DraftablePlayer[]> {
@@ -36,7 +35,6 @@ export default async function DraftPage() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
-        <Header />
 
         <div className="mb-4 border-b border-zinc-800 pb-3">
           <h2 className="text-xl font-semibold sm:text-2xl">Mock Draft</h2>

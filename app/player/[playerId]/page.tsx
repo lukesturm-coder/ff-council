@@ -13,7 +13,6 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import Header from "@/app/_components/Header";
 import SourceComparisonChart from "./SourceComparisonChart";
 
 const POSITION_STYLES: Record<FantasyPosition, string> = {
@@ -149,7 +148,6 @@ export default async function PlayerDetailPage({
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
-        <Header />
 
         {/* Player header */}
         <div className="mb-4 flex flex-col gap-2 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-0">

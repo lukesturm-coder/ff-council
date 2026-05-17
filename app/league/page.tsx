@@ -4,7 +4,6 @@ import {
   fetchLeague,
   looksLikeSleeperLeagueId,
 } from "@/lib/sleeper";
-import Header from "@/app/_components/Header";
 
 async function analyzeLeague(formData: FormData) {
   "use server";
@@ -35,7 +34,6 @@ export default async function LeagueEntryPage({
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-3xl px-6 py-6">
-        <Header />
 
         <div className="space-y-8">
           <div>

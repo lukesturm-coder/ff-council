@@ -21,7 +21,6 @@ import {
   type SleeperUser,
 } from "@/lib/sleeper";
 import { PlayerMatcher } from "@/lib/player-matching";
-import Header from "@/app/_components/Header";
 
 const FANTASY_POSITIONS: ReadonlySet<string> = new Set(["QB", "RB", "WR", "TE"]);
 
@@ -193,7 +192,6 @@ export default async function ComparePage({
     return (
       <main className="min-h-screen bg-zinc-950 text-zinc-100">
         <div className="mx-auto max-w-3xl px-6 py-6">
-          <Header />
           <p className="text-rose-300">
             Couldn&apos;t load league:{" "}
             {err instanceof Error ? err.message : String(err)}
@@ -310,7 +308,6 @@ export default async function ComparePage({
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-7xl px-6 py-6">
-        <Header />
 
         <div className="mb-4 flex items-baseline justify-between border-b border-zinc-800 pb-3">
           <div>

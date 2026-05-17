@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import Header from "@/app/_components/Header";
 import TradeListClient, { type TradeCardData } from "./TradeListClient";
 
 type SidePlayer = {
@@ -137,7 +136,6 @@ export default async function TradesIndexPage({
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
-        <Header />
 
         <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>

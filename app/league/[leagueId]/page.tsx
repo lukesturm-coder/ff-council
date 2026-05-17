@@ -20,7 +20,6 @@ import {
   type SleeperUser,
 } from "@/lib/sleeper";
 import { PlayerMatcher } from "@/lib/player-matching";
-import Header from "@/app/_components/Header";
 
 /** Compute integer age from an ISO date string like "1998-02-09". */
 function ageFromBirthDate(birthDate: string | null | undefined): number | null {
@@ -253,7 +252,6 @@ export default async function LeagueAnalysisPage({
     return (
       <main className="min-h-screen bg-zinc-950 text-zinc-100">
         <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
-          <Header />
           <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-rose-200">
               Couldn&apos;t load that league
@@ -455,7 +453,6 @@ export default async function LeagueAnalysisPage({
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
-        <Header />
 
         <div className="mb-4 flex flex-col gap-2 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-0">
           <div>

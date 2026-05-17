@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import Header from "@/app/_components/Header";
 import ShareButton from "./ShareButton";
 import VotingPanel from "./VotingPanel";
 
@@ -57,7 +56,6 @@ export default async function TradeDetailPage({
     return (
       <main className="min-h-screen bg-zinc-950 text-zinc-100">
         <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
-          <Header />
           <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-center sm:p-6">
             <p className="text-sm text-zinc-400">Trade not found.</p>
             <Link
@@ -99,7 +97,6 @@ export default async function TradeDetailPage({
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
-        <Header />
 
         <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>

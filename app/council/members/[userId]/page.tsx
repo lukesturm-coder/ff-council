@@ -13,7 +13,6 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import Header from "@/app/_components/Header";
 
 const POSITION_STYLES: Record<FantasyPosition, string> = {
   QB: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
@@ -102,7 +101,6 @@ export default async function CouncilMemberProfilePage({
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-6 py-6">
-        <Header />
 
         <div className="mb-4 border-b border-zinc-800 pb-3">
           <div className="flex items-baseline gap-3">
