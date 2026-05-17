@@ -275,7 +275,7 @@ export default function RankingsTable({
             <tr>
               <th className="w-8 py-3 pl-3"></th>
               <th className="w-10 py-3 pr-2 text-right">#</th>
-              <th className="min-w-[140px] py-3 pl-2 whitespace-nowrap sm:min-w-[200px] sm:pl-4">Player</th>
+              <th className="sticky left-0 z-20 min-w-[140px] border-r border-zinc-800/60 bg-zinc-900 py-3 pl-2 whitespace-nowrap sm:min-w-[200px] sm:pl-4">Player</th>
               <th className="w-12 py-3 text-center">Pos</th>
               <SortHeader
                 label="Vegas"
@@ -313,7 +313,6 @@ export default function RankingsTable({
                   title="FantasyPros consensus ADP — aggregated across multiple platforms"
                   active={sortKey}
                   onClick={toggleSort}
-                  extraClass="hidden sm:table-cell"
                 />
               )}
               {EXTRA_PLATFORMS.map((pf) => (
@@ -325,7 +324,6 @@ export default function RankingsTable({
                   title={`${pf.label} ${pf.type === "adp" ? "ADP" : "editorial rank"} (mock data until 2026 preseason rankings publish)`}
                   active={sortKey}
                   onClick={toggleSort}
-                  extraClass="hidden sm:table-cell"
                 />
               ))}
               <SortHeader
@@ -489,7 +487,7 @@ function RankRow({
     <>
       <tr
         onClick={onToggle}
-        className="cursor-pointer border-t border-zinc-800/60 transition hover:bg-zinc-800/40"
+        className="group cursor-pointer border-t border-zinc-800/60 transition hover:bg-zinc-800/40"
       >
         <td className="pl-3 align-middle">
           {isExpanded ? (
@@ -499,7 +497,7 @@ function RankRow({
           )}
         </td>
         <td className="py-3 pr-2 text-right font-mono text-zinc-500">{rank}</td>
-        <td className="py-3 pl-2 font-medium whitespace-nowrap sm:pl-4">
+        <td className="sticky left-0 z-10 border-r border-zinc-800/60 bg-zinc-900 py-3 pl-2 font-medium whitespace-nowrap group-hover:bg-zinc-800 sm:pl-4">
           <Link
             href={`/player/${player.playerId}`}
             onClick={(e) => e.stopPropagation()}
@@ -549,7 +547,7 @@ function RankRow({
           </td>
         )}
         {hasFp && (
-          <td className="hidden py-3 text-center font-mono text-xs tabular-nums sm:table-cell">
+          <td className="py-3 text-center font-mono text-xs tabular-nums">
             <span className="text-teal-400">
               {fpRank != null ? fpRank.toFixed(0) : "—"}
             </span>
@@ -558,7 +556,7 @@ function RankRow({
         {extraRanks.map((r, idx) => (
           <td
             key={EXTRA_PLATFORMS[idx].key}
-            className="hidden py-3 text-center font-mono text-xs tabular-nums sm:table-cell"
+            className="py-3 text-center font-mono text-xs tabular-nums"
           >
             <span className={EXTRA_PLATFORMS[idx].accent}>
               {r != null ? r.toFixed(0) : "—"}
