@@ -6,7 +6,8 @@ import type {
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
-import { TIER_STYLES, computeTiersByPlayer } from "@/lib/tiers";
+import Link from "next/link";
+import { computeTiersByPlayer, tierStyle, tierDescription } from "@/lib/tiers";
 
 export type ConsensusRow = {
   playerId: number;
@@ -110,7 +111,7 @@ export default function ConsensusView({
               <th className="py-3 pl-2">Pos</th>
               <th
                 className="py-3 pl-2"
-                title="Per-position tier (S/A/B/C/D) based on natural FPts gaps in Vegas projections"
+                title="Numbered per-position tier from Jenks natural-breaks clustering on Vegas FPts. Click to open the Tiers chart."
               >
                 Tier
               </th>
@@ -179,16 +180,17 @@ export default function ConsensusView({
                   </td>
                   <td className="py-3 pl-2">
                     {(() => {
-                      const tier = tierByPlayer.get(row.playerId);
-                      return tier ? (
-                        <span
-                          className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset ${TIER_STYLES[tier].badge}`}
-                          title={`Tier ${tier} · ${TIER_STYLES[tier].label}`}
+                      const info = tierByPlayer.get(row.playerId);
+                      if (!info) return <span className="text-xs text-zinc-600">—</span>;
+                      const style = tierStyle(info.tier);
+                      return (
+                        <Link
+                          href={`/tiers?scoring=${scoring}&source=council`}
+                          className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset transition hover:brightness-125 ${style.badge}`}
+                          title={tierDescription(info.tier, info.position, info.tierSize)}
                         >
-                          {tier}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-zinc-600">—</span>
+                          T{info.tier}
+                        </Link>
                       );
                     })()}
                   </td>

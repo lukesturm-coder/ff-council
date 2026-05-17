@@ -26,10 +26,12 @@ import type {
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
+import Link from "next/link";
 import {
-  TIER_STYLES,
   computeTiersByPlayer,
-  type TierLetter,
+  tierStyle,
+  tierDescription,
+  type TierInfo,
 } from "@/lib/tiers";
 import { saveRanking } from "./actions";
 
@@ -228,6 +230,7 @@ export default function RankingsEditor({
                     rank={idx + 1}
                     delta={delta}
                     tier={tierByPlayer.get(playerId) ?? null}
+                    scoring={scoring}
                   />
                 );
               })}
@@ -275,12 +278,14 @@ function SortableRow({
   rank,
   delta,
   tier,
+  scoring,
 }: {
   playerId: number;
   player: PlayerProjection;
   rank: number;
   delta: number;
-  tier: TierLetter | null;
+  tier: TierInfo | null;
+  scoring: ScoringSystem;
 }) {
   const {
     attributes,
@@ -323,12 +328,13 @@ function SortableRow({
         {player.position}
       </span>
       {tier && (
-        <span
-          className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset ${TIER_STYLES[tier].badge}`}
-          title={`Tier ${tier} · ${TIER_STYLES[tier].label}`}
+        <Link
+          href={`/tiers?scoring=${scoring}&source=vegas`}
+          className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset transition hover:brightness-125 ${tierStyle(tier.tier).badge}`}
+          title={tierDescription(tier.tier, tier.position, tier.tierSize)}
         >
-          {tier}
-        </span>
+          T{tier.tier}
+        </Link>
       )}
       <span className="hidden w-10 font-mono text-xs text-zinc-400 sm:inline">
         {player.team}
