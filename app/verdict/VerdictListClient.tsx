@@ -36,6 +36,7 @@ export type VerdictCardData = {
   roster: VerdictPlayer[] | null;
   context: VerdictContext;
   notes: string | null;
+  image_url: string | null;
   created_at: string;
   tally: VerdictTally;
 };
@@ -321,6 +322,17 @@ function VerdictModal({
                 {metaLine.join(" · ")}
               </p>
             </div>
+
+            {scenario.image_url && (
+              <div className="mb-4 overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={scenario.image_url}
+                  alt="Scenario screenshot"
+                  className="w-full object-contain"
+                />
+              </div>
+            )}
 
             {scenario.notes && (
               <div className="mb-4 rounded-md border border-zinc-800 bg-zinc-950/60 p-3 text-sm text-zinc-300">

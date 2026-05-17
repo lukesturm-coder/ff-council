@@ -49,7 +49,7 @@ export default async function VerdictIndexPage({
   let query = supabase
     .from("verdict_scenarios")
     .select(
-      "id, asker_id, scenario_type, candidates, roster, context, notes, created_at",
+      "id, asker_id, scenario_type, candidates, roster, context, notes, image_url, created_at",
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -99,6 +99,7 @@ export default async function VerdictIndexPage({
     roster: (s.roster as VerdictPlayer[] | null) ?? null,
     context: (s.context as VerdictContext) ?? {},
     notes: (s.notes as string | null) ?? null,
+    image_url: (s.image_url as string | null) ?? null,
     created_at: s.created_at as string,
     tally: tallyByScenario.get(s.id as string) ?? { byPlayer: {}, total: 0 },
   }));

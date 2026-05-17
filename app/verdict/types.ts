@@ -28,6 +28,7 @@ export type VerdictScenario = {
   roster: VerdictPlayer[] | null;
   context: VerdictContext;
   notes: string | null;
+  image_url: string | null;
   created_at: string;
 };
 

@@ -71,6 +71,7 @@ type ScenarioRow = {
   roster: VerdictPlayer[] | null;
   context: VerdictContext | null;
   notes: string | null;
+  image_url: string | null;
   created_at: string;
 };
 
@@ -89,7 +90,7 @@ export default async function VerdictDetailPage({
     supabase
       .from("verdict_scenarios")
       .select(
-        "id, asker_id, scenario_type, candidates, roster, context, notes, created_at",
+        "id, asker_id, scenario_type, candidates, roster, context, notes, image_url, created_at",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -195,6 +196,18 @@ export default async function VerdictDetailPage({
           <p className="mb-4 text-xs text-zinc-400 sm:text-sm">
             {ctxBits.join(" · ")}
           </p>
+        )}
+
+        {/* Screenshot */}
+        {scenario.image_url && (
+          <div className="mb-4 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={scenario.image_url}
+              alt="Scenario screenshot"
+              className="w-full object-contain"
+            />
+          </div>
         )}
 
         {/* Notes */}

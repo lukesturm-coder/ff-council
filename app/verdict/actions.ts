@@ -25,6 +25,7 @@ export async function submitVerdict(formData: FormData) {
   const rosterRaw = String(formData.get("roster") ?? "[]");
   const contextRaw = String(formData.get("context") ?? "{}");
   const notes = String(formData.get("notes") ?? "").trim();
+  const imageUrl = String(formData.get("image_url") ?? "").trim();
 
   let candidates: VerdictPlayer[] = [];
   let roster: VerdictPlayer[] = [];
@@ -52,6 +53,7 @@ export async function submitVerdict(formData: FormData) {
       roster: roster.length > 0 ? roster : null,
       context,
       notes: notes || null,
+      image_url: imageUrl || null,
     })
     .select("id")
     .single();
