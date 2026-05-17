@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 const PRIMARY_NAV = [
   { href: "/", label: "Rankings" },
   { href: "/trades", label: "Trade Court" },
-  { href: "/draft", label: "Mock Draft" },
   { href: "/trade", label: "Trade Calc" },
+  { href: "/draft", label: "Mock Draft" },
   { href: "/league", label: "League Analyzer" },
   { href: "/council", label: "Council" },
 ];
