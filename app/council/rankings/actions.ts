@@ -25,7 +25,7 @@ export async function saveRanking(input: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/login");
+    redirect("/login?next=/council/rankings");
   }
 
   const { scoring, ranks } = input;

@@ -1,9 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   fetchLeague,
   looksLikeSleeperLeagueId,
 } from "@/lib/sleeper";
+
+export const metadata: Metadata = {
+  title: "League Analyzer · FF Council",
+  description:
+    "Plug in your Sleeper league to see roster strength, positional gaps, and council-derived trade targets.",
+};
 
 async function analyzeLeague(formData: FormData) {
   "use server";

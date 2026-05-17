@@ -56,7 +56,7 @@ export default async function MyRankingsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/council/rankings");
 
   const [projections, existing] = await Promise.all([
     loadProjections(),

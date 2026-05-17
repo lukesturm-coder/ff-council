@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +10,12 @@ import type {
   VerdictContext,
   VerdictScenarioType,
 } from "./types";
+
+export const metadata: Metadata = {
+  title: "Verdict · FF Council",
+  description:
+    "Submit your toughest start/sit and draft calls — get a fast council ruling on the tough call.",
+};
 
 // =====================================================================
 // /verdict — list page for the crowdsourced "tough call" tool.

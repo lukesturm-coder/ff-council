@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   projectionsFromFutures,
   type PlayerRosterEntry,
@@ -249,6 +250,13 @@ export default async function LeagueAnalysisPage({
         loadCouncilLookup(scoring),
       ]);
   } catch (err) {
+    // If Sleeper specifically returned 404, the league doesn't exist — surface
+    // Next's not-found page instead of a "try again" panel. Other network
+    // errors (rate limit, DNS, 500s) still render the retry panel.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("→ 404")) {
+      notFound();
+    }
     return (
       <main className="min-h-screen bg-zinc-950 text-zinc-100">
         <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
@@ -256,9 +264,7 @@ export default async function LeagueAnalysisPage({
             <h2 className="text-lg font-semibold text-rose-200">
               Couldn&apos;t load that league
             </h2>
-            <p className="mt-2 text-sm text-rose-200/80">
-              {err instanceof Error ? err.message : String(err)}
-            </p>
+            <p className="mt-2 text-sm text-rose-200/80">{msg}</p>
             <Link
               href="/league"
               className="mt-4 inline-block text-xs underline-offset-4 hover:underline"

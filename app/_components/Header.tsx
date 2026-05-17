@@ -39,12 +39,12 @@ export default async function Header() {
   if (isAdmin) navItems.push({ href: "/council/admin", label: "Admin" });
 
   return (
-    <header className="border-b border-zinc-800">
+    <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60">
       <div className="mx-auto max-w-7xl px-3 pb-3 pt-3 sm:px-6">
         {/* Top row: logo + auth. Stays a single row at all widths. */}
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="shrink-0">
-            <h1 className="whitespace-nowrap font-mono text-xl font-bold tracking-tight text-emerald-400">
+            <h1 className="whitespace-nowrap font-mono text-xl font-bold tracking-tight text-emerald-400 sm:text-2xl md:text-[1.625rem]">
               FF COUNCIL
             </h1>
           </Link>
@@ -52,6 +52,7 @@ export default async function Header() {
           {/* On md+, nav lives between logo and auth so the layout stays compact. */}
           <PrimaryNav
             items={navItems}
+            variant="desktop"
             className="hidden min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-sm md:flex"
           />
 
@@ -60,7 +61,7 @@ export default async function Header() {
               <>
                 <Link
                   href="/me"
-                  className="text-xs text-zinc-400 transition hover:text-emerald-300"
+                  className="text-sm text-zinc-200 transition hover:text-emerald-300"
                   title={user.email ?? ""}
                 >
                   {displayName}
@@ -88,7 +89,8 @@ export default async function Header() {
         {/* Mobile-only nav: horizontal scroll so all links stay on one row. */}
         <PrimaryNav
           items={navItems}
-          className="mt-2 -mx-2 flex items-center gap-x-4 overflow-x-auto px-2 text-sm md:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          variant="mobile"
+          className="mt-2 -mx-2 flex items-center gap-x-5 overflow-x-auto px-2 text-sm md:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         />
       </div>
     </header>

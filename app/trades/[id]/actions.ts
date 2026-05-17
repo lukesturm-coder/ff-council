@@ -89,5 +89,7 @@ export async function castVote(input: VoteInput): Promise<VoteResult> {
   revalidatePath(`/trades/${input.tradeId}`);
   revalidatePath("/trades");
   revalidatePath("/");
+  revalidatePath("/judge");
+  revalidatePath("/me");
   return { ok: true, consensus: { total, topWinner, topPct, counts } };
 }

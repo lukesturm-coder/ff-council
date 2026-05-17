@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import type { Metadata } from "next";
 import {
   projectionsFromFutures,
   type PlayerRosterEntry,
@@ -11,6 +12,12 @@ import type {
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 import ConsensusView, { type ConsensusRow } from "./ConsensusView";
+
+export const metadata: Metadata = {
+  title: "Council Consensus · FF Council",
+  description:
+    "The aggregated council rankings — average rank, agreement, and dispersion across every council member.",
+};
 
 async function loadProjections(): Promise<PlayerProjection[]> {
   const dataDir = path.join(process.cwd(), "data");

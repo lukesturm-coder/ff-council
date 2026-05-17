@@ -25,7 +25,14 @@ export async function submitVerdict(formData: FormData) {
   const rosterRaw = String(formData.get("roster") ?? "[]");
   const contextRaw = String(formData.get("context") ?? "{}");
   const notes = String(formData.get("notes") ?? "").trim();
-  const imageUrl = String(formData.get("image_url") ?? "").trim();
+  let imageUrl = String(formData.get("image_url") ?? "").trim();
+  // image_url comes from a hidden form input, so a hostile client could post
+  // any URL. Only accept URLs served from our own Supabase storage origin;
+  // anything else gets cleared (the empty-string → null guard below handles it).
+  const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  if (imageUrl && (!supabaseOrigin || !imageUrl.startsWith(supabaseOrigin))) {
+    imageUrl = "";
+  }
 
   let candidates: VerdictPlayer[] = [];
   let roster: VerdictPlayer[] = [];
@@ -131,5 +138,7 @@ export async function castVerdictVote(
 
   revalidatePath(`/verdict/${input.scenarioId}`);
   revalidatePath("/verdict");
+  revalidatePath("/judge");
+  revalidatePath("/me");
   return { ok: true, consensus: { total, topPlayerId, topPct, byPlayer } };
 }

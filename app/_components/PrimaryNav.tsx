@@ -23,9 +23,11 @@ function pickActiveHref(pathname: string, items: NavItem[]): string | null {
 export default function PrimaryNav({
   items,
   className,
+  variant = "desktop",
 }: {
   items: NavItem[];
   className?: string;
+  variant?: "desktop" | "mobile";
 }) {
   const pathname = usePathname();
   const activeHref = pickActiveHref(pathname, items);
@@ -33,15 +35,26 @@ export default function PrimaryNav({
     <nav className={className}>
       {items.map((item) => {
         const isActive = item.href === activeHref;
+        // Desktop gets a real "current tab" underline; mobile (horizontal
+        // scroller) stays color-only. We add a transparent border on inactive
+        // desktop links so the active border doesn't shift adjacent items.
+        const desktopBase =
+          "border-b-2 border-transparent -mb-px pb-0.5";
+        const desktopActive = "border-emerald-400 text-emerald-400";
+        const desktopInactive = "text-zinc-400 hover:text-zinc-100";
+        const mobileActive = "text-emerald-400";
+        const mobileInactive = "text-zinc-400 hover:text-zinc-100";
+        const classes =
+          variant === "desktop"
+            ? `${desktopBase} ${isActive ? desktopActive : desktopInactive}`
+            : isActive
+              ? mobileActive
+              : mobileInactive;
         return (
           <Link
             key={item.href}
             href={item.href}
-            className={`whitespace-nowrap transition ${
-              isActive
-                ? "font-medium text-emerald-400"
-                : "text-zinc-400 hover:text-zinc-100"
-            }`}
+            className={`whitespace-nowrap py-2 transition ${classes}`}
           >
             {item.label}
           </Link>

@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import JudgeFeed, { type JudgeItem } from "./JudgeFeed";
+
+export const metadata: Metadata = {
+  title: "Judge mode · FF Council",
+  description:
+    "Rapid-fire voting on the council's open trades and verdicts — swipe through unvoted calls one tap at a time.",
+};
 
 // /judge — single-card full-screen feed of unvoted scenarios. Mixed feed
 // of trade-court trades + verdict scenarios, ordered by recency. Optimised
@@ -120,39 +127,54 @@ export default async function JudgePage({
   // is selected). When sorting by controversial/popular we also need the
   // raw vote rows aggregated in-memory.
   const needsVoteCounts = sortMode !== "recent";
-  const [
-    tradeRes,
-    verdictRes,
-    myTradeVotesRes,
-    myVerdictVotesRes,
-    tradeVotesRes,
-    verdictVotesRes,
-  ] = await Promise.all([
-    typeFilter === "verdicts"
-      ? Promise.resolve({ data: [] as TradeRow[] })
-      : tradeQuery,
-    typeFilter === "trades"
-      ? Promise.resolve({ data: [] as VerdictRow[] })
-      : verdictQuery,
-    user
+
+  // Phase 1: feed rows + the signed-in user's votes (used to hide already-
+  // voted items from the feed).
+  const [tradeRes, verdictRes, myTradeVotesRes, myVerdictVotesRes] =
+    await Promise.all([
+      typeFilter === "verdicts"
+        ? Promise.resolve({ data: [] as TradeRow[] })
+        : tradeQuery,
+      typeFilter === "trades"
+        ? Promise.resolve({ data: [] as VerdictRow[] })
+        : verdictQuery,
+      user
+        ? supabase
+            .from("trade_votes")
+            .select("trade_id")
+            .eq("voter_id", user.id)
+        : Promise.resolve({ data: [] as { trade_id: string }[] }),
+      user
+        ? supabase
+            .from("verdict_votes")
+            .select("scenario_id")
+            .eq("voter_id", user.id)
+        : Promise.resolve({ data: [] as { scenario_id: string }[] }),
+    ]);
+
+  // Phase 2: vote rows scoped to JUST the IDs in this feed. Previously this
+  // selected every vote row in the DB when sort mode wasn't "recent" — fine
+  // at 100 votes, catastrophic at 100k.
+  const tradeIdsForVotes = ((tradeRes.data ?? []) as TradeRow[]).map(
+    (t) => t.id,
+  );
+  const verdictIdsForVotes = ((verdictRes.data ?? []) as VerdictRow[]).map(
+    (v) => v.id,
+  );
+  const [tradeVotesRes, verdictVotesRes] = await Promise.all([
+    needsVoteCounts && typeFilter !== "verdicts" && tradeIdsForVotes.length > 0
       ? supabase
           .from("trade_votes")
-          .select("trade_id")
-          .eq("voter_id", user.id)
-      : Promise.resolve({ data: [] as { trade_id: string }[] }),
-    user
-      ? supabase
-          .from("verdict_votes")
-          .select("scenario_id")
-          .eq("voter_id", user.id)
-      : Promise.resolve({ data: [] as { scenario_id: string }[] }),
-    needsVoteCounts && typeFilter !== "verdicts"
-      ? supabase.from("trade_votes").select("trade_id, winner")
+          .select("trade_id, winner")
+          .in("trade_id", tradeIdsForVotes)
       : Promise.resolve({
           data: [] as { trade_id: string; winner: "A" | "B" | "EVEN" }[],
         }),
-    needsVoteCounts && typeFilter !== "trades"
-      ? supabase.from("verdict_votes").select("scenario_id, pick_player_id")
+    needsVoteCounts && typeFilter !== "trades" && verdictIdsForVotes.length > 0
+      ? supabase
+          .from("verdict_votes")
+          .select("scenario_id, pick_player_id")
+          .in("scenario_id", verdictIdsForVotes)
       : Promise.resolve({
           data: [] as { scenario_id: string; pick_player_id: number }[],
         }),

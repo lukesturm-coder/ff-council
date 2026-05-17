@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +10,59 @@ import type {
   VerdictContext,
   VerdictScenarioType,
 } from "../types";
+
+const SITE_URL = "https://www.ffcouncil.com";
+
+// Build SEO/OG metadata from the scenario summary line — same one-liner
+// that shows above the page ("Round 4 — RB needed" / "Start/Sit — Week 7
+// FLEX") so social previews match what the user clicks into.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("verdict_scenarios")
+    .select("scenario_type, context, candidates")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!data) {
+    const title = "Verdict · FF Council";
+    return {
+      title,
+      description: "Crowdsourced fantasy football verdict.",
+      openGraph: {
+        title,
+        description: "Crowdsourced fantasy football verdict.",
+        url: `${SITE_URL}/verdict/${id}`,
+      },
+    };
+  }
+
+  const summary = scenarioSummary(
+    data.scenario_type as VerdictScenarioType,
+    (data.context ?? {}) as VerdictContext,
+  );
+  const candidates = (data.candidates ?? []) as VerdictPlayer[];
+  const names = candidates.map((c) => c.name).filter(Boolean);
+  const candidateLine =
+    names.length > 0 ? names.join(" vs ") : "Cast your verdict";
+  const title = `${summary} · FF Council`;
+  const description = `${candidateLine} — get the council's ruling.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}/verdict/${id}`,
+    },
+  };
+}
 
 // =====================================================================
 // /verdict/[id] — deep-link detail page for a single scenario.

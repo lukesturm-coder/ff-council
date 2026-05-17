@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import TradeListClient, { type TradeCardData } from "./TradeListClient";
+
+export const metadata: Metadata = {
+  title: "Trade Court · FF Council",
+  description:
+    "Crowdsourced fantasy football trade verdicts — submit a trade and let the council weigh in on who wins.",
+};
 
 type SidePlayer = {
   player_id: number | null;

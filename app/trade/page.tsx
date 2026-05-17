@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import type { Metadata } from "next";
 import {
   projectionsFromFutures,
   type PlayerRosterEntry,
@@ -14,6 +15,12 @@ import { createClient } from "@/lib/supabase/server";
 import TradeCalculator, {
   type TradePlayer,
 } from "./TradeCalculator";
+
+export const metadata: Metadata = {
+  title: "Trade Calc · FF Council",
+  description:
+    "Side-by-side trade valuation using council consensus, Vegas-derived projections, and platform ADP.",
+};
 
 async function loadProjections(): Promise<PlayerProjection[]> {
   const dataDir = path.join(process.cwd(), "data");

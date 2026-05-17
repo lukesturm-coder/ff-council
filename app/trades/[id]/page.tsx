@@ -1,7 +1,50 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ShareButton from "./ShareButton";
 import VotingPanel from "./VotingPanel";
+
+const SITE_URL = "https://www.ffcouncil.com";
+
+// Build SEO/OG metadata from the trade vote summary. Title shows the
+// council split when votes exist ("Team A 73% vs Team B 27%"), otherwise
+// falls back to the open-call copy.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: summary } = await supabase
+    .from("trade_vote_summary")
+    .select("total_votes, votes_a, votes_b, votes_even")
+    .eq("trade_id", id)
+    .maybeSingle();
+
+  const total = (summary?.total_votes as number | undefined) ?? 0;
+  let title: string;
+  let description: string;
+  if (total > 0) {
+    const aPct = Math.round(((summary?.votes_a ?? 0) / total) * 100);
+    const bPct = Math.round(((summary?.votes_b ?? 0) / total) * 100);
+    title = `Team A ${aPct}% vs Team B ${bPct}% · FF Council`;
+    description = `Crowdsourced trade verdict from ${total} council vote${
+      total === 1 ? "" : "s"
+    }.`;
+  } else {
+    title = "Open trade · FF Council";
+    description = "Cast your verdict on this trade — the council is open.";
+  }
+
+  const url = `${SITE_URL}/trades/${id}`;
+  return {
+    title,
+    description,
+    openGraph: { title, description, url },
+  };
+}
 
 type SidePlayer = {
   player_id: number | null;
@@ -53,21 +96,7 @@ export default async function TradeDetailPage({
   ]);
 
   if (!trade) {
-    return (
-      <main className="min-h-screen bg-zinc-950 text-zinc-100">
-        <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-center sm:p-6">
-            <p className="text-sm text-zinc-400">Trade not found.</p>
-            <Link
-              href="/trades"
-              className="mt-3 inline-block text-xs text-emerald-300 underline-offset-4 hover:underline"
-            >
-              ← Browse other trades
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
+    notFound();
   }
 
   const t = trade as TradeSubmission;

@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import type { Metadata } from "next";
 import {
   projectionsFromFutures,
   type PlayerRosterEntry,
@@ -10,6 +11,12 @@ import type {
   PlayerProjection,
 } from "@/lib/types";
 import MockDraft, { type DraftablePlayer } from "./MockDraft";
+
+export const metadata: Metadata = {
+  title: "Mock Draft · FF Council",
+  description:
+    "Run a solo mock draft against council-derived rankings and Vegas-fueled projections.",
+};
 
 async function loadDraftablePlayers(): Promise<DraftablePlayer[]> {
   const dataDir = path.join(process.cwd(), "data");
