@@ -81,7 +81,7 @@ export default function VerdictListClient({
 }: {
   scenarios: VerdictCardData[];
 }) {
-  const [open, setOpen] = useState<VerdictCardData | null>(null);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [votedIds, setVotedIds] = useState<Set<string>>(() => new Set());
 
   // Hydrate localStorage state once mounted (avoids SSR mismatch).
@@ -99,6 +99,14 @@ export default function VerdictListClient({
     });
   }
 
+  function openByScenario(s: VerdictCardData) {
+    const idx = scenarios.findIndex((x) => x.id === s.id);
+    if (idx >= 0) setOpenIndex(idx);
+  }
+
+  const openScenario = openIndex != null ? scenarios[openIndex] : null;
+  const hasNext = openIndex != null && openIndex + 1 < scenarios.length;
+
   return (
     <>
       <div className="grid grid-cols-1 gap-3">
@@ -107,17 +115,21 @@ export default function VerdictListClient({
             key={s.id}
             scenario={s}
             voted={votedIds.has(s.id)}
-            onOpen={setOpen}
+            onOpen={openByScenario}
           />
         ))}
       </div>
 
-      {open && (
+      {openScenario && (
         <VerdictModal
-          scenario={open}
-          alreadyVoted={votedIds.has(open.id)}
-          onVoted={() => markVoted(open.id)}
-          onClose={() => setOpen(null)}
+          key={openScenario.id}
+          scenario={openScenario}
+          alreadyVoted={votedIds.has(openScenario.id)}
+          position={(openIndex ?? 0) + 1}
+          total={scenarios.length}
+          onVoted={() => markVoted(openScenario.id)}
+          onClose={() => setOpenIndex(null)}
+          onNext={hasNext ? () => setOpenIndex((openIndex ?? 0) + 1) : null}
         />
       )}
     </>
@@ -239,13 +251,19 @@ function VerdictCardButton({
 function VerdictModal({
   scenario,
   alreadyVoted,
+  position,
+  total,
   onVoted,
   onClose,
+  onNext,
 }: {
   scenario: VerdictCardData;
   alreadyVoted: boolean;
+  position: number;
+  total: number;
   onVoted: () => void;
   onClose: () => void;
+  onNext: (() => void) | null;
 }) {
   const [thanks, setThanks] = useState(false);
 
@@ -262,13 +280,6 @@ function VerdictModal({
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
-
-  // Auto-close ~2.5s after successful vote.
-  useEffect(() => {
-    if (!thanks) return;
-    const t = setTimeout(onClose, 2500);
-    return () => clearTimeout(t);
-  }, [thanks, onClose]);
 
   const ctx = scenario.context;
   const metaLine: string[] = [scenarioLabel(scenario.scenario_type)];
@@ -307,17 +318,44 @@ function VerdictModal({
           <div className="py-10 text-center">
             <h3 className="text-2xl font-bold text-emerald-300">Thanks!</h3>
             <p className="mt-2 text-sm text-zinc-400">
-              Your verdict has been recorded.
+              Verdict {position} of {total} recorded.
             </p>
+            <div className="mt-6 flex flex-col items-center gap-2">
+              {onNext ? (
+                <button
+                  type="button"
+                  onClick={onNext}
+                  className="rounded-md bg-emerald-500/20 px-5 py-2.5 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/30"
+                >
+                  Judge the next one →
+                </button>
+              ) : (
+                <p className="text-sm text-zinc-400">
+                  You&apos;re caught up — that was the last one.
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+              >
+                Done for now
+              </button>
+            </div>
           </div>
         ) : (
           <>
             <div className="mb-4 pr-8">
-              <h3 className="text-xl font-bold text-zinc-100 sm:text-2xl">
-                {scenario.scenario_type === "draft"
-                  ? "Who would you draft?"
-                  : "Who would you start?"}
-              </h3>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-xl font-bold text-zinc-100 sm:text-2xl">
+                  {scenario.scenario_type === "draft"
+                    ? "Who would you draft?"
+                    : "Who would you start?"}
+                </h3>
+                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                  {position} / {total}
+                </span>
+              </div>
               <p className="mt-1 text-xs text-zinc-500">
                 {metaLine.join(" · ")}
               </p>
@@ -387,7 +425,18 @@ function VerdictModal({
               </p>
             )}
 
-            <div className="mt-4 flex items-center justify-end text-xs text-zinc-500">
+            <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-500">
+              {onNext ? (
+                <button
+                  type="button"
+                  onClick={onNext}
+                  className="underline-offset-4 hover:text-zinc-300 hover:underline"
+                >
+                  Skip →
+                </button>
+              ) : (
+                <span />
+              )}
               <Link
                 href={`/verdict/${scenario.id}`}
                 className="underline-offset-4 hover:text-zinc-300 hover:underline"

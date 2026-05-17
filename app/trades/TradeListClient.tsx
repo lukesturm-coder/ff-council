@@ -145,18 +145,35 @@ function CardSidePreview({
 }
 
 export default function TradeListClient({ trades }: { trades: TradeCardData[] }) {
-  const [openTrade, setOpenTrade] = useState<TradeCardData | null>(null);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  function openByTrade(t: TradeCardData) {
+    const idx = trades.findIndex((x) => x.id === t.id);
+    if (idx >= 0) setOpenIndex(idx);
+  }
 
   return (
     <>
       <div className="space-y-3">
         {trades.map((t) => (
-          <TradeListCardButton key={t.id} trade={t} onOpen={setOpenTrade} />
+          <TradeListCardButton key={t.id} trade={t} onOpen={openByTrade} />
         ))}
       </div>
 
-      {openTrade && (
-        <TradeModal trade={openTrade} onClose={() => setOpenTrade(null)} />
+      {openIndex != null && trades[openIndex] && (
+        <TradeModal
+          // key forces a full remount when advancing — clears voted/winner state
+          key={trades[openIndex].id}
+          trade={trades[openIndex]}
+          position={openIndex + 1}
+          total={trades.length}
+          onClose={() => setOpenIndex(null)}
+          onNext={
+            openIndex + 1 < trades.length
+              ? () => setOpenIndex(openIndex + 1)
+              : null
+          }
+        />
       )}
     </>
   );
@@ -164,10 +181,16 @@ export default function TradeListClient({ trades }: { trades: TradeCardData[] })
 
 function TradeModal({
   trade,
+  position,
+  total,
   onClose,
+  onNext,
 }: {
   trade: TradeCardData;
+  position: number;
+  total: number;
   onClose: () => void;
+  onNext: (() => void) | null;
 }) {
   const [voted, setVoted] = useState(false);
   // Winner state lives up here so clicking the Team A / Team B side panel
@@ -188,13 +211,6 @@ function TradeModal({
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
-
-  // Auto-close after a successful vote (match home-modal pattern, ~2.5s).
-  useEffect(() => {
-    if (!voted) return;
-    const t = setTimeout(onClose, 2500);
-    return () => clearTimeout(t);
-  }, [voted, onClose]);
 
   return (
     <div
@@ -220,15 +236,42 @@ function TradeModal({
           <div className="py-10 text-center">
             <h3 className="text-2xl font-bold text-emerald-300">Thanks!</h3>
             <p className="mt-2 text-sm text-zinc-400">
-              Your verdict has been added to the Trade Court.
+              Verdict {position} of {total} recorded.
             </p>
+            <div className="mt-6 flex flex-col items-center gap-2">
+              {onNext ? (
+                <button
+                  type="button"
+                  onClick={onNext}
+                  className="rounded-md bg-emerald-500/20 px-5 py-2.5 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/30"
+                >
+                  Vote on the next one →
+                </button>
+              ) : (
+                <p className="text-sm text-zinc-400">
+                  You&apos;re caught up — that was the last one.
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+              >
+                Done for now
+              </button>
+            </div>
           </div>
         ) : (
           <>
             <div className="mb-4 pr-8">
-              <h3 className="text-xl font-bold text-zinc-100 sm:text-2xl">
-                Your verdict?
-              </h3>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-xl font-bold text-zinc-100 sm:text-2xl">
+                  Your verdict?
+                </h3>
+                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                  {position} / {total}
+                </span>
+              </div>
               <p className="mt-1 text-xs text-zinc-500">
                 {trade.league_type} · {trade.scoring}
               </p>
@@ -268,7 +311,18 @@ function TradeModal({
               onVoted={() => setVoted(true)}
             />
 
-            <div className="mt-4 flex items-center justify-end text-xs text-zinc-500">
+            <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-500">
+              {onNext ? (
+                <button
+                  type="button"
+                  onClick={onNext}
+                  className="underline-offset-4 hover:text-zinc-300 hover:underline"
+                >
+                  Skip →
+                </button>
+              ) : (
+                <span />
+              )}
               <Link
                 href={`/trades/${trade.id}`}
                 className="underline-offset-4 hover:text-zinc-300 hover:underline"
