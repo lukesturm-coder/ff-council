@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { relativeTimeShort } from "@/lib/relative-time";
 import type { FantasyPosition } from "@/lib/types";
 import VerdictVotePanel from "../VerdictVotePanel";
 import ShareButton from "./ShareButton";
@@ -83,22 +84,6 @@ const TYPE_LABEL: Record<VerdictScenarioType, string> = {
   draft: "Draft",
   start_sit: "Start/Sit",
 };
-
-// Compact relative time formatter — keeps the header lean ("3h ago",
-// "2d ago"). Falls back to a date string after a week.
-function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return "";
-  const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
-  if (diffSec < 60) return "just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
 
 // Build a one-line summary for the header — e.g. "Draft pick — RB needed"
 // or "Start/Sit — Week 7 FLEX". Falls back gracefully when fields are
@@ -207,7 +192,7 @@ export default async function VerdictDetailPage({
 
   const summary = scenarioSummary(scenario.scenario_type, context);
   const submittedBy = submitterName ?? "anon";
-  const created = relativeTime(scenario.created_at);
+  const created = relativeTimeShort(scenario.created_at);
 
   // Context line: only render fields that are actually present in the
   // jsonb blob, joined with middle dots.
@@ -289,7 +274,10 @@ export default async function VerdictDetailPage({
                   className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-2.5 py-2 text-sm sm:px-3"
                 >
                   <span
-                    className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[p.position]}`}
+                    className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                      POSITION_STYLES[p.position] ??
+                      "bg-zinc-500/10 text-zinc-300 ring-zinc-500/30"
+                    }`}
                   >
                     {p.position}
                   </span>
@@ -377,7 +365,10 @@ export default async function VerdictDetailPage({
                           />
                           <div className="relative flex items-center gap-2 text-sm">
                             <span
-                              className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[c.position]}`}
+                              className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                                POSITION_STYLES[c.position] ??
+                                "bg-zinc-500/10 text-zinc-300 ring-zinc-500/30"
+                              }`}
                             >
                               {c.position}
                             </span>

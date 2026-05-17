@@ -71,9 +71,7 @@ export default async function PlayerDetailPage({
         .eq("player_id", playerId),
       supabase
         .from("trade_submissions")
-        .select(
-          "id, side_a, side_b, scoring, league_type, created_at, trade_vote_summary(total_votes)",
-        )
+        .select("id, side_a, side_b, scoring, league_type, created_at")
         .order("created_at", { ascending: false })
         .limit(200),
     ]);
@@ -117,8 +115,17 @@ export default async function PlayerDetailPage({
     };
   }
 
-  // Recent trades involving this player
-  const relevantTrades: TradeRow[] = [];
+  // Recent trades involving this player.
+  // Aggregate vote counts directly from trade_votes (the trade_vote_summary
+  // view under-counts anon votes — same bug /me already routes around).
+  const playerTrades: Array<{
+    id: string;
+    side_a: Side;
+    side_b: Side;
+    scoring: string;
+    league_type: string;
+    created_at: string;
+  }> = [];
   for (const t of (allTradesRes.data ?? []) as Array<{
     id: string;
     side_a: Side;
@@ -126,24 +133,48 @@ export default async function PlayerDetailPage({
     scoring: string;
     league_type: string;
     created_at: string;
-    trade_vote_summary: Array<{ total_votes: number }> | { total_votes: number } | null;
   }>) {
     const inA = t.side_a?.players?.some((p) => p.player_id === playerId);
     const inB = t.side_b?.players?.some((p) => p.player_id === playerId);
     if (!inA && !inB) continue;
-    const summary = Array.isArray(t.trade_vote_summary)
-      ? t.trade_vote_summary[0]
-      : t.trade_vote_summary;
-    relevantTrades.push({
-      id: t.id,
-      side_a: t.side_a,
-      side_b: t.side_b,
-      scoring: t.scoring,
-      league_type: t.league_type,
-      created_at: t.created_at,
-      total_votes: Number(summary?.total_votes ?? 0),
-    });
+    playerTrades.push(t);
   }
+
+  const voteCountsByTrade = new Map<
+    string,
+    { total: number; votes_a: number; votes_b: number; votes_even: number }
+  >();
+  if (playerTrades.length > 0) {
+    const { data: voteRows } = await supabase
+      .from("trade_votes")
+      .select("trade_id, winner")
+      .in(
+        "trade_id",
+        playerTrades.map((t) => t.id),
+      );
+    for (const v of voteRows ?? []) {
+      const tid = v.trade_id as string;
+      const w = v.winner as "A" | "B" | "EVEN";
+      const c =
+        voteCountsByTrade.get(tid) ??
+        { total: 0, votes_a: 0, votes_b: 0, votes_even: 0 };
+      c.total += 1;
+      if (w === "A") c.votes_a += 1;
+      else if (w === "B") c.votes_b += 1;
+      else if (w === "EVEN") c.votes_even += 1;
+      voteCountsByTrade.set(tid, c);
+    }
+  }
+
+  const relevantTrades: TradeRow[] = playerTrades.map((t) => ({
+    id: t.id,
+    side_a: t.side_a,
+    side_b: t.side_b,
+    scoring: t.scoring,
+    league_type: t.league_type,
+    created_at: t.created_at,
+    total_votes: voteCountsByTrade.get(t.id)?.total ?? 0,
+  }));
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">

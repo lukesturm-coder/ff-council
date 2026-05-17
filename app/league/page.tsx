@@ -52,6 +52,23 @@ export default async function LeagueEntryPage({
             </p>
           </div>
 
+          <Link
+            href="/league/connect"
+            className="block rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 transition hover:border-emerald-500/50 hover:bg-emerald-500/10 sm:p-5"
+          >
+            <p className="text-xs uppercase tracking-wider text-emerald-300">
+              New · one-time setup
+            </p>
+            <p className="mt-1 text-sm font-semibold text-zinc-100">
+              Connect your Sleeper account →
+            </p>
+            <p className="mt-1 text-xs text-zinc-400">
+              Link your account once and skip pasting league IDs forever.
+              We&apos;ll remember your league for trades, verdicts, and
+              roster-aware tools.
+            </p>
+          </Link>
+
           <form
             action={analyzeLeague}
             className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-6"

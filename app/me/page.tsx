@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { relativeTime } from "@/lib/relative-time";
 import type { VerdictPlayer, VerdictScenarioType } from "@/app/verdict/types";
 
 // =====================================================================
@@ -51,23 +52,6 @@ const POSITION_STYLES: Record<string, string> = {
   TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
 };
 
-function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  const now = Date.now();
-  const diff = Math.max(0, now - then);
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d < 30) return `${d}d ago`;
-  const mo = Math.floor(d / 30);
-  if (mo < 12) return `${mo}mo ago`;
-  const y = Math.floor(d / 365);
-  return `${y}y ago`;
-}
-
 function formatJoinedDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
@@ -100,13 +84,17 @@ export default async function MePage() {
   // ----- Member profile + display name -----
   const { data: member } = await supabase
     .from("council_members")
-    .select("display_name")
+    .select("display_name, sleeper_username, sleeper_league_id")
     .eq("user_id", user.id)
     .maybeSingle();
   const displayName =
     (member?.display_name as string | undefined) ??
     user.email?.split("@")[0] ??
     "Member";
+  const sleeperUsername =
+    (member?.sleeper_username as string | null | undefined) ?? null;
+  const sleeperLeagueId =
+    (member?.sleeper_league_id as string | null | undefined) ?? null;
 
   // ----- All of the user's votes (we need them for agreement calc anyway) -----
   // Capped server-side; if a user ever gets to thousands we'd revisit, but the
@@ -319,12 +307,38 @@ export default async function MePage() {
     (a, b) => b[1] - a[1],
   );
 
-  // ----- Recent activity (cap at 10 each) -----
-  const recentTradeVotes = myTradeVotes.slice(0, 10);
-  const recentVerdictVotes = myVerdictVotes.slice(0, 10);
+  // ----- Recent activity (merge trade + verdict votes, sort by time, cap at 10) -----
+  // Two query streams arrive sorted independently; pre-merging here means the
+  // feed reads as one chronological list instead of "all trades, then all
+  // verdicts" with a broken boundary in the middle.
+  type ActivityItem =
+    | { kind: "trade"; trade_id: string; winner: "A" | "B" | "EVEN"; created_at: string }
+    | { kind: "verdict"; scenario_id: string; pick_player_id: number; created_at: string };
+
+  const recentActivity: ActivityItem[] = [
+    ...myTradeVotes.map<ActivityItem>((v) => ({
+      kind: "trade",
+      trade_id: v.trade_id,
+      winner: v.winner,
+      created_at: v.created_at,
+    })),
+    ...myVerdictVotes.map<ActivityItem>((v) => ({
+      kind: "verdict",
+      scenario_id: v.scenario_id,
+      pick_player_id: v.pick_player_id,
+      created_at: v.created_at,
+    })),
+  ]
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
+    .slice(0, 10);
 
   // Fetch trade meta for activity (side names so we can say "you said Saquon+...")
-  const recentTradeIds = recentTradeVotes.map((v) => v.trade_id);
+  const recentTradeIds = recentActivity
+    .filter((a): a is Extract<ActivityItem, { kind: "trade" }> => a.kind === "trade")
+    .map((a) => a.trade_id);
   const tradeMeta = new Map<string, { side_a: Side; side_b: Side }>();
   if (recentTradeIds.length > 0) {
     const { data } = await supabase
@@ -485,92 +499,92 @@ export default async function MePage() {
               <h2 className="text-sm font-semibold text-zinc-200 sm:text-base">
                 Recent activity
               </h2>
-              {recentTradeVotes.length === 0 && recentVerdictVotes.length === 0 ? (
+              {recentActivity.length === 0 ? (
                 <p className="mt-3 text-xs text-zinc-500 sm:text-sm">
                   Vote on a trade or verdict to start building your activity
                   feed.
                 </p>
               ) : (
                 <ul className="mt-3 divide-y divide-zinc-800/70 text-xs sm:text-sm">
-                  {recentTradeVotes.map((v) => {
-                    const c = tradeConsensus.get(v.trade_id);
-                    const meta = tradeMeta.get(v.trade_id);
-                    const yourSide =
-                      v.winner === "EVEN"
-                        ? "Even"
-                        : v.winner === "A"
-                          ? meta
-                            ? sideLabel(meta.side_a)
-                            : "Side A"
-                          : meta
-                            ? sideLabel(meta.side_b)
-                            : "Side B";
-                    const councilSide =
-                      c?.topWinner === "EVEN"
-                        ? "Even"
-                        : c?.topWinner === "A"
-                          ? meta
-                            ? sideLabel(meta.side_a)
-                            : "Side A"
-                          : c?.topWinner === "B"
+                  {recentActivity.map((a) => {
+                    if (a.kind === "trade") {
+                      const c = tradeConsensus.get(a.trade_id);
+                      const meta = tradeMeta.get(a.trade_id);
+                      const yourSide =
+                        a.winner === "EVEN"
+                          ? "Even"
+                          : a.winner === "A"
                             ? meta
+                              ? sideLabel(meta.side_a)
+                              : "Side A"
+                            : meta
                               ? sideLabel(meta.side_b)
-                              : "Side B"
-                            : null;
-                    const matches = c?.topWinner === v.winner;
-                    return (
-                      <li key={`t-${v.trade_id}`} className="py-2">
-                        <Link
-                          href={`/trades/${v.trade_id}`}
-                          className="group flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
-                        >
-                          <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
-                            <span
-                              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider ring-1 ${
-                                matches
-                                  ? "bg-emerald-500/10 text-emerald-300 ring-emerald-500/30"
-                                  : "bg-rose-500/10 text-rose-300 ring-rose-500/30"
-                              }`}
-                            >
-                              Trade
-                            </span>
-                            <span className="truncate text-zinc-200 group-hover:text-emerald-300">
-                              You said {yourSide}
-                            </span>
-                            {councilSide && c && c.total > 0 ? (
-                              <span className="truncate text-zinc-500">
-                                · Council {c.topPct}% favor {councilSide}
+                              : "Side B";
+                      const councilSide =
+                        c?.topWinner === "EVEN"
+                          ? "Even"
+                          : c?.topWinner === "A"
+                            ? meta
+                              ? sideLabel(meta.side_a)
+                              : "Side A"
+                            : c?.topWinner === "B"
+                              ? meta
+                                ? sideLabel(meta.side_b)
+                                : "Side B"
+                              : null;
+                      const matches = c?.topWinner === a.winner;
+                      return (
+                        <li key={`t-${a.trade_id}`} className="py-2">
+                          <Link
+                            href={`/trades/${a.trade_id}`}
+                            className="group flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+                          >
+                            <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
+                              <span
+                                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider ring-1 ${
+                                  matches
+                                    ? "bg-emerald-500/10 text-emerald-300 ring-emerald-500/30"
+                                    : "bg-rose-500/10 text-rose-300 ring-rose-500/30"
+                                }`}
+                              >
+                                Trade
                               </span>
-                            ) : (
-                              <span className="text-zinc-500">
-                                · No council consensus yet
+                              <span className="truncate text-zinc-200 group-hover:text-emerald-300">
+                                You said {yourSide}
                               </span>
-                            )}
-                          </div>
-                          <span className="shrink-0 text-[11px] text-zinc-500">
-                            {relativeTime(v.created_at)}
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                  {recentVerdictVotes.map((v) => {
-                    const c = verdictConsensus.get(v.scenario_id);
-                    const cands = verdictCandidates.get(v.scenario_id) ?? [];
+                              {councilSide && c && c.total > 0 ? (
+                                <span className="truncate text-zinc-500">
+                                  · Council {c.topPct}% favor {councilSide}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-500">
+                                  · No council consensus yet
+                                </span>
+                              )}
+                            </div>
+                            <span className="shrink-0 text-[11px] text-zinc-500">
+                              {relativeTime(a.created_at)}
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    }
+                    const c = verdictConsensus.get(a.scenario_id);
+                    const cands = verdictCandidates.get(a.scenario_id) ?? [];
                     const picked = cands.find(
-                      (p) => p.player_id === v.pick_player_id,
+                      (p) => p.player_id === a.pick_player_id,
                     );
                     const councilPick =
                       c?.topPlayerId != null
                         ? cands.find((p) => p.player_id === c.topPlayerId)
                         : null;
                     const matches =
-                      c?.topPlayerId === v.pick_player_id &&
+                      c?.topPlayerId === a.pick_player_id &&
                       c?.topPlayerId != null;
                     return (
-                      <li key={`v-${v.scenario_id}`} className="py-2">
+                      <li key={`v-${a.scenario_id}`} className="py-2">
                         <Link
-                          href={`/verdict/${v.scenario_id}`}
+                          href={`/verdict/${a.scenario_id}`}
                           className="group flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
                         >
                           <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
@@ -597,7 +611,7 @@ export default async function MePage() {
                             )}
                           </div>
                           <span className="shrink-0 text-[11px] text-zinc-500">
-                            {relativeTime(v.created_at)}
+                            {relativeTime(a.created_at)}
                           </span>
                         </Link>
                       </li>
@@ -610,6 +624,58 @@ export default async function MePage() {
 
           {/* Right: your scenarios */}
           <aside className="space-y-3">
+            {/* Sleeper connection card */}
+            {sleeperLeagueId ? (
+              <section className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-5">
+                <h2 className="text-sm font-semibold text-emerald-200 sm:text-base">
+                  Sleeper connected
+                </h2>
+                <p className="mt-1 text-xs text-zinc-300 sm:text-sm">
+                  {sleeperUsername ? (
+                    <>
+                      Linked as{" "}
+                      <span className="font-mono text-zinc-100">
+                        @{sleeperUsername}
+                      </span>
+                      .
+                    </>
+                  ) : (
+                    "Linked to a Sleeper league."
+                  )}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <Link
+                    href={`/league/${sleeperLeagueId}`}
+                    className="text-emerald-300 underline-offset-4 hover:underline"
+                  >
+                    View league →
+                  </Link>
+                  <Link
+                    href="/league/connect"
+                    className="text-zinc-400 underline-offset-4 hover:text-zinc-200 hover:underline"
+                  >
+                    Change league
+                  </Link>
+                </div>
+              </section>
+            ) : (
+              <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
+                <h2 className="text-sm font-semibold text-zinc-200 sm:text-base">
+                  Connect Sleeper
+                </h2>
+                <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
+                  Link your Sleeper account so trades and verdicts already
+                  know your roster.
+                </p>
+                <Link
+                  href="/league/connect"
+                  className="mt-3 inline-block rounded-md bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/30"
+                >
+                  Connect Sleeper →
+                </Link>
+              </section>
+            )}
+
             <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
               <h2 className="text-sm font-semibold text-zinc-200 sm:text-base">
                 Your scenarios

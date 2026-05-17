@@ -24,6 +24,8 @@ export type SleeperLeague = {
 
 export type SleeperUser = {
   user_id: string;
+  /** Present on /v1/user/{username}; absent on /v1/league/{id}/users responses. */
+  username?: string;
   display_name: string;
   avatar: string | null;
   metadata?: { team_name?: string };
@@ -111,4 +113,67 @@ export async function fetchAllPlayers(): Promise<
  */
 export function looksLikeSleeperLeagueId(input: string): boolean {
   return /^\d{15,20}$/.test(input.trim());
+}
+
+// ---------------------------------------------------------------------------
+// Non-throwing convenience wrappers used by the /league/connect flow.
+//
+// The "fetch* throw on non-2xx" functions above are convenient when failure
+// should surface as a 5xx page (the league analyzer). For the connect flow
+// we want 404s — "no such Sleeper user" — to render an inline form error,
+// so these variants resolve to null / [] on any non-2xx response.
+// ---------------------------------------------------------------------------
+
+const CONNECT_REVALIDATE_SECONDS = 600;
+
+async function getJsonOrNull<T>(url: string): Promise<T | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: CONNECT_REVALIDATE_SECONDS },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Look up a Sleeper account by username. Returns null if not found. */
+export async function getSleeperUser(
+  username: string,
+): Promise<SleeperUser | null> {
+  const trimmed = username.trim();
+  if (!trimmed) return null;
+  return getJsonOrNull<SleeperUser>(
+    `${BASE}/user/${encodeURIComponent(trimmed)}`,
+  );
+}
+
+/** All NFL leagues this user is in for a given season. Returns [] on error. */
+export async function getSleeperLeagues(
+  userId: string,
+  season: string,
+): Promise<SleeperLeague[]> {
+  const result = await getJsonOrNull<SleeperLeague[]>(
+    `${BASE}/user/${encodeURIComponent(userId)}/leagues/nfl/${encodeURIComponent(season)}`,
+  );
+  return result ?? [];
+}
+
+/** Single-league settings lookup. Null if the league is missing or private. */
+export async function getSleeperLeague(
+  leagueId: string,
+): Promise<SleeperLeague | null> {
+  return getJsonOrNull<SleeperLeague>(`${BASE}/league/${leagueId}`);
+}
+
+/** Rosters in a league. Returns [] on error. */
+export async function getSleeperRosters(
+  leagueId: string,
+): Promise<SleeperRoster[]> {
+  const result = await getJsonOrNull<SleeperRoster[]>(
+    `${BASE}/league/${leagueId}/rosters`,
+  );
+  return result ?? [];
 }

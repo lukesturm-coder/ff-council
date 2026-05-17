@@ -137,42 +137,57 @@ export default function TradeSubmissionForm({
 
   return (
     <form action={submitTrade} className="space-y-6">
-      {/* League context */}
+      {/* Format choices — pulled to the top because these are the two
+          settings most likely to make a vote wrong if mis-set. Visually
+          larger than the secondary fields below. */}
+      <section className="space-y-5 rounded-lg border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900 p-5">
+        <div>
+          <label className="block text-sm font-semibold text-zinc-100 sm:text-base">
+            What kind of league?
+          </label>
+          <p className="mt-0.5 text-xs text-zinc-400">
+            Affects how council members value picks vs players.
+          </p>
+          <RadioGroup
+            name="league_type"
+            defaultValue="redraft"
+            options={LEAGUE_TYPES}
+            size="lg"
+            onChange={(v) => {
+              setLeagueType(v);
+              // Redraft leagues don't trade picks — clear any that were
+              // typed in before the user switched away from dynasty/keeper.
+              if (v === "redraft") {
+                setSideAPicks([]);
+                setSideBPicks([]);
+              }
+            }}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-zinc-100 sm:text-base">
+            Scoring system?
+          </label>
+          <p className="mt-0.5 text-xs text-zinc-400">
+            Determines how valuable WRs and TEs are relative to RBs.
+          </p>
+          <RadioGroup
+            name="scoring"
+            defaultValue="PPR"
+            options={SCORING_OPTIONS}
+            size="lg"
+          />
+        </div>
+      </section>
+
+      {/* Secondary context — smaller, below the headline format choices */}
       <fieldset className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-5">
         <legend className="px-2 text-xs uppercase tracking-wider text-zinc-500">
           League context
         </legend>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs uppercase tracking-wider text-zinc-500">
-              League type
-            </label>
-            <RadioGroup
-              name="league_type"
-              defaultValue="redraft"
-              options={LEAGUE_TYPES}
-              onChange={(v) => {
-                setLeagueType(v);
-                // Redraft leagues don't trade picks — clear any that were
-                // typed in before the user switched away from dynasty/keeper.
-                if (v === "redraft") {
-                  setSideAPicks([]);
-                  setSideBPicks([]);
-                }
-              }}
-            />
-          </div>
-          <div>
-            <label className="block text-xs uppercase tracking-wider text-zinc-500">
-              Scoring
-            </label>
-            <RadioGroup
-              name="scoring"
-              defaultValue="PPR"
-              options={SCORING_OPTIONS}
-            />
-          </div>
           <div>
             <label
               htmlFor="team_count"
@@ -279,15 +294,25 @@ function RadioGroup<T extends string>({
   defaultValue,
   options,
   onChange,
+  size = "sm",
 }: {
   name: string;
   defaultValue: T;
   options: readonly { value: T; label: string }[];
   onChange?: (v: T) => void;
+  size?: "sm" | "lg";
 }) {
   const [value, setValue] = useState<T>(defaultValue);
+  const containerCls =
+    size === "lg"
+      ? "mt-2 flex flex-wrap gap-1.5 rounded-md border border-zinc-800 bg-zinc-950 p-1.5"
+      : "mt-1 flex flex-wrap gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-1";
+  const pillCls =
+    size === "lg"
+      ? "rounded-md px-3.5 py-2 text-sm font-semibold transition"
+      : "rounded px-2.5 py-1 text-xs font-medium transition";
   return (
-    <div className="mt-1 flex flex-wrap gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-1">
+    <div className={containerCls}>
       <input type="hidden" name={name} value={value} />
       {options.map((opt) => (
         <button
@@ -297,9 +322,9 @@ function RadioGroup<T extends string>({
             setValue(opt.value);
             onChange?.(opt.value);
           }}
-          className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+          className={`${pillCls} ${
             value === opt.value
-              ? "bg-emerald-500/20 text-emerald-200"
+              ? "bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
               : "text-zinc-400 hover:text-zinc-200"
           }`}
         >
