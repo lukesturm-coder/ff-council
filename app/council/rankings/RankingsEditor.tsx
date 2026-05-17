@@ -26,6 +26,11 @@ import type {
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
+import {
+  TIER_STYLES,
+  computeTiersByPlayer,
+  type TierLetter,
+} from "@/lib/tiers";
 import { saveRanking } from "./actions";
 
 const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
@@ -67,6 +72,11 @@ export default function RankingsEditor({
     for (const p of projections) m.set(p.playerId, p);
     return m;
   }, [projections]);
+
+  const tierByPlayer = useMemo(
+    () => computeTiersByPlayer(projections, scoring),
+    [projections, scoring],
+  );
 
   const currentOrder = orders[scoring];
 
@@ -217,6 +227,7 @@ export default function RankingsEditor({
                     player={p}
                     rank={idx + 1}
                     delta={delta}
+                    tier={tierByPlayer.get(playerId) ?? null}
                   />
                 );
               })}
@@ -263,11 +274,13 @@ function SortableRow({
   player,
   rank,
   delta,
+  tier,
 }: {
   playerId: number;
   player: PlayerProjection;
   rank: number;
   delta: number;
+  tier: TierLetter | null;
 }) {
   const {
     attributes,
@@ -309,6 +322,14 @@ function SortableRow({
       >
         {player.position}
       </span>
+      {tier && (
+        <span
+          className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset ${TIER_STYLES[tier].badge}`}
+          title={`Tier ${tier} · ${TIER_STYLES[tier].label}`}
+        >
+          {tier}
+        </span>
+      )}
       <span className="hidden w-10 font-mono text-xs text-zinc-400 sm:inline">
         {player.team}
       </span>

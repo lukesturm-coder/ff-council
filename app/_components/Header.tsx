@@ -4,10 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 // Primary nav — always visible to everyone (no sign-in required to view).
 const PRIMARY_NAV = [
   { href: "/", label: "Rankings" },
-  { href: "/tiers", label: "Tiers" },
+  { href: "/trades", label: "Trade Court" },
   { href: "/draft", label: "Mock Draft" },
   { href: "/trade", label: "Trade Calc" },
-  { href: "/trades", label: "Trade Court" },
   { href: "/league", label: "League Analyzer" },
   { href: "/council", label: "Council" },
 ];

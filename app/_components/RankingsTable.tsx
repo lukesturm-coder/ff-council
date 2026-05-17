@@ -8,6 +8,11 @@ import type {
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
+import {
+  TIER_STYLES,
+  computeTiersByPlayer,
+  type TierLetter,
+} from "@/lib/tiers";
 
 type PositionFilter = "ALL" | FantasyPosition;
 type SortKey =
@@ -138,6 +143,13 @@ export default function RankingsTable({
   const hasCouncil = useMemo(
     () => Object.keys(councilConsensus).length > 0,
     [councilConsensus],
+  );
+
+  // Tiers are computed from the unfiltered set so the breakpoints are stable
+  // regardless of which position filter the user has selected.
+  const tierByPlayer = useMemo(
+    () => computeTiersByPlayer(projections, scoring),
+    [projections, scoring],
   );
 
   const view = useMemo(() => {
@@ -277,6 +289,12 @@ export default function RankingsTable({
               <th className="w-10 py-3 pr-2 text-right">#</th>
               <th className="sticky left-0 z-20 min-w-[140px] border-r border-zinc-800/60 bg-zinc-900 py-3 pl-2 whitespace-nowrap sm:min-w-[200px] sm:pl-4">Player</th>
               <th className="w-12 py-3 text-center">Pos</th>
+              <th
+                className="w-12 py-3 text-center"
+                title="Per-position tier (S/A/B/C/D) based on natural FPts gaps in Vegas projections"
+              >
+                Tier
+              </th>
               <SortHeader
                 label="Vegas"
                 sortKey="VEGAS"
@@ -360,6 +378,7 @@ export default function RankingsTable({
                   extraRanks={row.extraRanks}
                   avgRank={row.avgRank}
                   vegasRank={row.vegasRank}
+                  tier={tierByPlayer.get(row.player.playerId) ?? null}
                 />
               );
             })}
@@ -463,6 +482,7 @@ function RankRow({
   extraRanks,
   avgRank,
   vegasRank,
+  tier,
 }: {
   player: PlayerProjection;
   rank: number;
@@ -479,6 +499,7 @@ function RankRow({
   extraRanks: Array<number | null>;
   avgRank: number | null;
   vegasRank: number | null;
+  tier: TierLetter | null;
 }) {
   const fpts = player.fantasyPoints[scoring];
   const vbd = player.vbd[scoring];
@@ -515,6 +536,18 @@ function RankRow({
           >
             {player.position}
           </span>
+        </td>
+        <td className="py-3 text-center">
+          {tier ? (
+            <span
+              className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset ${TIER_STYLES[tier].badge}`}
+              title={TIER_STYLES[tier].label}
+            >
+              {tier}
+            </span>
+          ) : (
+            <span className="text-zinc-600">—</span>
+          )}
         </td>
         <td className="min-w-[5rem] py-3 text-center font-mono text-xs font-semibold tabular-nums">
           <span className="text-amber-400">
@@ -576,7 +609,7 @@ function RankRow({
         <tr className="border-t border-zinc-800/60 bg-zinc-950/50">
           <td
             colSpan={
-              7 +
+              8 +
               (hasEspn ? 1 : 0) +
               (hasCouncil ? 1 : 0) +
               (hasFp ? 1 : 0) +
