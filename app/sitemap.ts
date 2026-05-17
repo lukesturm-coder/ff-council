@@ -72,5 +72,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // still publishes. Next will retry on the following request.
   }
 
-  return [...staticEntries, ...tradeEntries, ...verdictEntries];
+  // Dedup by URL. Defensive — guards against a dynamic id colliding with a
+  // static path (e.g. a trade with id="new" producing /trades/new twice).
+  // First write wins, which keeps the static entry's `lastModified=now`.
+  const seen = new Set<string>();
+  const all: MetadataRoute.Sitemap = [];
+  for (const entry of [...staticEntries, ...tradeEntries, ...verdictEntries]) {
+    if (seen.has(entry.url)) continue;
+    seen.add(entry.url);
+    all.push(entry);
+  }
+  return all;
 }

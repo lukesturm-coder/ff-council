@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Header from "./_components/Header";
 import "./globals.css";
@@ -18,6 +18,15 @@ export const metadata: Metadata = {
   title: "FF Council — Council-derived fantasy football rankings",
   description:
     "Crowdsourced fantasy football rankings from the FF Council, with Vegas, ESPN, and FantasyPros as supporting sources.",
+};
+
+// Next.js 14 pattern: viewport / themeColor / colorScheme live on the
+// dedicated `viewport` export rather than `metadata`. Drives the iOS
+// PWA chrome (status bar tint, etc.) and the address-bar color on
+// Android Chrome.
+export const viewport: Viewport = {
+  themeColor: "#09090b",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
