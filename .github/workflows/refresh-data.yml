@@ -1,0 +1,35 @@
+name: Refresh comparison data sources
+
+# Runs nightly at 09:00 UTC (5am Eastern) to keep ESPN + FantasyPros rankings
+# fresh. Add more steps here as more sources come online.
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch: # allow manual trigger from the Actions tab
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci --prefer-offline --no-audit
+
+      - name: Fetch ESPN rankings + ADP
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/fetch-espn.ts
+
+      - name: Fetch FantasyPros consensus ADP
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/fetch-fantasypros.ts
