@@ -251,63 +251,114 @@ export default async function VerdictDetailPage({
           </div>
         )}
 
-        {/* FF Council Verdict — aggregate counts + top pick highlight */}
-        <div className="mb-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            FF Council Verdict
-          </h3>
-          {total === 0 ? (
-            <p className="text-sm text-zinc-500">
-              No votes yet. Be the first to weigh in below.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {candidates.map((c) => {
-                const count = byPlayer[c.player_id] ?? 0;
-                const pct =
-                  total > 0 ? Math.round((count / total) * 100) : 0;
-                const isTop = c.player_id === topPlayerId && count > 0;
-                return (
-                  <div
-                    key={`v-${c.player_id}`}
-                    className={`relative overflow-hidden rounded-md border px-3 py-2 ${
-                      isTop
-                        ? "border-emerald-500/40 bg-emerald-500/5"
-                        : "border-zinc-800 bg-zinc-950"
-                    }`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`absolute inset-y-0 left-0 ${
-                        isTop ? "bg-emerald-500/15" : "bg-zinc-700/30"
-                      }`}
-                      style={{ width: `${pct}%` }}
-                    />
-                    <div className="relative flex items-center gap-2 text-sm">
-                      <span
-                        className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[c.position]}`}
-                      >
-                        {c.position}
+        {/* FF Council Verdict — aggregate counts + top pick highlight.
+           The headline result is the anchor of the page when votes exist,
+           so it gets a gradient frame, oversized percentage, and a named
+           winner before the per-candidate breakdown. */}
+        {(() => {
+          const topPct =
+            total > 0 && topPlayerId != null
+              ? Math.round((topCount / total) * 100)
+              : 0;
+          const topPlayer =
+            topPlayerId != null
+              ? candidates.find((c) => c.player_id === topPlayerId) ?? null
+              : null;
+          return (
+            <div
+              className={`mb-4 overflow-hidden rounded-lg border p-4 sm:p-5 ${
+                total === 0
+                  ? "border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900"
+                  : "border-emerald-500/30 bg-gradient-to-b from-emerald-500/10 to-zinc-900"
+              }`}
+            >
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-300/90">
+                FF Council Verdict
+              </h3>
+              {total === 0 ? (
+                <div>
+                  <p className="text-lg font-bold text-zinc-100">
+                    Awaiting the council&apos;s ruling.
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    No votes yet — be the first to weigh in below.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {topPlayer && (
+                    <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <span className="font-mono text-4xl font-bold leading-none tabular-nums text-emerald-300 sm:text-5xl">
+                        {topPct}%
                       </span>
-                      <span className="flex-1 truncate font-medium text-zinc-100">
-                        {c.name}
-                      </span>
-                      <span className="font-mono text-xs text-zinc-500">
-                        {c.team}
-                      </span>
-                      <span className="ml-1 shrink-0 font-mono text-xs text-zinc-300 tabular-nums">
-                        {count} ({pct}%)
-                      </span>
+                      <p className="text-sm text-zinc-300 sm:text-base">
+                        favor{" "}
+                        <span className="font-semibold text-zinc-50">
+                          {topPlayer.name}
+                        </span>
+                      </p>
                     </div>
+                  )}
+                  <div className="space-y-2">
+                    {candidates.map((c) => {
+                      const count = byPlayer[c.player_id] ?? 0;
+                      const pct =
+                        total > 0 ? Math.round((count / total) * 100) : 0;
+                      const isTop = c.player_id === topPlayerId && count > 0;
+                      return (
+                        <div
+                          key={`v-${c.player_id}`}
+                          className={`relative overflow-hidden rounded-md border px-3 py-2 ${
+                            isTop
+                              ? "border-emerald-500/40 bg-emerald-500/5"
+                              : "border-zinc-800 bg-zinc-950"
+                          }`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`absolute inset-y-0 left-0 animate-bar-grow ${
+                              isTop ? "bg-emerald-500/20" : "bg-zinc-700/30"
+                            }`}
+                            style={{ width: `${pct}%` }}
+                          />
+                          <div className="relative flex items-center gap-2 text-sm">
+                            <span
+                              className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[c.position]}`}
+                            >
+                              {c.position}
+                            </span>
+                            <span
+                              className={`flex-1 truncate ${
+                                isTop
+                                  ? "font-semibold text-emerald-100"
+                                  : "font-medium text-zinc-100"
+                              }`}
+                            >
+                              {c.name}
+                            </span>
+                            <span className="font-mono text-xs text-zinc-500">
+                              {c.team}
+                            </span>
+                            <span
+                              className={`ml-1 shrink-0 font-mono text-xs tabular-nums ${
+                                isTop ? "font-semibold text-emerald-200" : "text-zinc-300"
+                              }`}
+                            >
+                              {count} ({pct}%)
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <p className="pt-1 text-xs text-zinc-500">
+                      {total} vote{total === 1 ? "" : "s"} cast
+                    </p>
                   </div>
-                );
-              })}
-              <p className="pt-1 text-xs text-zinc-500">
-                {total} vote{total === 1 ? "" : "s"} cast
-              </p>
+                </>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* One-tap voting */}
         <VerdictVotePanel

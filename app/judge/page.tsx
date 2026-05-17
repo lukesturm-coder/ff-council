@@ -141,22 +141,27 @@ export default async function JudgePage() {
         </div>
 
         {feed.length === 0 ? (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-8 text-center text-sm text-zinc-400">
-            <p className="text-base text-zinc-200">You&apos;re all caught up.</p>
-            <p className="mt-1 text-xs text-zinc-500">
-              No more unvoted scenarios. Submit a tough call to get the council
-              weighing in.
+          <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900 p-10 text-center">
+            <p className="text-2xl font-bold text-emerald-300">
+              All caught up.
             </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <p className="mt-2 text-sm text-zinc-300">
+              You&apos;ve weighed in on every open scenario.
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Got a tough call of your own? Drop it in and let the council
+              render its verdict.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
               <Link
                 href="/verdict/new"
-                className="rounded-md bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-200 hover:bg-emerald-500/30"
+                className="rounded-md bg-emerald-500/20 px-4 py-2 text-xs font-medium text-emerald-200 hover:bg-emerald-500/30"
               >
                 Post a verdict scenario
               </Link>
               <Link
                 href="/trades/new"
-                className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
+                className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
               >
                 Post a trade
               </Link>

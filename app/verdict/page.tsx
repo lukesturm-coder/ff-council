@@ -149,16 +149,27 @@ export default async function VerdictIndexPage({
         </div>
 
         {rows.length === 0 ? (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-10 text-center text-sm text-zinc-400">
+          <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900 p-10 text-center">
             {rowsRaw.length === 0 ? (
-              <Link
-                href="/verdict/new"
-                className="text-emerald-300 underline-offset-4 hover:underline"
-              >
-                Be the first to post a tough call →
-              </Link>
+              <>
+                <p className="text-lg font-bold text-emerald-300">
+                  No verdicts yet.
+                </p>
+                <p className="mt-2 text-sm text-zinc-300">
+                  Post the first tough call. The council will weigh in.
+                </p>
+                <Link
+                  href="/verdict/new"
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/30"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Post a tough call
+                </Link>
+              </>
             ) : (
-              <>No scenarios match these filters yet.</>
+              <p className="text-sm text-zinc-400">
+                No scenarios match these filters yet.
+              </p>
             )}
           </div>
         ) : (

@@ -124,51 +124,111 @@ export default async function TradeDetailPage({
           <TradeSide label="Team B receives" side={t.side_b} accent="sky" />
         </div>
 
-        {/* Crowd consensus */}
-        <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            FF Council Verdict
-          </h3>
-
-          {total === 0 ? (
-            <p className="text-sm text-zinc-500">
-              No votes yet. Be the first to weigh in below.
-            </p>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <ConsensusBar
-                  label="Team A wins"
-                  count={summary?.votes_a ?? 0}
-                  pct={aPct}
-                  color="bg-rose-500/40"
-                />
-                <ConsensusBar
-                  label="Even trade"
-                  count={summary?.votes_even ?? 0}
-                  pct={evenPct}
-                  color="bg-zinc-500/40"
-                />
-                <ConsensusBar
-                  label="Team B wins"
-                  count={summary?.votes_b ?? 0}
-                  pct={bPct}
-                  color="bg-sky-500/40"
-                />
-              </div>
-              <p className="mt-4 text-xs text-zinc-500">
-                {total} vote{total === 1 ? "" : "s"} · fairness mix:{" "}
-                {summary?.tier_balanced ?? 0} balanced ·{" "}
-                {(summary?.tier_slight_edge ?? 0) +
-                  (summary?.tier_clear_advantage ?? 0)}{" "}
-                edge ·{" "}
-                {(summary?.tier_major_advantage ?? 0) +
-                  (summary?.tier_extreme_imbalance ?? 0)}{" "}
-                imbalanced
-              </p>
-            </>
-          )}
-        </div>
+        {/* Crowd consensus — anchor block of the page when votes exist.
+            Gradient frame, oversized headline percentage, and the winning
+            side called out by name so it reads at a single glance. */}
+        {(() => {
+          type Winner = "A" | "B" | "EVEN" | null;
+          const winner: Winner =
+            total === 0
+              ? null
+              : aPct >= bPct && aPct >= evenPct
+                ? "A"
+                : bPct >= aPct && bPct >= evenPct
+                  ? "B"
+                  : "EVEN";
+          const winnerPct =
+            winner === "A"
+              ? aPct
+              : winner === "B"
+                ? bPct
+                : winner === "EVEN"
+                  ? evenPct
+                  : 0;
+          const winnerLabel =
+            winner === "A"
+              ? "favor Team A"
+              : winner === "B"
+                ? "favor Team B"
+                : winner === "EVEN"
+                  ? "called it even"
+                  : "";
+          const winnerColor =
+            winner === "A"
+              ? "text-rose-300"
+              : winner === "B"
+                ? "text-sky-300"
+                : "text-emerald-300";
+          return (
+            <div
+              className={`mb-6 overflow-hidden rounded-lg border p-4 sm:p-5 ${
+                total === 0
+                  ? "border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900"
+                  : "border-emerald-500/30 bg-gradient-to-b from-emerald-500/10 to-zinc-900"
+              }`}
+            >
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-300/90">
+                FF Council Verdict
+              </h3>
+              {total === 0 ? (
+                <div>
+                  <p className="text-lg font-bold text-zinc-100">
+                    Awaiting the council&apos;s ruling.
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    No votes yet — be the first to weigh in below.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span
+                      className={`font-mono text-4xl font-bold leading-none tabular-nums sm:text-5xl ${winnerColor}`}
+                    >
+                      {winnerPct}%
+                    </span>
+                    <p className="text-sm text-zinc-300 sm:text-base">
+                      {winnerLabel}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <ConsensusBar
+                      label="Team A wins"
+                      count={summary?.votes_a ?? 0}
+                      pct={aPct}
+                      color="bg-rose-500/40"
+                      highlight={winner === "A"}
+                    />
+                    <ConsensusBar
+                      label="Even trade"
+                      count={summary?.votes_even ?? 0}
+                      pct={evenPct}
+                      color="bg-emerald-500/40"
+                      highlight={winner === "EVEN"}
+                    />
+                    <ConsensusBar
+                      label="Team B wins"
+                      count={summary?.votes_b ?? 0}
+                      pct={bPct}
+                      color="bg-sky-500/40"
+                      highlight={winner === "B"}
+                    />
+                  </div>
+                  <p className="mt-4 text-xs text-zinc-500">
+                    {total} vote{total === 1 ? "" : "s"} · fairness mix:{" "}
+                    {summary?.tier_balanced ?? 0} balanced ·{" "}
+                    {(summary?.tier_slight_edge ?? 0) +
+                      (summary?.tier_clear_advantage ?? 0)}{" "}
+                    edge ·{" "}
+                    {(summary?.tier_major_advantage ?? 0) +
+                      (summary?.tier_extreme_imbalance ?? 0)}{" "}
+                    imbalanced
+                  </p>
+                </>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Voting */}
         {user ? (
@@ -260,23 +320,39 @@ function ConsensusBar({
   count,
   pct,
   color,
+  highlight,
 }: {
   label: string;
   count: number;
   pct: number;
   color: string;
+  highlight?: boolean;
 }) {
   return (
     <div>
       <div className="flex items-baseline justify-between text-xs">
-        <span className="text-zinc-300">{label}</span>
-        <span className="font-mono text-zinc-400">
+        <span
+          className={
+            highlight ? "font-semibold text-zinc-100" : "text-zinc-300"
+          }
+        >
+          {label}
+        </span>
+        <span
+          className={`font-mono tabular-nums ${
+            highlight ? "font-semibold text-zinc-100" : "text-zinc-400"
+          }`}
+        >
           {count} ({pct}%)
         </span>
       </div>
-      <div className="mt-1 h-2 overflow-hidden rounded-full bg-zinc-800">
+      <div
+        className={`mt-1 h-2.5 overflow-hidden rounded-full ${
+          highlight ? "bg-zinc-800/60 ring-1 ring-inset ring-zinc-700" : "bg-zinc-800"
+        }`}
+      >
         <div
-          className={`h-full ${color} transition-all`}
+          className={`h-full ${color} animate-bar-grow`}
           style={{ width: `${pct}%` }}
         />
       </div>

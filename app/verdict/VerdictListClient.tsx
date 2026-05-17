@@ -158,13 +158,6 @@ function VerdictCardButton({
   const topPct =
     topPick && total > 0 ? Math.round((topPick.count / total) * 100) : 0;
 
-  const verdictText =
-    total === 0
-      ? "No votes yet"
-      : topPick
-        ? `${topPct}% favor ${topPick.player.name}`
-        : "No votes yet";
-
   const ctx = scenario.context;
   const meta: string[] = [];
   if (ctx.scoring) meta.push(ctx.scoring);
@@ -177,6 +170,16 @@ function VerdictCardButton({
   }
   meta.push(new Date(scenario.created_at).toLocaleDateString());
 
+  // Highlight the winning candidate's chip and pull it to the front of
+  // the list so the council's pick reads at a glance.
+  const orderedCandidates = (() => {
+    if (!topPick || total === 0) return scenario.candidates.slice(0, 4);
+    const winnerId = topPick.player.player_id;
+    const winner = scenario.candidates.find((c) => c.player_id === winnerId);
+    const rest = scenario.candidates.filter((c) => c.player_id !== winnerId);
+    return winner ? [winner, ...rest].slice(0, 4) : scenario.candidates.slice(0, 4);
+  })();
+
   return (
     <button
       type="button"
@@ -184,7 +187,7 @@ function VerdictCardButton({
       className="block w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-left transition hover:border-zinc-700 hover:bg-zinc-900/60 sm:p-4"
     >
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:gap-3">
-        <div>
+        <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
               {scenarioLabel(scenario.scenario_type)}
@@ -200,21 +203,40 @@ function VerdictCardButton({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            {scenario.candidates.slice(0, 4).map((c) => (
-              <div key={c.player_id} className="flex items-center gap-1.5">
-                <span
-                  className={`inline-flex shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${POSITION_STYLES[c.position]}`}
+            {orderedCandidates.map((c) => {
+              const isWinner =
+                total > 0 &&
+                topPick != null &&
+                c.player_id === topPick.player.player_id;
+              return (
+                <div
+                  key={c.player_id}
+                  className={`flex items-center gap-1.5 ${
+                    isWinner
+                      ? "rounded-md bg-emerald-500/10 px-1.5 py-0.5 ring-1 ring-inset ring-emerald-500/30"
+                      : ""
+                  }`}
                 >
-                  {c.position}
-                </span>
-                <span className="text-sm font-medium text-zinc-100">
-                  {c.name}
-                </span>
-                <span className="font-mono text-[10px] text-zinc-500">
-                  {c.team}
-                </span>
-              </div>
-            ))}
+                  <span
+                    className={`inline-flex shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${POSITION_STYLES[c.position]}`}
+                  >
+                    {c.position}
+                  </span>
+                  <span
+                    className={`text-sm ${
+                      isWinner
+                        ? "font-semibold text-emerald-100"
+                        : "font-medium text-zinc-100"
+                    }`}
+                  >
+                    {c.name}
+                  </span>
+                  <span className="font-mono text-[10px] text-zinc-500">
+                    {c.team}
+                  </span>
+                </div>
+              );
+            })}
             {scenario.candidates.length > 4 && (
               <span className="text-xs text-zinc-600">
                 +{scenario.candidates.length - 4}
@@ -228,11 +250,30 @@ function VerdictCardButton({
           )}
         </div>
 
-        <div className="flex flex-row items-center justify-between gap-1 border-t border-zinc-800 pt-2 text-xs sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:pt-0">
-          <span className="font-medium text-zinc-200">{verdictText}</span>
-          <span className="text-zinc-500">
-            {total} vote{total === 1 ? "" : "s"}
-          </span>
+        <div className="flex flex-row items-center justify-between gap-2 border-t border-zinc-800 pt-2 text-xs sm:min-w-[160px] sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:pt-0">
+          {total === 0 ? (
+            <>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
+                Cast first vote
+              </span>
+              <span className="text-zinc-500">0 votes</span>
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-lg font-bold leading-none tabular-nums text-emerald-300">
+                {topPct}%
+              </span>
+              <span className="truncate font-medium text-zinc-200 sm:max-w-[160px] sm:text-right">
+                favor {topPick?.player.name}
+              </span>
+              <span className="text-zinc-500 sm:hidden">
+                {total} vote{total === 1 ? "" : "s"}
+              </span>
+              <span className="hidden text-zinc-500 sm:inline">
+                of {total} vote{total === 1 ? "" : "s"}
+              </span>
+            </>
+          )}
         </div>
       </div>
 

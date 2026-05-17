@@ -59,14 +59,19 @@ export function TradeListCardButton({
     total > 0 ? Math.round(((trade.summary?.votes_b ?? 0) / total) * 100) : 0;
   const evenPct = total > 0 ? 100 - aPct - bPct : 0;
 
-  const verdict =
+  // Pick the leader of A / B / EVEN. Whatever wins drives the verdict
+  // chip and the subtle winner-side highlight on the preview.
+  type Winner = "A" | "B" | "EVEN" | null;
+  const winner: Winner =
     total === 0
-      ? "No votes yet"
-      : aPct > bPct && aPct > evenPct
-        ? `${aPct}% favor Team A`
-        : bPct > aPct && bPct > evenPct
-          ? `${bPct}% favor Team B`
-          : `${evenPct}% even`;
+      ? null
+      : aPct >= bPct && aPct >= evenPct
+        ? "A"
+        : bPct >= aPct && bPct >= evenPct
+          ? "B"
+          : "EVEN";
+  const winnerPct =
+    winner === "A" ? aPct : winner === "B" ? bPct : winner === "EVEN" ? evenPct : 0;
 
   return (
     <button
@@ -75,16 +80,52 @@ export function TradeListCardButton({
       className="block w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-left transition hover:border-zinc-700 hover:bg-zinc-900/60 sm:p-4"
     >
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
-        <CardSidePreview side={trade.side_a} accent="rose" />
+        <CardSidePreview
+          side={trade.side_a}
+          accent="rose"
+          isWinner={winner === "A"}
+        />
         <div className="flex items-center justify-center text-xs text-zinc-500">
           ↔
         </div>
-        <CardSidePreview side={trade.side_b} accent="sky" />
-        <div className="col-span-3 flex flex-row items-center justify-between gap-1 border-t border-zinc-800 pt-2 text-xs md:col-span-1 md:flex-col md:items-end md:justify-center md:border-t-0 md:pt-0">
-          <span className="font-medium text-zinc-200">{verdict}</span>
-          <span className="text-zinc-500">
-            {total} vote{total === 1 ? "" : "s"}
-          </span>
+        <CardSidePreview
+          side={trade.side_b}
+          accent="sky"
+          isWinner={winner === "B"}
+        />
+        <div className="col-span-3 flex flex-row items-center justify-between gap-2 border-t border-zinc-800 pt-2 text-xs md:col-span-1 md:min-w-[140px] md:flex-col md:items-end md:justify-center md:border-t-0 md:pt-0">
+          {total === 0 ? (
+            <>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
+                Cast first vote
+              </span>
+              <span className="text-zinc-500">0 votes</span>
+            </>
+          ) : (
+            <>
+              <span
+                className={`font-mono text-lg font-bold leading-none tabular-nums ${
+                  winner === "A"
+                    ? "text-rose-300"
+                    : winner === "B"
+                      ? "text-sky-300"
+                      : "text-zinc-200"
+                }`}
+              >
+                {winnerPct}%
+              </span>
+              <span className="font-medium text-zinc-200 md:text-right">
+                {winner === "A"
+                  ? "favor Team A"
+                  : winner === "B"
+                    ? "favor Team B"
+                    : "called it even"}
+              </span>
+              <span className="text-zinc-500">
+                {total} vote{total === 1 ? "" : "s"}
+              </span>
+            </>
+          )}
         </div>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
@@ -103,13 +144,25 @@ export function TradeListCardButton({
 function CardSidePreview({
   side,
   accent,
+  isWinner,
 }: {
   side: Side;
   accent: "rose" | "sky";
+  isWinner?: boolean;
 }) {
   const color = accent === "rose" ? "text-rose-300" : "text-sky-300";
+  // Winning side gets a faint ring + slightly brighter player names so
+  // the eye can tell which side the council picked before reading copy.
   return (
-    <div className="space-y-1">
+    <div
+      className={`min-w-0 space-y-1 rounded-md p-1.5 transition ${
+        isWinner
+          ? accent === "rose"
+            ? "bg-rose-500/5 ring-1 ring-inset ring-rose-500/30"
+            : "bg-sky-500/5 ring-1 ring-inset ring-sky-500/30"
+          : ""
+      }`}
+    >
       {side.players.slice(0, 3).map((p, idx) => (
         <div key={`p-${idx}`} className="flex items-center gap-2 text-sm">
           {p.position && POSITION_STYLES[p.position] && (
@@ -119,7 +172,13 @@ function CardSidePreview({
               {p.position}
             </span>
           )}
-          <span className="truncate text-zinc-100">{p.name}</span>
+          <span
+            className={`truncate ${
+              isWinner ? "font-semibold text-zinc-50" : "text-zinc-100"
+            }`}
+          >
+            {p.name}
+          </span>
           <span className="ml-auto font-mono text-[10px] text-zinc-500">
             {p.team}
           </span>
