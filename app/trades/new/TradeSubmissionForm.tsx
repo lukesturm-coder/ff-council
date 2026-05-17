@@ -20,6 +20,52 @@ const LEAGUE_TYPES = [
   { value: "dynasty", label: "Dynasty" },
   { value: "keeper", label: "Keeper" },
 ] as const;
+type LeagueType = (typeof LEAGUE_TYPES)[number]["value"];
+
+// Parse free-form pick phrases like "2027 mid 2nd", "2027 1.05", "2028 early
+// 1st", "2027 Rd 3". Requires a year (20xx) and a round; slot is optional.
+// Returns null when the input isn't recognisably a pick.
+function parsePick(input: string): Pick | null {
+  const s = input.trim().toLowerCase();
+  if (!s) return null;
+
+  const yearMatch = s.match(/\b(20\d{2})\b/);
+  if (!yearMatch) return null;
+  const year = Number(yearMatch[1]);
+  const rest = s.replace(yearMatch[1], " ").replace(/\s+/g, " ");
+
+  // Dot notation: "1.05" → round 1, slot 5
+  const dotMatch = rest.match(/(?<![\d.])([1-9])\.(\d{1,2})(?![\d.])/);
+  if (dotMatch) {
+    return {
+      year,
+      round: Number(dotMatch[1]),
+      slot: Number(dotMatch[2]),
+    };
+  }
+
+  let round: number | null = null;
+  const ordMatch = rest.match(/\b([1-9])(?:st|nd|rd|th)\b/);
+  if (ordMatch) round = Number(ordMatch[1]);
+  else {
+    const rMatch = rest.match(/\b(?:r|rd|round)\s*([1-9])\b/);
+    if (rMatch) round = Number(rMatch[1]);
+  }
+  if (!round) return null;
+
+  // Slot descriptor: early/mid/late → 3/6/10
+  let slot: number | null = null;
+  if (/\bearly\b/.test(rest)) slot = 3;
+  else if (/\bmid(?:dle)?\b/.test(rest)) slot = 6;
+  else if (/\blate\b/.test(rest)) slot = 10;
+
+  return { year, round, slot };
+}
+
+function formatPick(p: Pick): string {
+  const slotPart = p.slot != null ? `.${String(p.slot).padStart(2, "0")}` : "";
+  return `${p.year} R${p.round}${slotPart}`;
+}
 
 const SCORING_OPTIONS = [
   { value: "PPR", label: "PPR" },
@@ -49,6 +95,7 @@ export default function TradeSubmissionForm({
   const [sideBPlayers, setSideBPlayers] = useState<number[]>(prefillB);
   const [sideAPicks, setSideAPicks] = useState<Pick[]>([]);
   const [sideBPicks, setSideBPicks] = useState<Pick[]>([]);
+  const [leagueType, setLeagueType] = useState<LeagueType>("redraft");
 
   const playerById = useMemo(() => {
     const m = new Map<number, PickablePlayer>();
@@ -105,6 +152,15 @@ export default function TradeSubmissionForm({
               name="league_type"
               defaultValue="redraft"
               options={LEAGUE_TYPES}
+              onChange={(v) => {
+                setLeagueType(v);
+                // Redraft leagues don't trade picks — clear any that were
+                // typed in before the user switched away from dynasty/keeper.
+                if (v === "redraft") {
+                  setSideAPicks([]);
+                  setSideBPicks([]);
+                }
+              }}
             />
           </div>
           <div>
@@ -162,6 +218,7 @@ export default function TradeSubmissionForm({
           setPicks={setSideAPicks}
           allPlayers={players}
           excludeIds={[...sideAPlayers, ...sideBPlayers]}
+          leagueType={leagueType}
         />
         <TradeSidePicker
           label="Team B receives"
@@ -171,6 +228,7 @@ export default function TradeSubmissionForm({
           setPicks={setSideBPicks}
           allPlayers={players}
           excludeIds={[...sideAPlayers, ...sideBPlayers]}
+          leagueType={leagueType}
         />
       </div>
 
@@ -220,10 +278,12 @@ function RadioGroup<T extends string>({
   name,
   defaultValue,
   options,
+  onChange,
 }: {
   name: string;
   defaultValue: T;
   options: readonly { value: T; label: string }[];
+  onChange?: (v: T) => void;
 }) {
   const [value, setValue] = useState<T>(defaultValue);
   return (
@@ -233,7 +293,10 @@ function RadioGroup<T extends string>({
         <button
           key={opt.value}
           type="button"
-          onClick={() => setValue(opt.value)}
+          onClick={() => {
+            setValue(opt.value);
+            onChange?.(opt.value);
+          }}
           className={`rounded px-2.5 py-1 text-xs font-medium transition ${
             value === opt.value
               ? "bg-emerald-500/20 text-emerald-200"
@@ -255,6 +318,7 @@ function TradeSidePicker({
   setPicks,
   allPlayers,
   excludeIds,
+  leagueType,
 }: {
   label: string;
   selectedPlayers: number[];
@@ -263,11 +327,9 @@ function TradeSidePicker({
   setPicks: (picks: Pick[]) => void;
   allPlayers: PickablePlayer[];
   excludeIds: number[];
+  leagueType: LeagueType;
 }) {
   const [search, setSearch] = useState("");
-  const currentYear = new Date().getFullYear();
-  const [pickYear, setPickYear] = useState(currentYear + 1);
-  const [pickRound, setPickRound] = useState(1);
 
   const playerById = useMemo(() => {
     const m = new Map<number, PickablePlayer>();
@@ -294,14 +356,26 @@ function TradeSidePicker({
       .slice(0, 8);
   }, [search, allPlayers, excludeIds]);
 
+  const allowsPicks = leagueType !== "redraft";
+  const parsedPick = allowsPicks ? parsePick(search) : null;
+  const showDropdown = filtered.length > 0 || parsedPick != null;
+
+  const placeholder = allowsPicks
+    ? "Search players, or type a pick (e.g. 2027 mid 2nd)"
+    : "Search players to add";
+
   return (
     <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
       <p className="text-xs uppercase tracking-wider text-zinc-500">{label}</p>
 
-      {/* Selected players */}
+      {/* Selected players + picks */}
       <div className="space-y-1.5">
         {selected.length === 0 && picks.length === 0 && (
-          <p className="text-xs text-zinc-600">Add players or picks below</p>
+          <p className="text-xs text-zinc-600">
+            {allowsPicks
+              ? "Add players or picks below"
+              : "Add players below"}
+          </p>
         )}
         {selected.map((p) => (
           <div
@@ -338,8 +412,7 @@ function TradeSidePicker({
             className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm"
           >
             <span className="flex-1 font-mono text-zinc-100">
-              {pk.year} {pk.round}
-              {pk.slot != null ? `.${String(pk.slot).padStart(2, "0")}` : ""}
+              {formatPick(pk)}
             </span>
             <span className="text-xs text-zinc-500">pick</span>
             <button
@@ -353,7 +426,7 @@ function TradeSidePicker({
         ))}
       </div>
 
-      {/* Add player */}
+      {/* Search input (players + picks) */}
       <div className="relative">
         <div className="relative">
           <Plus className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
@@ -361,12 +434,28 @@ function TradeSidePicker({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search players to add"
+            placeholder={placeholder}
             className="block w-full rounded-md border border-zinc-800 bg-zinc-950 py-2 pl-8 pr-3 text-sm text-zinc-100 placeholder:text-zinc-600"
           />
         </div>
-        {filtered.length > 0 && (
+        {showDropdown && (
           <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-900 shadow-lg">
+            {parsedPick && (
+              <button
+                key="pick-suggestion"
+                type="button"
+                onClick={() => {
+                  setPicks([...picks, parsedPick]);
+                  setSearch("");
+                }}
+                className="flex w-full items-center gap-2 border-b border-zinc-800/60 bg-zinc-900 px-3 py-2 text-left text-sm hover:bg-zinc-800"
+              >
+                <span className="flex-1 font-mono text-zinc-100">
+                  Add {formatPick(parsedPick)}
+                </span>
+                <span className="text-xs text-zinc-500">pick</span>
+              </button>
+            )}
             {filtered.map((p) => (
               <button
                 key={p.player_id}
@@ -390,44 +479,6 @@ function TradeSidePicker({
             ))}
           </div>
         )}
-      </div>
-
-      {/* Add pick */}
-      <div className="flex items-center gap-1.5">
-        <select
-          value={pickYear}
-          onChange={(e) => setPickYear(Number(e.target.value))}
-          className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100"
-        >
-          {[currentYear, currentYear + 1, currentYear + 2, currentYear + 3].map(
-            (y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ),
-          )}
-        </select>
-        <select
-          value={pickRound}
-          onChange={(e) => setPickRound(Number(e.target.value))}
-          className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100"
-        >
-          {[1, 2, 3, 4].map((r) => (
-            <option key={r} value={r}>
-              Rd {r}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={() =>
-            setPicks([...picks, { year: pickYear, round: pickRound, slot: null }])
-          }
-          className="inline-flex items-center gap-1 rounded-md bg-zinc-800/50 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-800"
-        >
-          <Plus className="h-3 w-3" />
-          Add pick
-        </button>
       </div>
     </div>
   );
