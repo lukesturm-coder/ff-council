@@ -37,10 +37,16 @@ const MAGNITUDE_TIERS: {
 
 export default function VotingPanel({
   tradeId,
+  winner: controlledWinner,
+  onWinnerChange,
   myVote,
   onVoted,
 }: {
   tradeId: string;
+  // Controlled mode: parent owns the winner. If undefined, VotingPanel
+  // manages winner internally (initialised from myVote).
+  winner?: Winner | null;
+  onWinnerChange?: (w: Winner | null) => void;
   myVote: {
     winner: "A" | "B" | "EVEN";
     fairness_tier: string;
@@ -48,9 +54,12 @@ export default function VotingPanel({
   } | null;
   onVoted?: () => void;
 }) {
-  const [winner, setWinner] = useState<Winner | null>(
+  const [internalWinner, setInternalWinner] = useState<Winner | null>(
     (myVote?.winner as Winner) ?? null,
   );
+  const isControlled = controlledWinner !== undefined;
+  const winner = isControlled ? controlledWinner : internalWinner;
+
   // Only relevant when winner != Even
   const [magnitude, setMagnitude] = useState<
     Exclude<FairnessTier, "balanced"> | null
@@ -63,7 +72,8 @@ export default function VotingPanel({
   const [msg, setMsg] = useState<string | null>(null);
 
   function pickWinner(w: Winner) {
-    setWinner(w);
+    if (isControlled) onWinnerChange?.(w);
+    else setInternalWinner(w);
     if (w === "EVEN") setMagnitude(null); // forced balanced
     setMsg(null);
   }

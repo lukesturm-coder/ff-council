@@ -170,6 +170,10 @@ function TradeModal({
   onClose: () => void;
 }) {
   const [voted, setVoted] = useState(false);
+  // Winner state lives up here so clicking the Team A / Team B side panel
+  // at the top of the modal can drive the verdict — VotingPanel below
+  // mirrors the selection.
+  const [winner, setWinner] = useState<"A" | "B" | "EVEN" | null>(null);
 
   // Lock body scroll while open + close on Escape.
   useEffect(() => {
@@ -230,11 +234,18 @@ function TradeModal({
               </p>
             </div>
 
+            <p className="-mt-2 mb-3 text-xs text-zinc-500">
+              Tap the side that won — or the buttons below.
+            </p>
+
             <div className="mb-5 flex flex-col gap-3 sm:flex-row">
               <ModalSidePanel
                 label="Team A receives"
                 side={trade.side_a}
                 accent="text-rose-300"
+                team="A"
+                selected={winner === "A"}
+                onSelect={() => setWinner("A")}
               />
               <div className="flex items-center justify-center text-xs uppercase tracking-wider text-zinc-600">
                 for
@@ -243,11 +254,16 @@ function TradeModal({
                 label="Team B receives"
                 side={trade.side_b}
                 accent="text-sky-300"
+                team="B"
+                selected={winner === "B"}
+                onSelect={() => setWinner("B")}
               />
             </div>
 
             <VotingPanel
               tradeId={trade.id}
+              winner={winner}
+              onWinnerChange={setWinner}
               myVote={null}
               onVoted={() => setVoted(true)}
             />
@@ -272,17 +288,43 @@ function ModalSidePanel({
   label,
   side,
   accent,
+  team,
+  selected,
+  onSelect,
 }: {
   label: string;
   side: Side;
   accent: string;
+  team: "A" | "B";
+  selected: boolean;
+  onSelect: () => void;
 }) {
+  const selectedBorder =
+    team === "A"
+      ? "border-rose-500/60 bg-rose-500/5 ring-1 ring-rose-500/30"
+      : "border-sky-500/60 bg-sky-500/5 ring-1 ring-sky-500/30";
   return (
-    <div className="flex-1 rounded-md border border-zinc-800 bg-zinc-950/60 p-3">
-      <div
-        className={`mb-2 text-xs font-semibold uppercase tracking-wider ${accent}`}
-      >
-        {label}
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={`flex-1 cursor-pointer rounded-md border p-3 text-left transition ${
+        selected
+          ? selectedBorder
+          : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-700"
+      }`}
+    >
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <span
+          className={`text-xs font-semibold uppercase tracking-wider ${accent}`}
+        >
+          {label}
+        </span>
+        {selected && (
+          <span className="text-[10px] font-medium uppercase tracking-wider text-emerald-300">
+            ✓ Your pick
+          </span>
+        )}
       </div>
       <div className="space-y-1.5">
         {side.players.map((p, idx) => (
@@ -316,6 +358,6 @@ function ModalSidePanel({
           <span className="text-xs text-zinc-600">—</span>
         )}
       </div>
-    </div>
+    </button>
   );
 }
