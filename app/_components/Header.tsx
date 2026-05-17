@@ -5,6 +5,7 @@ import PrimaryNav, { type NavItem } from "./PrimaryNav";
 const PRIMARY_NAV: NavItem[] = [
   { href: "/", label: "Rankings" },
   { href: "/trades", label: "Trade Court" },
+  { href: "/verdict", label: "Verdict" },
   { href: "/trade", label: "Trade Calc" },
   { href: "/draft", label: "Mock Draft" },
   { href: "/league", label: "League Analyzer" },
