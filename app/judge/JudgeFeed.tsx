@@ -86,6 +86,12 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
   const remaining = feed.length - index;
 
   function advance() {
+    // Drop focus from any just-tapped button so its :focus / :hover
+    // (sticky on iOS) state doesn't visually bleed onto the next card.
+    if (typeof document !== "undefined") {
+      const active = document.activeElement as HTMLElement | null;
+      active?.blur?.();
+    }
     setIndex((i) => i + 1);
     setJustPicked(null);
   }
@@ -248,8 +254,12 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
           </div>
         )}
 
+        {/* key={current.id} forces React to remount the card on advance —
+            kills iOS "sticky hover" where the last-tapped button stays
+            visually highlighted on the next scenario. */}
         {current.kind === "trade" ? (
           <TradeCard
+            key={current.id}
             item={current}
             pending={pending}
             justPicked={justPicked}
@@ -257,6 +267,7 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
           />
         ) : (
           <VerdictCard
+            key={current.id}
             item={current}
             pending={pending}
             justPicked={justPicked}
