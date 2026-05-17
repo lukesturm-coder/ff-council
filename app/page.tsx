@@ -104,11 +104,12 @@ export default async function Page() {
 
         <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">
           <p>
-            ESPN {hasEspn ? "rankings + ADP wired" : "(run `npm run fetch:espn`)"}
-            {" · "}Council{" "}
+            Council{" "}
             {hasCouncil
               ? "consensus active"
               : "(submit at /council/rankings)"}
+            {" · "}
+            ESPN {hasEspn ? "rankings + ADP wired" : "(run `npm run fetch:espn`)"}
             {" · "}
             <span className="text-amber-400/70">
               Vegas column is placeholder

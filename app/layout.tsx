@@ -15,9 +15,9 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "FF Council — Vegas-driven fantasy football rankings",
+  title: "FF Council — Council-derived fantasy football rankings",
   description:
-    "Fantasy football rankings derived from sportsbook futures markets.",
+    "Crowdsourced fantasy football rankings from the FF Council, with Vegas, ESPN, and FantasyPros as supporting sources.",
 };
 
 export default function RootLayout({

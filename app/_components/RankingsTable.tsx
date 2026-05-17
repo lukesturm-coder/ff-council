@@ -113,13 +113,16 @@ export default function RankingsTable({
   const [scoring, setScoring] = useState<ScoringSystem>("PPR");
   const [position, setPosition] = useState<PositionFilter>("ALL");
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("VEGAS");
+  // Council is the primary ranking source; fall back to Vegas when no
+  // council submissions exist yet so the table still has a useful default.
+  const initialSortKey: SortKey =
+    Object.keys(councilConsensus).length > 0 ? "COUNCIL" : "VEGAS";
+  const [sortKey, setSortKey] = useState<SortKey>(initialSortKey);
 
   function toggleSort(key: SortKey) {
     // Click an inactive column → sort by it. Click the active column → reset
-    // back to the default Vegas sort. (No reverse-order sort — nobody wants
-    // to look at the worst player first.)
-    setSortKey(key === sortKey ? "VEGAS" : key);
+    // back to the default sort.
+    setSortKey(key === sortKey ? initialSortKey : key);
   }
 
   const hasEspn = useMemo(
@@ -146,7 +149,7 @@ export default function RankingsTable({
         ? projections
         : projections.filter((p) => p.position === position);
 
-    // Vegas rank: position when sorted by VBD desc (our Vegas methodology).
+    // Vegas rank: position when sorted by VBD desc (Vegas-derived baseline).
     const vegasRankById = new Map<number, number>();
     [...filtered]
       .sort((a, b) => b.vbd[scoring] - a.vbd[scoring])
@@ -277,14 +280,6 @@ export default function RankingsTable({
               <th className="w-10 py-3 pr-2 text-right">#</th>
               <th className="sticky left-0 z-20 min-w-[140px] border-r border-zinc-800/60 bg-zinc-900 py-3 pl-2 whitespace-nowrap sm:min-w-[200px] sm:pl-4">Player</th>
               <th className="w-12 py-3 text-center">Pos</th>
-              <SortHeader
-                label="Vegas"
-                sortKey="VEGAS"
-                color="text-amber-400"
-                title="FF Council Vegas-derived rank (the ranking our methodology produces)"
-                active={sortKey}
-                onClick={toggleSort}
-              />
               {hasCouncil && (
                 <SortHeader
                   label="Council"
@@ -295,6 +290,14 @@ export default function RankingsTable({
                   onClick={toggleSort}
                 />
               )}
+              <SortHeader
+                label="Vegas"
+                sortKey="VEGAS"
+                color="text-amber-400"
+                title="FF Council Vegas-derived rank"
+                active={sortKey}
+                onClick={toggleSort}
+              />
               {hasEspn && (
                 <SortHeader
                   label="ESPN"
@@ -368,11 +371,11 @@ export default function RankingsTable({
       </div>
 
       <p className="text-xs text-zinc-500">
-        <span className="text-zinc-300">#</span> is FF Council&apos;s
-        Vegas-derived rank. Other columns show each platform&apos;s rank for
-        the same player. Sort by any source to find disagreements. Sleeper /
-        NFL / CBS / Yahoo are mock numbers until those platforms publish 2026
-        preseason rankings.
+        <span className="text-zinc-300">#</span> is the player&apos;s rank in
+        the current sort — Council Consensus by default. Other columns show
+        each source&apos;s rank for comparison; sort by any column to find
+        disagreements. Sleeper / NFL / CBS / Yahoo are mock numbers until
+        those platforms publish 2026 preseason rankings.
       </p>
     </div>
   );
@@ -516,14 +519,9 @@ function RankRow({
             {player.position}
           </span>
         </td>
-        <td className="min-w-[5rem] py-3 text-center font-mono text-xs font-semibold tabular-nums">
-          <span className="text-amber-400">
-            {vegasRank != null ? vegasRank.toFixed(0) : "—"}
-          </span>
-        </td>
         {hasCouncil && (
           <td
-            className="min-w-[5rem] py-3 text-center font-mono text-xs tabular-nums"
+            className="min-w-[5rem] py-3 text-center font-mono text-xs font-semibold tabular-nums"
             title={
               councilRankerCount
                 ? `${councilRankerCount} ranker${councilRankerCount === 1 ? "" : "s"}`
@@ -539,6 +537,11 @@ function RankRow({
             </span>
           </td>
         )}
+        <td className="min-w-[5rem] py-3 text-center font-mono text-xs tabular-nums">
+          <span className="text-amber-400">
+            {vegasRank != null ? vegasRank.toFixed(0) : "—"}
+          </span>
+        </td>
         {hasEspn && (
           <td className="min-w-[5rem] py-3 text-center font-mono text-xs tabular-nums">
             <span className="text-red-400">
