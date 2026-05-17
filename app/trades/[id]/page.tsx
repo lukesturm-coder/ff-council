@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Header from "@/app/_components/Header";
-import type { FantasyPosition } from "@/lib/types";
 import ShareButton from "./ShareButton";
 import VotingPanel from "./VotingPanel";
 

@@ -122,7 +122,7 @@ export default async function TradesIndexPage({
     );
   }
 
-  let rows: TradeListRow[] = (trades ?? []).map((t) => ({
+  const rows: TradeListRow[] = (trades ?? []).map((t) => ({
     id: t.id as string,
     league_type: t.league_type as string,
     scoring: t.scoring as string,

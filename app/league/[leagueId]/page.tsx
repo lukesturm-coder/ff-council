@@ -17,8 +17,6 @@ import {
   fetchLeague,
   fetchLeagueRosters,
   fetchLeagueUsers,
-  type SleeperPlayer,
-  type SleeperRoster,
   type SleeperUser,
 } from "@/lib/sleeper";
 import { PlayerMatcher } from "@/lib/player-matching";
@@ -569,7 +567,7 @@ export default async function LeagueAnalysisPage({
               Position Strength
             </h3>
             <p className="text-xs text-zinc-500">
-              Each cell: sum of top players' Vegas FPts at that position
+              Each cell: sum of top players&apos; Vegas FPts at that position
               (QB×2, RB×4, WR×5, TE×2). Color shows relative strength within
               the league.
             </p>
