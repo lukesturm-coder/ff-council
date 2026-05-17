@@ -73,9 +73,8 @@ export default async function LoginPage({
             </button>
 
             <p className="text-center text-xs text-zinc-500">
-              New here? Just enter your email — we&apos;ll create your account
-              automatically. You&apos;ll start as a pending member until you
-              complete a tryout submission.
+              New here? Just enter your email — we&apos;ll create your council
+              account automatically.
             </p>
           </form>
         )}
