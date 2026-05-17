@@ -10,15 +10,16 @@ import type {
 } from "@/lib/types";
 
 type PositionFilter = "ALL" | FantasyPosition;
-type Tier = "S" | "A" | "B" | "C" | "D";
-type SortMode =
-  | "VBD"
-  | "FPts"
-  | "ADP"
+type SortKey =
+  | "VEGAS"
+  | "COUNCIL"
   | "ESPN"
-  | "ESPN_ADP"
-  | "FP_ADP"
-  | "COUNCIL";
+  | "FP"
+  | "SLEEPER"
+  | "NFL"
+  | "CBS"
+  | "YAHOO"
+  | "AVG";
 
 /**
  * Nested map of external platform rankings:
@@ -53,28 +54,30 @@ export type CouncilConsensusMap = Record<
 const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
 const POSITION_OPTIONS: PositionFilter[] = ["ALL", "QB", "RB", "WR", "TE"];
 
-function tierOf(rank: number, total: number): Tier {
-  const pct = rank / total;
-  if (pct <= 0.1) return "S";
-  if (pct <= 0.3) return "A";
-  if (pct <= 0.55) return "B";
-  if (pct <= 0.85) return "C";
-  return "D";
-}
+/**
+ * Platforms displayed as a single rank column (Sleeper / NFL / CBS / Yahoo).
+ * ESPN and FantasyPros are rendered explicitly above because ESPN has two
+ * sub-columns (editorial + ADP) and FP has the "consensus" framing.
+ */
+const EXTRA_PLATFORMS: Array<{
+  key: string;
+  type: "editorial" | "adp";
+  label: string;
+  accent: string;
+}> = [
+  // Brand-accurate colors (closest Tailwind shades to each platform's logo).
+  // All blues are distinct shades so columns don't visually merge.
+  { key: "sleeper", type: "adp", label: "Sleeper", accent: "text-cyan-400" },
+  { key: "nfl", type: "editorial", label: "NFL", accent: "text-blue-400" },
+  { key: "cbs", type: "editorial", label: "CBS", accent: "text-indigo-400" },
+  { key: "yahoo", type: "editorial", label: "Yahoo", accent: "text-purple-400" },
+];
 
 const POSITION_STYLES: Record<FantasyPosition, string> = {
   QB: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
   RB: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
   WR: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
   TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
-};
-
-const TIER_STYLES: Record<Tier, string> = {
-  S: "bg-amber-400/20 text-amber-200 ring-amber-400/40",
-  A: "bg-emerald-400/15 text-emerald-200 ring-emerald-400/30",
-  B: "bg-sky-400/10 text-sky-200 ring-sky-400/25",
-  C: "bg-zinc-500/15 text-zinc-300 ring-zinc-500/30",
-  D: "bg-zinc-700/30 text-zinc-500 ring-zinc-700/40",
 };
 
 function formatAmerican(odds: number): string {
@@ -109,8 +112,15 @@ export default function RankingsTable({
 }) {
   const [scoring, setScoring] = useState<ScoringSystem>("PPR");
   const [position, setPosition] = useState<PositionFilter>("ALL");
-  const [sortMode, setSortMode] = useState<SortMode>("VBD");
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("VEGAS");
+
+  function toggleSort(key: SortKey) {
+    // Click an inactive column → sort by it. Click the active column → reset
+    // back to the default Vegas sort. (No reverse-order sort — nobody wants
+    // to look at the worst player first.)
+    setSortKey(key === sortKey ? "VEGAS" : key);
+  }
 
   const hasEspn = useMemo(
     () =>
@@ -130,79 +140,117 @@ export default function RankingsTable({
     [councilConsensus],
   );
 
-  const SORT_OPTIONS: SortMode[] = useMemo(() => {
-    const opts: SortMode[] = ["VBD", "FPts", "ADP"];
-    if (hasCouncil) opts.push("COUNCIL");
-    if (hasEspn) opts.push("ESPN", "ESPN_ADP");
-    if (hasFp) opts.push("FP_ADP");
-    return opts;
-  }, [hasEspn, hasFp, hasCouncil]);
-
   const view = useMemo(() => {
-    const adpField: "adp" | "adpPPR" =
-      scoring === "Standard" ? "adp" : "adpPPR";
-
     const filtered =
       position === "ALL"
         ? projections
         : projections.filter((p) => p.position === position);
 
-    const sortKey = (p: PlayerProjection): number => {
-      if (sortMode === "VBD") return -p.vbd[scoring];
-      if (sortMode === "FPts") return -p.fantasyPoints[scoring];
-      if (sortMode === "ESPN") {
-        const v = lookupPlatformRank(platformRankings, p.playerId, "espn", "editorial", scoring);
-        return v == null ? Number.POSITIVE_INFINITY : v;
+    // Vegas rank: position when sorted by VBD desc (our Vegas methodology).
+    const vegasRankById = new Map<number, number>();
+    [...filtered]
+      .sort((a, b) => b.vbd[scoring] - a.vbd[scoring])
+      .forEach((p, idx) => vegasRankById.set(p.playerId, idx + 1));
+
+    // Build a row record per player with all rank columns precomputed.
+    type RowData = {
+      player: PlayerProjection;
+      vegasRank: number | null;
+      councilAvgRank: number | null;
+      councilRankerCount: number;
+      espnRank: number | null;
+      fpRank: number | null;
+      extraRanks: Array<number | null>;
+      avgRank: number | null;
+    };
+    const rows: RowData[] = filtered.map((p) => {
+      const councilEntry = hasCouncil
+        ? councilConsensus[p.playerId]?.[scoring]
+        : undefined;
+      const espnRank = hasEspn
+        ? lookupPlatformRank(
+            platformRankings,
+            p.playerId,
+            "espn",
+            "editorial",
+            scoring,
+          )
+        : null;
+      const fpRank = hasFp
+        ? lookupPlatformRank(
+            platformRankings,
+            p.playerId,
+            "fantasypros",
+            "adp",
+            scoring,
+          )
+        : null;
+      const extraRanks = EXTRA_PLATFORMS.map((pf) =>
+        lookupPlatformRank(
+          platformRankings,
+          p.playerId,
+          pf.key,
+          pf.type,
+          scoring,
+        ),
+      );
+      const ranksForAvg = [
+        councilEntry?.avgRank ?? null,
+        espnRank,
+        fpRank,
+        ...extraRanks,
+      ].filter((r): r is number => r != null);
+      const avgRank =
+        ranksForAvg.length > 0
+          ? ranksForAvg.reduce((s, n) => s + n, 0) / ranksForAvg.length
+          : null;
+      return {
+        player: p,
+        vegasRank: vegasRankById.get(p.playerId) ?? null,
+        councilAvgRank: councilEntry?.avgRank ?? null,
+        councilRankerCount: councilEntry?.rankerCount ?? 0,
+        espnRank,
+        fpRank,
+        extraRanks,
+        avgRank,
+      };
+    });
+
+    const valueOf = (row: RowData): number => {
+      let v: number | null;
+      if (sortKey === "VEGAS") v = row.vegasRank;
+      else if (sortKey === "COUNCIL") v = row.councilAvgRank;
+      else if (sortKey === "ESPN") v = row.espnRank;
+      else if (sortKey === "FP") v = row.fpRank;
+      else if (sortKey === "AVG") v = row.avgRank;
+      else {
+        const idx = EXTRA_PLATFORMS.findIndex(
+          (pf) => pf.key.toUpperCase() === sortKey,
+        );
+        v = idx >= 0 ? row.extraRanks[idx] : null;
       }
-      if (sortMode === "ESPN_ADP") {
-        const v = lookupPlatformRank(platformRankings, p.playerId, "espn", "adp", scoring);
-        return v == null ? Number.POSITIVE_INFINITY : v;
-      }
-      if (sortMode === "FP_ADP") {
-        const v = lookupPlatformRank(platformRankings, p.playerId, "fantasypros", "adp", scoring);
-        return v == null ? Number.POSITIVE_INFINITY : v;
-      }
-      if (sortMode === "COUNCIL") {
-        const v = councilConsensus[p.playerId]?.[scoring]?.avgRank;
-        return v == null ? Number.POSITIVE_INFINITY : v;
-      }
-      // ADP — missing ADP sinks to the bottom
-      const a = p[adpField];
-      return a == null ? Number.POSITIVE_INFINITY : a;
+      return v == null ? Number.POSITIVE_INFINITY : v;
     };
 
-    const sorted = [...filtered].sort((a, b) => sortKey(a) - sortKey(b));
+    const sorted = [...rows].sort((a, b) => valueOf(a) - valueOf(b));
 
-    // Roster ADP rank within visible set — used for Edge column
-    const adpEntries = sorted
-      .map((p) => ({ id: p.playerId, adp: p[adpField] }))
-      .filter((e): e is { id: number; adp: number } => e.adp != null)
-      .sort((a, b) => a.adp - b.adp);
-    const adpRankById = new Map<number, number>();
-    adpEntries.forEach((e, idx) => adpRankById.set(e.id, idx + 1));
-
-    return { sorted, adpRankById, adpField };
-  }, [projections, scoring, position, sortMode, platformRankings, councilConsensus]);
+    return { sorted };
+  }, [
+    projections,
+    scoring,
+    position,
+    sortKey,
+    platformRankings,
+    councilConsensus,
+    hasEspn,
+    hasFp,
+    hasCouncil,
+  ]);
 
   return (
     <div className="space-y-4">
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
-        <ControlGroup
-          label="Sort"
-          options={SORT_OPTIONS}
-          value={sortMode}
-          onChange={setSortMode}
-          labels={{
-            VBD: "VBD",
-            FPts: "FPts",
-            ADP: "ADP",
-            COUNCIL: "Council",
-            ESPN: "ESPN Rank",
-            ESPN_ADP: "ESPN ADP",
-            FP_ADP: "FP ADP",
-          }}
-        />
         <ControlGroup
           label="Scoring"
           options={SCORING_OPTIONS}
@@ -225,117 +273,93 @@ export default function RankingsTable({
         <table className="w-full text-sm">
           <thead className="border-b border-zinc-800 bg-zinc-900/50 text-left text-xs uppercase tracking-wider text-zinc-500">
             <tr>
-              <th className="w-10 py-3 pl-4"></th>
-              <th className="w-12 py-3 text-right">#</th>
-              <th className="py-3 pl-4">Player</th>
-              <th className="py-3 pl-2">Pos</th>
-              <th className="py-3 pl-2">Team</th>
-              <th className="py-3 pr-4 text-right" title="Roster ADP">
-                ADP
-              </th>
-              <th
-                className="py-3 pr-4 text-right"
-                title="Value-Based Drafting: FPts above the replacement-level player at this position"
-              >
-                VBD
-              </th>
-              <th className="py-3 pr-4 text-right text-zinc-600">FPts</th>
+              <th className="w-8 py-3 pl-3"></th>
+              <th className="w-10 py-3 pr-2 text-right">#</th>
+              <th className="min-w-[200px] py-3 pl-4 whitespace-nowrap">Player</th>
+              <th className="w-12 py-3 text-center">Pos</th>
+              <SortHeader
+                label="Vegas"
+                sortKey="VEGAS"
+                color="text-amber-400"
+                title="FF Council Vegas-derived rank (the ranking our methodology produces)"
+                active={sortKey}
+                onClick={toggleSort}
+              />
               {hasCouncil && (
-                <th
-                  className="py-3 pr-4 text-right"
+                <SortHeader
+                  label="Council"
+                  sortKey="COUNCIL"
+                  color="text-emerald-400"
                   title="Council Consensus — average rank across approved council members' current submissions"
-                >
-                  <span className="text-emerald-300">Council</span>
-                </th>
+                  active={sortKey}
+                  onClick={toggleSort}
+                />
               )}
               {hasEspn && (
-                <>
-                  <th
-                    className="py-3 pr-4 text-right"
-                    title="ESPN editorial preseason rank"
-                  >
-                    <span className="text-rose-300">ESPN</span> Rank
-                  </th>
-                  <th
-                    className="py-3 pr-4 text-right"
-                    title="ESPN crowd ADP (real draft average)"
-                  >
-                    <span className="text-rose-300">ESPN</span> ADP
-                  </th>
-                </>
+                <SortHeader
+                  label="ESPN"
+                  sortKey="ESPN"
+                  color="text-red-400"
+                  title="ESPN editorial preseason rank"
+                  active={sortKey}
+                  onClick={toggleSort}
+                />
               )}
               {hasFp && (
-                <th
-                  className="py-3 pr-4 text-right"
-                  title="FantasyPros consensus ADP — aggregated across ESPN, Yahoo, Sleeper, NFL, RTSports drafts"
-                >
-                  <span className="text-sky-300">FP</span> ADP
-                </th>
+                <SortHeader
+                  label="FP"
+                  sortKey="FP"
+                  color="text-teal-400"
+                  title="FantasyPros consensus ADP — aggregated across multiple platforms"
+                  active={sortKey}
+                  onClick={toggleSort}
+                />
               )}
-              <th className="py-3 pr-4 text-center">Tier</th>
-              <th className="py-3 pr-4 text-right">Edge</th>
+              {EXTRA_PLATFORMS.map((pf) => (
+                <SortHeader
+                  key={pf.key}
+                  label={pf.label}
+                  sortKey={pf.key.toUpperCase() as SortKey}
+                  color={pf.accent}
+                  title={`${pf.label} ${pf.type === "adp" ? "ADP" : "editorial rank"} (mock data until 2026 preseason rankings publish)`}
+                  active={sortKey}
+                  onClick={toggleSort}
+                />
+              ))}
+              <SortHeader
+                label="AVG"
+                sortKey="AVG"
+                color="text-zinc-200"
+                title="Average of Council / ESPN / FP / Sleeper / NFL / CBS / Yahoo ranks"
+                active={sortKey}
+                onClick={toggleSort}
+                extraClass="pr-4"
+              />
             </tr>
           </thead>
           <tbody>
-            {view.sorted.map((p, idx) => {
-              const rank = idx + 1;
-              const tier = tierOf(rank, view.sorted.length);
-              const adpValue = p[view.adpField];
-              const adpRank = view.adpRankById.get(p.playerId);
-              const edge = adpRank != null ? adpRank - rank : null;
-              const isExpanded = expandedId === p.playerId;
-              const espnRank = hasEspn
-                ? lookupPlatformRank(
-                    platformRankings,
-                    p.playerId,
-                    "espn",
-                    "editorial",
-                    scoring,
-                  )
-                : null;
-              const espnAdp = hasEspn
-                ? lookupPlatformRank(
-                    platformRankings,
-                    p.playerId,
-                    "espn",
-                    "adp",
-                    scoring,
-                  )
-                : null;
-              const councilEntry = hasCouncil
-                ? councilConsensus[p.playerId]?.[scoring]
-                : undefined;
-              const fpAdp = hasFp
-                ? lookupPlatformRank(
-                    platformRankings,
-                    p.playerId,
-                    "fantasypros",
-                    "adp",
-                    scoring,
-                  )
-                : null;
-
+            {view.sorted.map((row, idx) => {
+              const isExpanded = expandedId === row.player.playerId;
               return (
                 <RankRow
-                  key={p.playerId}
-                  player={p}
-                  rank={rank}
-                  tier={tier}
+                  key={row.player.playerId}
+                  player={row.player}
+                  rank={idx + 1}
                   scoring={scoring}
-                  adpValue={adpValue}
-                  edge={edge}
                   isExpanded={isExpanded}
                   onToggle={() =>
-                    setExpandedId(isExpanded ? null : p.playerId)
+                    setExpandedId(isExpanded ? null : row.player.playerId)
                   }
                   hasEspn={hasEspn}
-                  espnRank={espnRank}
-                  espnAdp={espnAdp}
+                  espnRank={row.espnRank}
                   hasFp={hasFp}
-                  fpAdp={fpAdp}
+                  fpRank={row.fpRank}
                   hasCouncil={hasCouncil}
-                  councilAvgRank={councilEntry?.avgRank ?? null}
-                  councilRankerCount={councilEntry?.rankerCount ?? 0}
+                  councilAvgRank={row.councilAvgRank}
+                  councilRankerCount={row.councilRankerCount}
+                  extraRanks={row.extraRanks}
+                  avgRank={row.avgRank}
+                  vegasRank={row.vegasRank}
                 />
               );
             })}
@@ -344,19 +368,11 @@ export default function RankingsTable({
       </div>
 
       <p className="text-xs text-zinc-500">
-        <span className="text-zinc-300">VBD</span> = FPts above the
-        replacement-level player at the same position (QB12, RB24, WR30, TE12
-        in a 12-team league).{" "}
-        {hasEspn && (
-          <>
-            <span className="text-rose-300">ESPN</span> columns are{" "}
-            <span className="text-zinc-300">editorial rank</span> (their
-            staff&apos;s board) and{" "}
-            <span className="text-zinc-300">ADP</span> (where users actually
-            draft).
-          </>
-        )}{" "}
-        Sort by any column to find disagreements.
+        <span className="text-zinc-300">#</span> is FF Council&apos;s
+        Vegas-derived rank. Other columns show each platform&apos;s rank for
+        the same player. Sort by any source to find disagreements. Sleeper /
+        NFL / CBS / Yahoo are mock numbers until those platforms publish 2026
+        preseason rankings.
       </p>
     </div>
   );
@@ -397,48 +413,72 @@ function ControlGroup<T extends string>({
   );
 }
 
-function rankColor(value: number | null): string {
-  if (value == null) return "text-zinc-700";
-  if (value <= 12) return "text-emerald-300";
-  if (value <= 36) return "text-zinc-200";
-  if (value <= 96) return "text-zinc-400";
-  return "text-zinc-600";
+function SortHeader({
+  label,
+  sortKey: key,
+  color,
+  title,
+  active,
+  onClick,
+  extraClass,
+}: {
+  label: string;
+  sortKey: SortKey;
+  color: string;
+  title: string;
+  active: SortKey;
+  onClick: (k: SortKey) => void;
+  extraClass?: string;
+}) {
+  const isActive = active === key;
+  return (
+    <th
+      className={`w-20 py-3 text-center select-none cursor-pointer ${extraClass ?? ""} ${
+        isActive ? "bg-zinc-800/30" : "hover:bg-zinc-800/20"
+      }`}
+      title={isActive ? `${title} — click again to reset` : title}
+      onClick={() => onClick(key)}
+    >
+      <span className={color}>{label}</span>
+      {isActive && (
+        <span className="ml-1 text-[10px] text-zinc-400">▲</span>
+      )}
+    </th>
+  );
 }
 
 function RankRow({
   player,
   rank,
-  tier,
   scoring,
-  adpValue,
-  edge,
   isExpanded,
   onToggle,
   hasEspn,
   espnRank,
-  espnAdp,
   hasFp,
-  fpAdp,
+  fpRank,
   hasCouncil,
   councilAvgRank,
   councilRankerCount,
+  extraRanks,
+  avgRank,
+  vegasRank,
 }: {
   player: PlayerProjection;
   rank: number;
-  tier: Tier;
   scoring: ScoringSystem;
-  adpValue: number | undefined;
-  edge: number | null;
   isExpanded: boolean;
   onToggle: () => void;
   hasEspn: boolean;
   espnRank: number | null;
-  espnAdp: number | null;
   hasFp: boolean;
-  fpAdp: number | null;
+  fpRank: number | null;
   hasCouncil: boolean;
   councilAvgRank: number | null;
   councilRankerCount: number;
+  extraRanks: Array<number | null>;
+  avgRank: number | null;
+  vegasRank: number | null;
 }) {
   const fpts = player.fantasyPoints[scoring];
   const vbd = player.vbd[scoring];
@@ -449,15 +489,15 @@ function RankRow({
         onClick={onToggle}
         className="cursor-pointer border-t border-zinc-800/60 transition hover:bg-zinc-800/40"
       >
-        <td className="pl-4 align-middle">
+        <td className="pl-3 align-middle">
           {isExpanded ? (
             <ChevronDown className="h-4 w-4 text-zinc-500" />
           ) : (
             <ChevronRight className="h-4 w-4 text-zinc-600" />
           )}
         </td>
-        <td className="py-3 text-right font-mono text-zinc-500">{rank}</td>
-        <td className="py-3 pl-4 font-medium">
+        <td className="py-3 pr-2 text-right font-mono text-zinc-500">{rank}</td>
+        <td className="py-3 pl-4 font-medium whitespace-nowrap">
           <Link
             href={`/player/${player.playerId}`}
             onClick={(e) => e.stopPropagation()}
@@ -465,88 +505,69 @@ function RankRow({
           >
             {player.name}
           </Link>
+          <span className="ml-2 font-mono text-xs text-zinc-500">
+            ({player.team})
+          </span>
         </td>
-        <td className="py-3 pl-2">
+        <td className="py-3 text-center">
           <span
             className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[player.position]}`}
           >
             {player.position}
           </span>
         </td>
-        <td className="py-3 pl-2 font-mono text-xs text-zinc-400">
-          {player.team}
-        </td>
-        <td className="py-3 pr-4 text-right font-mono text-xs text-zinc-400">
-          {adpValue != null ? adpValue.toFixed(1) : "—"}
-        </td>
-        <td className="py-3 pr-4 text-right font-mono font-semibold tabular-nums">
-          <span
-            className={
-              vbd > 50
-                ? "text-emerald-300"
-                : vbd > 0
-                  ? "text-zinc-100"
-                  : "text-zinc-500"
-            }
-          >
-            {vbd > 0 ? "+" : ""}
-            {vbd.toFixed(1)}
+        <td className="py-3 text-center font-mono text-xs font-semibold tabular-nums">
+          <span className="text-amber-400">
+            {vegasRank != null ? vegasRank.toFixed(0) : "—"}
           </span>
-        </td>
-        <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-500">
-          {fpts.toFixed(1)}
         </td>
         {hasCouncil && (
           <td
-            className="py-3 pr-4 text-right font-mono text-xs tabular-nums"
+            className="py-3 text-center font-mono text-xs tabular-nums"
             title={
               councilRankerCount
                 ? `${councilRankerCount} ranker${councilRankerCount === 1 ? "" : "s"}`
                 : "No council ranking"
             }
           >
-            <span className={rankColor(councilAvgRank)}>
-              {councilAvgRank != null ? councilAvgRank.toFixed(1) : "—"}
+            <span className="text-emerald-400">
+              {councilAvgRank != null
+                ? Number.isInteger(councilAvgRank)
+                  ? councilAvgRank.toFixed(0)
+                  : councilAvgRank.toFixed(1)
+                : "—"}
             </span>
           </td>
         )}
         {hasEspn && (
-          <>
-            <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums">
-              <span className={rankColor(espnRank)}>
-                {espnRank != null ? espnRank.toFixed(0) : "—"}
-              </span>
-            </td>
-            <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums">
-              <span className={rankColor(espnAdp)}>
-                {espnAdp != null ? espnAdp.toFixed(1) : "—"}
-              </span>
-            </td>
-          </>
-        )}
-        {hasFp && (
-          <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums">
-            <span className={rankColor(fpAdp)}>
-              {fpAdp != null ? fpAdp.toFixed(1) : "—"}
+          <td className="py-3 text-center font-mono text-xs tabular-nums">
+            <span className="text-red-400">
+              {espnRank != null ? espnRank.toFixed(0) : "—"}
             </span>
           </td>
         )}
-        <td className="py-3 pr-4 text-center">
-          <span
-            className={`inline-flex w-6 justify-center rounded px-1 py-0.5 text-xs font-bold ring-1 ring-inset ${TIER_STYLES[tier]}`}
+        {hasFp && (
+          <td className="py-3 text-center font-mono text-xs tabular-nums">
+            <span className="text-teal-400">
+              {fpRank != null ? fpRank.toFixed(0) : "—"}
+            </span>
+          </td>
+        )}
+        {extraRanks.map((r, idx) => (
+          <td
+            key={EXTRA_PLATFORMS[idx].key}
+            className="py-3 text-center font-mono text-xs tabular-nums"
           >
-            {tier}
-          </span>
-        </td>
-        <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums">
-          {edge == null ? (
-            <span className="text-zinc-500">—</span>
-          ) : edge > 0 ? (
-            <span className="text-emerald-400">+{edge}</span>
-          ) : edge < 0 ? (
-            <span className="text-rose-400">{edge}</span>
+            <span className={EXTRA_PLATFORMS[idx].accent}>
+              {r != null ? r.toFixed(0) : "—"}
+            </span>
+          </td>
+        ))}
+        <td className="py-3 pr-4 text-center font-mono text-xs font-semibold tabular-nums">
+          {avgRank != null ? (
+            <span className="text-zinc-200">{avgRank.toFixed(1)}</span>
           ) : (
-            <span className="text-zinc-500">—</span>
+            <span className="text-zinc-600">—</span>
           )}
         </td>
       </tr>
@@ -554,7 +575,10 @@ function RankRow({
         <tr className="border-t border-zinc-800/60 bg-zinc-950/50">
           <td
             colSpan={
-              10 + (hasEspn ? 2 : 0) + (hasFp ? 1 : 0) + (hasCouncil ? 1 : 0)
+              6 +
+              (hasEspn ? 1 : 0) +
+              (hasCouncil ? 1 : 0) +
+              EXTRA_PLATFORMS.length
             }
             className="px-12 py-4"
           >
@@ -593,7 +617,7 @@ function RankRow({
               <span className="font-mono text-zinc-300">
                 {(fpts / 17).toFixed(1)}
               </span>{" "}
-              · VBD:{" "}
+              · Edge:{" "}
               <span
                 className={
                   vbd > 0

@@ -41,7 +41,7 @@ export default async function DraftPage() {
         <div className="mb-4 border-b border-zinc-800 pb-3">
           <h2 className="text-2xl font-semibold">Mock Draft</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            12-team snake draft. AI opponents pick by VBD + position need. Test
+            12-team snake draft. AI opponents pick by Edge + position need. Test
             your strategy before the real thing.
           </p>
         </div>

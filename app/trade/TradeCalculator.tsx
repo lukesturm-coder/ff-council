@@ -283,7 +283,7 @@ function TradeSide({
       )}
       {players.length > 0 && (
         <div className="flex items-baseline justify-between text-xs text-zinc-500">
-          <span>VBD total</span>
+          <span>Edge total</span>
           <span className="font-mono">{sideVbd.toFixed(1)}</span>
         </div>
       )}
@@ -402,7 +402,7 @@ function VerdictPanel({
       color: "text-zinc-100",
     },
     {
-      label: "Vegas VBD",
+      label: "Vegas Edge",
       aValue: a.vegasVbd,
       bValue: b.vegasVbd,
       aDisplay: a.vegasVbd.toFixed(1),

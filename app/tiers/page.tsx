@@ -207,7 +207,7 @@ export default async function TiersPage() {
                             </span>
                             <span className="w-16 text-right font-mono text-xs tabular-nums text-zinc-500">
                               {p.vbd.PPR > 0 ? "+" : ""}
-                              {p.vbd.PPR.toFixed(1)} VBD
+                              {p.vbd.PPR.toFixed(1)} Edge
                             </span>
                           </li>
                         ))}

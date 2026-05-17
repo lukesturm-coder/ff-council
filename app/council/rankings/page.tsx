@@ -80,7 +80,7 @@ export default async function MyRankingsPage() {
           <h2 className="text-xl font-semibold">My Rankings</h2>
           <p className="text-sm text-zinc-400">
             Submit your personal draft rankings. They start pre-populated from
-            the Vegas VBD baseline — use the ↑/↓ buttons to bump players up
+            the Vegas Edge baseline — use the ↑/↓ buttons to bump players up
             or down. Click <span className="text-zinc-200">Save</span> when
             you&apos;re done with a scoring system. Each scoring system
             (PPR/Half/Standard) is saved independently.

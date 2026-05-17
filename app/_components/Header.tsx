@@ -36,8 +36,8 @@ export default async function Header() {
   return (
     <header className="mb-4 flex items-center gap-4 border-b border-zinc-800 pb-3">
       <Link href="/" className="shrink-0">
-        <h1 className="whitespace-nowrap font-mono text-xl font-bold tracking-tight">
-          FF <span className="text-emerald-400">COUNCIL</span>
+        <h1 className="whitespace-nowrap font-mono text-xl font-bold tracking-tight text-emerald-400">
+          FF COUNCIL
         </h1>
       </Link>
 

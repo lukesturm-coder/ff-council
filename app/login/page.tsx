@@ -14,8 +14,8 @@ export default async function LoginPage({
     <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-zinc-100">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <h1 className="font-mono text-3xl font-bold tracking-tight">
-            FF <span className="text-emerald-400">COUNCIL</span>
+          <h1 className="font-mono text-3xl font-bold tracking-tight text-emerald-400">
+            FF COUNCIL
           </h1>
           <p className="mt-2 text-sm text-zinc-400">Sign in to the Council</p>
         </div>

@@ -111,15 +111,15 @@ export default function ConsensusView({
               </th>
               <th
                 className="py-3 pr-4 text-right"
-                title="Stddev of council ranks — high = disagreement"
+                title="Standard deviation of council ranks — high = disagreement"
               >
-                Spread
+                Std Dev
               </th>
               <th
                 className="py-3 pr-4 text-right"
                 title="Number of council members who ranked this player"
               >
-                n
+                Rankers
               </th>
               <th
                 className="py-3 pr-4 text-right"
@@ -199,12 +199,14 @@ export default function ConsensusView({
       </div>
 
       <p className="text-xs text-zinc-500">
-        <span className="text-zinc-300">Spread</span> highlights controversial
-        picks: green ≤ 2, amber 2–5, red ≥ 5. Use it to find players where
-        the council disagrees with itself.{" "}
+        <span className="text-zinc-300">Std Dev</span> is the standard
+        deviation of council ranks — green ≤ 2, amber 2–5, red ≥ 5. High = a
+        controversial player the council can&apos;t agree on.{" "}
+        <span className="text-zinc-300">Rankers</span> = how many council
+        members have submitted a rank for that player.{" "}
         <span className="text-zinc-300">Edge vs Vegas</span> shows where the
         council&apos;s collective judgment diverges from the market — positive
-        means the council ranks them higher than Vegas VBD does.
+        means the council ranks them higher than the Vegas Edge ranking does.
       </p>
     </div>
   );

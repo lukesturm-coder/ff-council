@@ -639,7 +639,7 @@ export default async function LeagueAnalysisPage({
                     <th className="py-3 pl-2">Pos</th>
                     <th className="py-3 pl-2">Team</th>
                     <th className="py-3 pr-4 text-right">Vegas FPts</th>
-                    <th className="py-3 pr-4 text-right">VBD</th>
+                    <th className="py-3 pr-4 text-right">Edge</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -777,7 +777,7 @@ function PlayerTable({
             <th className="py-1">Team</th>
             <th className="py-1 text-right">Age</th>
             <th className="py-1 text-right">Vegas FPts</th>
-            <th className="py-1 text-right">VBD</th>
+            <th className="py-1 text-right">Edge</th>
             <th className="py-1 text-right">ESPN ADP</th>
             <th className="py-1 text-right">FP ADP</th>
             <th className="py-1 text-right">Council</th>

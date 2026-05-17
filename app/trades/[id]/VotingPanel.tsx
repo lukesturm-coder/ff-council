@@ -38,6 +38,7 @@ const MAGNITUDE_TIERS: {
 export default function VotingPanel({
   tradeId,
   myVote,
+  onVoted,
 }: {
   tradeId: string;
   myVote: {
@@ -45,6 +46,7 @@ export default function VotingPanel({
     fairness_tier: string;
     fairness_lean: string | null;
   } | null;
+  onVoted?: () => void;
 }) {
   const [winner, setWinner] = useState<Winner | null>(
     (myVote?.winner as Winner) ?? null,
@@ -82,6 +84,7 @@ export default function VotingPanel({
       });
       if (res.ok) {
         setMsg(myVote ? "Vote updated." : "Vote recorded.");
+        onVoted?.();
       } else {
         setMsg(`Error: ${res.error}`);
       }

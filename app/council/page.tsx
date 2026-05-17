@@ -99,8 +99,8 @@ export default async function CouncilConsensusPage() {
             Average ranking across {totalApprovedMembers} council member
             {totalApprovedMembers === 1 ? "" : "s"}&apos; current submissions.
             The <span className="text-zinc-200">spread</span> column shows
-            disagreement — high spread = controversial pick. Edge compares
-            Council consensus to Vegas VBD.
+            disagreement — high spread = controversial pick. The Edge vs Vegas
+            column compares Council consensus to the Vegas Edge ranking.
           </p>
         </div>
 

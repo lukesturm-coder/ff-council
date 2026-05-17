@@ -155,7 +155,7 @@ export default function RankingsEditor({
         <button
           onClick={resetToVegas}
           className="inline-flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
-          title="Reset to Vegas VBD baseline for this scoring system"
+          title="Reset to Vegas Edge baseline for this scoring system"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           Reset to Vegas baseline
@@ -250,7 +250,7 @@ export default function RankingsEditor({
         Drag any player by the <span className="text-zinc-300">grip
         handle</span> on the left to reorder. The{" "}
         <span className="text-emerald-400">+/−</span> column shows how far
-        your rank diverges from the Vegas VBD baseline — positive means you
+        your rank diverges from the Vegas Edge baseline — positive means you
         like the player more than Vegas does.
       </p>
     </div>

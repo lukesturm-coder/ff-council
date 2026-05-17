@@ -182,7 +182,7 @@ export default async function PlayerDetailPage({
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Vegas FPts (PPR)" value={player.fantasyPoints.PPR.toFixed(1)} />
           <StatCard
-            label="Vegas VBD (PPR)"
+            label="Vegas Edge (PPR)"
             value={`${player.vbd.PPR > 0 ? "+" : ""}${player.vbd.PPR.toFixed(1)}`}
             tone={player.vbd.PPR > 0 ? "emerald" : "zinc"}
           />

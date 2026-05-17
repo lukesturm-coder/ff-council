@@ -10,7 +10,9 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
+import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
 import Header from "./_components/Header";
+import TradePrompt from "./_components/TradePrompt";
 import RankingsTable, {
   type CouncilConsensusMap,
   type PlatformRankingsMap,
@@ -75,11 +77,16 @@ async function loadCouncilConsensus(): Promise<CouncilConsensusMap> {
 }
 
 export default async function Page() {
-  const [projections, platformRankings, councilConsensus] = await Promise.all([
+  const [projections, realPlatformRankings, councilConsensus] = await Promise.all([
     loadProjections(),
     loadPlatformRankings(),
     loadCouncilConsensus(),
   ]);
+
+  // Real platforms only have ESPN + FantasyPros so far. Layer mock Sleeper /
+  // NFL / CBS / Yahoo ranks on top so we can design the multi-source table
+  // UX while we wait for those platforms to publish 2026 preseason data.
+  const platformRankings = withMockPlatformRankings(realPlatformRankings, projections);
 
   const hasEspn = Object.values(platformRankings).some((p) => p.espn);
   const hasCouncil = Object.keys(councilConsensus).length > 0;
@@ -88,6 +95,8 @@ export default async function Page() {
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-7xl px-6 py-6">
         <Header />
+
+        <TradePrompt />
 
         <RankingsTable
           projections={projections}
