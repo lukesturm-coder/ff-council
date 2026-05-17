@@ -69,8 +69,15 @@ export type CastVerdictVoteInput = {
   reasoning?: string;
 };
 
+export type VerdictConsensus = {
+  total: number;
+  topPlayerId: number | null;
+  topPct: number;
+  byPlayer: Record<number, number>;
+};
+
 export type CastVerdictVoteResult =
-  | { ok: true }
+  | { ok: true; consensus: VerdictConsensus }
   | { ok: false; error: string };
 
 export async function castVerdictVote(
@@ -98,7 +105,31 @@ export async function castVerdictVote(
 
   if (error) return { ok: false, error: error.message };
 
+  // Re-aggregate so the caller can render "you said X · council says Y 52%"
+  // without an extra round-trip. Direct query against verdict_votes — no
+  // dependency on any summary view.
+  const { data: voteRows } = await supabase
+    .from("verdict_votes")
+    .select("pick_player_id")
+    .eq("scenario_id", input.scenarioId);
+  const byPlayer: Record<number, number> = {};
+  for (const v of voteRows ?? []) {
+    const pid = v.pick_player_id as number;
+    byPlayer[pid] = (byPlayer[pid] ?? 0) + 1;
+  }
+  let total = 0;
+  for (const n of Object.values(byPlayer)) total += n;
+  let topPlayerId: number | null = null;
+  let topCount = -1;
+  for (const [pidStr, count] of Object.entries(byPlayer)) {
+    if (count > topCount) {
+      topCount = count;
+      topPlayerId = Number(pidStr);
+    }
+  }
+  const topPct = total > 0 ? Math.round((topCount / total) * 100) : 0;
+
   revalidatePath(`/verdict/${input.scenarioId}`);
   revalidatePath("/verdict");
-  return { ok: true };
+  return { ok: true, consensus: { total, topPlayerId, topPct, byPlayer } };
 }

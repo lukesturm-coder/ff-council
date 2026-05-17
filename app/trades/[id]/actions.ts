@@ -15,8 +15,15 @@ export type VoteInput = {
   fairnessLean: "A" | "B" | null;
 };
 
+export type TradeConsensus = {
+  total: number;
+  topWinner: "A" | "B" | "EVEN" | null;
+  topPct: number;
+  counts: { A: number; B: number; EVEN: number };
+};
+
 export type VoteResult =
-  | { ok: true }
+  | { ok: true; consensus: TradeConsensus }
   | { ok: false; error: string };
 
 export async function castVote(input: VoteInput): Promise<VoteResult> {
@@ -55,8 +62,32 @@ export async function castVote(input: VoteInput): Promise<VoteResult> {
 
   if (error) return { ok: false, error: error.message };
 
+  // Re-aggregate the current consensus so the caller (e.g. /judge) can
+  // immediately show "you said A · council says B 73%" feedback without a
+  // second round-trip. Hits trade_votes directly to avoid depending on the
+  // trade_vote_summary view (which has had its own counting bugs).
+  const { data: voteRows } = await supabase
+    .from("trade_votes")
+    .select("winner")
+    .eq("trade_id", input.tradeId);
+  const counts = { A: 0, B: 0, EVEN: 0 };
+  for (const v of voteRows ?? []) {
+    const w = v.winner as "A" | "B" | "EVEN";
+    if (w === "A" || w === "B" || w === "EVEN") counts[w] += 1;
+  }
+  const total = counts.A + counts.B + counts.EVEN;
+  let topWinner: "A" | "B" | "EVEN" | null = null;
+  let topCount = -1;
+  for (const w of ["A", "B", "EVEN"] as const) {
+    if (counts[w] > topCount) {
+      topCount = counts[w];
+      topWinner = w;
+    }
+  }
+  const topPct = total > 0 ? Math.round((topCount / total) * 100) : 0;
+
   revalidatePath(`/trades/${input.tradeId}`);
   revalidatePath("/trades");
   revalidatePath("/");
-  return { ok: true };
+  return { ok: true, consensus: { total, topWinner, topPct, counts } };
 }

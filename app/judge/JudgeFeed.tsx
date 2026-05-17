@@ -77,6 +77,14 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
   const [skipped, setSkipped] = useState(0);
   const [flashMsg, setFlashMsg] = useState<string | null>(null);
   const [flashSub, setFlashSub] = useState<string | null>(null);
+  // After a successful vote: "you said X · council says Y, 73%" feedback
+  // shown in the flash. Null when there are no other votes yet (you're
+  // the first to weigh in).
+  const [flashAgreement, setFlashAgreement] = useState<{
+    matched: boolean;
+    topLabel: string;
+    pct: number;
+  } | null>(null);
   // Track which option the user just picked so we can ring-pulse it
   // before the card advances. Cleared on advance().
   const [justPicked, setJustPicked] = useState<string | null>(null);
@@ -101,20 +109,42 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
     advance();
   }
 
-  function flashAndAdvance(msg: string, pickKey: string) {
+  function flashAndAdvance(
+    msg: string,
+    pickKey: string,
+    agreement: { matched: boolean; topLabel: string; pct: number } | null,
+  ) {
     setJustPicked(pickKey);
     setFlashMsg(msg);
+    setFlashAgreement(agreement);
     // Compute streak milestone for the soon-to-be-incremented count.
     const nextJudged = judged + 1;
     setFlashSub(STREAK_MILESTONES[nextJudged] ?? null);
     setJudged(nextJudged);
-    // Snappier than before (was 600ms). 350ms keeps it crisp without
-    // skipping the visual confirmation.
+    // Hold longer when there's a consensus line to read.
+    const duration = agreement ? 1100 : 420;
     setTimeout(() => {
       setFlashMsg(null);
       setFlashSub(null);
+      setFlashAgreement(null);
       advance();
-    }, 380);
+    }, duration);
+  }
+
+  // Short label for trade winners (Team A / Even / Team B). Used in both the
+  // user's pick line and the council line.
+  function tradeLabel(w: "A" | "B" | "EVEN" | null): string {
+    if (w === "A") return "Team A";
+    if (w === "B") return "Team B";
+    if (w === "EVEN") return "Even";
+    return "—";
+  }
+
+  // Last name only for verdict candidates — keeps the flash compact.
+  // Falls back to the full name when there's no whitespace to split on.
+  function shortPlayerName(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    return parts.length > 1 ? parts[parts.length - 1] : name;
   }
 
   function tradeQuickVote(tradeId: string, winner: "A" | "B" | "EVEN") {
@@ -126,18 +156,52 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
         fairnessTier: winner === "EVEN" ? "balanced" : "slight_edge",
         fairnessLean: winner === "EVEN" ? null : winner,
       });
-      if (res.ok) flashAndAdvance("Vote recorded", `trade:${winner}`);
-      else setFlashMsg(`Error: ${res.error}`);
+      if (res.ok) {
+        const c = res.consensus;
+        const userLabel = tradeLabel(winner);
+        const agreement =
+          c.total > 0
+            ? {
+                matched: c.topWinner === winner,
+                topLabel: tradeLabel(c.topWinner),
+                pct: c.topPct,
+              }
+            : null;
+        flashAndAdvance(`You said ${userLabel}`, `trade:${winner}`, agreement);
+      } else {
+        setFlashMsg(`Error: ${res.error}`);
+      }
     });
   }
 
   function verdictQuickVote(scenarioId: string, pickPlayerId: number) {
-    if (pending) return;
+    if (pending || !current || current.kind !== "verdict") return;
+    const candidates = current.candidates;
+    const userPick = candidates.find((c) => c.player_id === pickPlayerId);
+    const userLabel = userPick ? shortPlayerName(userPick.name) : "—";
     startTransition(async () => {
       const res = await castVerdictVote({ scenarioId, pickPlayerId });
-      if (res.ok)
-        flashAndAdvance("Vote recorded", `verdict:${pickPlayerId}`);
-      else setFlashMsg(`Error: ${res.error}`);
+      if (res.ok) {
+        const c = res.consensus;
+        const topCandidate = candidates.find(
+          (x) => x.player_id === c.topPlayerId,
+        );
+        const agreement =
+          c.total > 0 && topCandidate
+            ? {
+                matched: c.topPlayerId === pickPlayerId,
+                topLabel: shortPlayerName(topCandidate.name),
+                pct: c.topPct,
+              }
+            : null;
+        flashAndAdvance(
+          `You said ${userLabel}`,
+          `verdict:${pickPlayerId}`,
+          agreement,
+        );
+      } else {
+        setFlashMsg(`Error: ${res.error}`);
+      }
     });
   }
 
@@ -245,6 +309,19 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
             >
               {flashMsg}
             </span>
+            {flashAgreement && (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${
+                  flashAgreement.matched
+                    ? "bg-emerald-500/20 text-emerald-200 ring-emerald-500/40"
+                    : "bg-amber-500/15 text-amber-200 ring-amber-500/40"
+                }`}
+              >
+                {flashAgreement.matched
+                  ? `Council agrees · ${flashAgreement.pct}%`
+                  : `Council says ${flashAgreement.topLabel} · ${flashAgreement.pct}%`}
+              </span>
+            )}
             {flashSub && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-amber-200 ring-1 ring-amber-500/40">
                 <Flame className="h-3 w-3" />
