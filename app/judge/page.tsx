@@ -4,7 +4,7 @@ import JudgeFeed, { type JudgeItem } from "./JudgeFeed";
 
 // /judge — single-card full-screen feed of unvoted scenarios. Mixed feed
 // of trade-court trades + verdict scenarios, ordered by recency. Optimised
-// for high-throughput one-tap voting. Filters (type, league, scoring)
+// for high-throughput one-tap voting. Filters (type, league, scoring, sort)
 // live in URL search params so they survive refresh.
 
 type SidePlayer = {
@@ -61,6 +61,17 @@ const SCORING_OPTIONS = [
   { value: "TEPremium", label: "TE Prem" },
 ] as const;
 
+const SORT_OPTIONS = [
+  { value: "recent", label: "Recent" },
+  { value: "controversial", label: "Most controversial" },
+  { value: "popular", label: "Most voted" },
+] as const;
+
+// Minimum vote threshold for an item to qualify for the controversial /
+// popular sort. Anything below this falls to the bottom of the list so a
+// 2-vote 1-1 split doesn't trump a 200-vote real split.
+const MIN_VOTES_FOR_RANKED_SORT = 10;
+
 export default async function JudgePage({
   searchParams,
 }: {
@@ -68,6 +79,7 @@ export default async function JudgePage({
     type?: string;
     league?: string;
     scoring?: string;
+    sort?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -77,6 +89,8 @@ export default async function JudgePage({
     LEAGUE_OPTIONS.find((o) => o.value === params.league)?.value ?? "all";
   const scoringFilter =
     SCORING_OPTIONS.find((o) => o.value === params.scoring)?.value ?? "all";
+  const sortMode =
+    SORT_OPTIONS.find((o) => o.value === params.sort)?.value ?? "recent";
 
   const supabase = await createClient();
   const {
@@ -103,28 +117,46 @@ export default async function JudgePage({
 
   // Skip fetches we don't need based on the type filter (saves a round-trip
   // and keeps the data small for the longest possible feed when one type
-  // is selected).
-  const [tradeRes, verdictRes, myTradeVotesRes, myVerdictVotesRes] =
-    await Promise.all([
-      typeFilter === "verdicts"
-        ? Promise.resolve({ data: [] as TradeRow[] })
-        : tradeQuery,
-      typeFilter === "trades"
-        ? Promise.resolve({ data: [] as VerdictRow[] })
-        : verdictQuery,
-      user
-        ? supabase
-            .from("trade_votes")
-            .select("trade_id")
-            .eq("voter_id", user.id)
-        : Promise.resolve({ data: [] as { trade_id: string }[] }),
-      user
-        ? supabase
-            .from("verdict_votes")
-            .select("scenario_id")
-            .eq("voter_id", user.id)
-        : Promise.resolve({ data: [] as { scenario_id: string }[] }),
-    ]);
+  // is selected). When sorting by controversial/popular we also need the
+  // raw vote rows aggregated in-memory.
+  const needsVoteCounts = sortMode !== "recent";
+  const [
+    tradeRes,
+    verdictRes,
+    myTradeVotesRes,
+    myVerdictVotesRes,
+    tradeVotesRes,
+    verdictVotesRes,
+  ] = await Promise.all([
+    typeFilter === "verdicts"
+      ? Promise.resolve({ data: [] as TradeRow[] })
+      : tradeQuery,
+    typeFilter === "trades"
+      ? Promise.resolve({ data: [] as VerdictRow[] })
+      : verdictQuery,
+    user
+      ? supabase
+          .from("trade_votes")
+          .select("trade_id")
+          .eq("voter_id", user.id)
+      : Promise.resolve({ data: [] as { trade_id: string }[] }),
+    user
+      ? supabase
+          .from("verdict_votes")
+          .select("scenario_id")
+          .eq("voter_id", user.id)
+      : Promise.resolve({ data: [] as { scenario_id: string }[] }),
+    needsVoteCounts && typeFilter !== "verdicts"
+      ? supabase.from("trade_votes").select("trade_id, winner")
+      : Promise.resolve({
+          data: [] as { trade_id: string; winner: "A" | "B" | "EVEN" }[],
+        }),
+    needsVoteCounts && typeFilter !== "trades"
+      ? supabase.from("verdict_votes").select("scenario_id, pick_player_id")
+      : Promise.resolve({
+          data: [] as { scenario_id: string; pick_player_id: number }[],
+        }),
+  ]);
 
   const myTradeIds = new Set(
     ((myTradeVotesRes.data ?? []) as { trade_id: string }[]).map(
@@ -149,6 +181,78 @@ export default async function JudgePage({
     verdicts = verdicts.filter(
       (v) => (v.context as { scoring?: string })?.scoring === scoringFilter,
     );
+  }
+
+  // Aggregate vote rows in-memory keyed by their scenario id. Only computed
+  // when the active sort needs them.
+  type TradeTally = { total: number; a: number; b: number; even: number };
+  const tradeTallies = new Map<string, TradeTally>();
+  if (needsVoteCounts) {
+    for (const v of (tradeVotesRes.data ?? []) as {
+      trade_id: string;
+      winner: "A" | "B" | "EVEN";
+    }[]) {
+      const t = tradeTallies.get(v.trade_id) ?? {
+        total: 0,
+        a: 0,
+        b: 0,
+        even: 0,
+      };
+      t.total += 1;
+      if (v.winner === "A") t.a += 1;
+      else if (v.winner === "B") t.b += 1;
+      else if (v.winner === "EVEN") t.even += 1;
+      tradeTallies.set(v.trade_id, t);
+    }
+  }
+  // For verdicts: tally per-candidate plus total.
+  type VerdictTally = { total: number; byPlayer: Map<number, number> };
+  const verdictTallies = new Map<string, VerdictTally>();
+  if (needsVoteCounts) {
+    for (const v of (verdictVotesRes.data ?? []) as {
+      scenario_id: string;
+      pick_player_id: number;
+    }[]) {
+      const t = verdictTallies.get(v.scenario_id) ?? {
+        total: 0,
+        byPlayer: new Map<number, number>(),
+      };
+      t.total += 1;
+      t.byPlayer.set(
+        v.pick_player_id,
+        (t.byPlayer.get(v.pick_player_id) ?? 0) + 1,
+      );
+      verdictTallies.set(v.scenario_id, t);
+    }
+  }
+
+  // Controversy score: HIGHER = more controversial.
+  // Trade: 1 - max(share_a, share_b, share_even). Even three-way → 2/3.
+  // Verdict: 1 - (gap between top two candidates' shares). Tie → 1.0.
+  // Both require >= MIN_VOTES_FOR_RANKED_SORT and (verdict) >= 2 voted-for
+  // candidates; ineligible items get -1 so they sort to the bottom.
+  function tradeControversy(id: string): number {
+    const t = tradeTallies.get(id);
+    if (!t || t.total < MIN_VOTES_FOR_RANKED_SORT) return -1;
+    const maxShare = Math.max(t.a, t.b, t.even) / t.total;
+    return 1 - maxShare;
+  }
+  function verdictControversy(id: string): number {
+    const t = verdictTallies.get(id);
+    if (!t || t.total < MIN_VOTES_FOR_RANKED_SORT) return -1;
+    const shares = Array.from(t.byPlayer.values())
+      .filter((c) => c > 0)
+      .map((c) => c / t.total)
+      .sort((a, b) => b - a);
+    if (shares.length < 2) return -1;
+    return 1 - (shares[0] - shares[1]);
+  }
+
+  function tradeTotal(id: string): number {
+    return tradeTallies.get(id)?.total ?? 0;
+  }
+  function verdictTotal(id: string): number {
+    return verdictTallies.get(id)?.total ?? 0;
   }
 
   const feed: JudgeItem[] = [
@@ -176,7 +280,31 @@ export default async function JudgePage({
         created_at: v.created_at,
       }),
     ),
-  ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  ];
+
+  function scoreFor(item: JudgeItem): number {
+    if (sortMode === "controversial") {
+      return item.kind === "trade"
+        ? tradeControversy(item.id)
+        : verdictControversy(item.id);
+    }
+    if (sortMode === "popular") {
+      return item.kind === "trade" ? tradeTotal(item.id) : verdictTotal(item.id);
+    }
+    return 0;
+  }
+
+  if (sortMode === "recent") {
+    feed.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  } else {
+    feed.sort((a, b) => {
+      const sb = scoreFor(b);
+      const sa = scoreFor(a);
+      if (sb !== sa) return sb - sa;
+      // Stable tiebreak: newer first
+      return a.created_at < b.created_at ? 1 : -1;
+    });
+  }
 
   const anyFilterActive =
     typeFilter !== "all" || leagueFilter !== "all" || scoringFilter !== "all";
@@ -202,11 +330,26 @@ export default async function JudgePage({
         {/* Filters — pill rows. Each pill is a Link so URL params drive state. */}
         <div className="mb-4 space-y-2">
           <FilterRow
+            label="Sort"
+            options={SORT_OPTIONS}
+            current={sortMode}
+            paramName="sort"
+            otherParams={{
+              type: typeFilter,
+              league: leagueFilter,
+              scoring: scoringFilter,
+            }}
+          />
+          <FilterRow
             label="Type"
             options={TYPE_OPTIONS}
             current={typeFilter}
             paramName="type"
-            otherParams={{ league: leagueFilter, scoring: scoringFilter }}
+            otherParams={{
+              league: leagueFilter,
+              scoring: scoringFilter,
+              sort: sortMode,
+            }}
           />
           {typeFilter !== "verdicts" && (
             <FilterRow
@@ -214,7 +357,11 @@ export default async function JudgePage({
               options={LEAGUE_OPTIONS}
               current={leagueFilter}
               paramName="league"
-              otherParams={{ type: typeFilter, scoring: scoringFilter }}
+              otherParams={{
+                type: typeFilter,
+                scoring: scoringFilter,
+                sort: sortMode,
+              }}
             />
           )}
           <FilterRow
@@ -222,7 +369,11 @@ export default async function JudgePage({
             options={SCORING_OPTIONS}
             current={scoringFilter}
             paramName="scoring"
-            otherParams={{ type: typeFilter, league: leagueFilter }}
+            otherParams={{
+              type: typeFilter,
+              league: leagueFilter,
+              sort: sortMode,
+            }}
           />
         </div>
 
@@ -281,10 +432,12 @@ function FilterRow({
   otherParams: Record<string, string>;
 }) {
   // Build a URL with this pill's value applied + other filters preserved.
-  // Default values ("all") are omitted to keep URLs short and clean.
+  // Default values ("all", "recent") are omitted to keep URLs short and clean.
   function hrefFor(value: string): string {
     const params: Record<string, string> = { ...otherParams, [paramName]: value };
-    const entries = Object.entries(params).filter(([, v]) => v && v !== "all");
+    const entries = Object.entries(params).filter(
+      ([, v]) => v && v !== "all" && v !== "recent",
+    );
     if (entries.length === 0) return "/judge";
     const qs = new URLSearchParams(entries).toString();
     return `/judge?${qs}`;

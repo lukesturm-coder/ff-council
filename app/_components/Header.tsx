@@ -58,9 +58,13 @@ export default async function Header() {
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm">
             {user ? (
               <>
-                <span className="text-xs text-zinc-400" title={user.email ?? ""}>
+                <Link
+                  href="/me"
+                  className="text-xs text-zinc-400 transition hover:text-emerald-300"
+                  title={user.email ?? ""}
+                >
                   {displayName}
-                </span>
+                </Link>
                 <form action="/logout" method="post">
                   <button
                     type="submit"

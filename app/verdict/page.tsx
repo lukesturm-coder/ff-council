@@ -31,10 +31,22 @@ const TYPE_FILTERS: { value: TypeFilter; label: string }[] = [
 const SCORING_FILTERS = ["all", "PPR", "Half", "Standard"] as const;
 type ScoringFilter = (typeof SCORING_FILTERS)[number];
 
+type SortMode = "recent" | "controversial" | "popular";
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: "recent", label: "Recent" },
+  { value: "controversial", label: "Most controversial" },
+  { value: "popular", label: "Most voted" },
+];
+
+// Minimum vote threshold for an item to qualify for the controversial /
+// popular sort. Anything below this falls to the bottom so a 1-1 2-vote
+// split doesn't trump a real split with 200 votes.
+const MIN_VOTES_FOR_RANKED_SORT = 10;
+
 export default async function VerdictIndexPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; scoring?: string }>;
+  searchParams: Promise<{ type?: string; scoring?: string; sort?: string }>;
 }) {
   const params = await searchParams;
   const typeFilter: TypeFilter =
@@ -43,6 +55,8 @@ export default async function VerdictIndexPage({
     (SCORING_FILTERS as readonly string[]).includes(params.scoring ?? "")
       ? (params.scoring as ScoringFilter)
       : "all";
+  const sortMode: SortMode =
+    SORT_OPTIONS.find((o) => o.value === params.sort)?.value ?? "recent";
 
   const supabase = await createClient();
 
@@ -104,6 +118,30 @@ export default async function VerdictIndexPage({
     tally: tallyByScenario.get(s.id as string) ?? { byPlayer: {}, total: 0 },
   }));
 
+  // Apply derived-metric sorts in-app. Default ordering (recent) was set by
+  // the DB query above so we only re-sort for the other modes.
+  if (sortMode === "popular") {
+    rows.sort((a, b) => b.tally.total - a.tally.total);
+  } else if (sortMode === "controversial") {
+    // Controversy = 1 - (top share - runner-up share). Requires >= 2
+    // candidates with actual votes and total >= threshold; ineligible rows
+    // score -1 so they sort to the bottom (newer first within them).
+    const controversyScore = (r: VerdictCardData): number => {
+      if (r.tally.total < MIN_VOTES_FOR_RANKED_SORT) return -1;
+      const shares = Object.values(r.tally.byPlayer)
+        .filter((c) => c > 0)
+        .map((c) => c / r.tally.total)
+        .sort((a, b) => b - a);
+      if (shares.length < 2) return -1;
+      return 1 - (shares[0] - shares[1]);
+    };
+    rows.sort((a, b) => {
+      const diff = controversyScore(b) - controversyScore(a);
+      if (diff !== 0) return diff;
+      return a.created_at < b.created_at ? 1 : -1;
+    });
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
@@ -124,14 +162,21 @@ export default async function VerdictIndexPage({
           </Link>
         </div>
 
-        {/* Filters bar — pill rows for type + scoring */}
+        {/* Filters bar — pill rows for sort + type + scoring */}
         <div className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto text-xs sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <FilterPillRow
+            label="Sort"
+            options={SORT_OPTIONS}
+            current={sortMode}
+            param="sort"
+            otherParams={{ type: typeFilter, scoring: scoringFilter }}
+          />
           <FilterPillRow
             label="Type"
             options={TYPE_FILTERS}
             current={typeFilter}
             param="type"
-            otherParams={{ scoring: scoringFilter }}
+            otherParams={{ scoring: scoringFilter, sort: sortMode }}
           />
           <FilterPillRow
             label="Scoring"
@@ -141,7 +186,7 @@ export default async function VerdictIndexPage({
             }))}
             current={scoringFilter}
             param="scoring"
-            otherParams={{ type: typeFilter }}
+            otherParams={{ type: typeFilter, sort: sortMode }}
           />
           <span className="ml-auto shrink-0 text-zinc-500">
             {rows.length} scenario{rows.length === 1 ? "" : "s"}

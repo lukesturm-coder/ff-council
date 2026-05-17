@@ -41,6 +41,11 @@ const SORT_OPTIONS: { value: SortMode; label: string; description: string }[] = 
   },
 ];
 
+// Minimum vote threshold for an item to qualify for the controversial /
+// lopsided sort. Anything below this falls to the bottom so a 2-vote 1-1
+// split doesn't trump a real split with 200 votes.
+const MIN_VOTES_FOR_RANKED_SORT = 10;
+
 const SCORING_FILTERS = ["all", "PPR", "Half", "Standard", "Superflex", "TEPremium"] as const;
 const LEAGUE_FILTERS = ["all", "redraft", "dynasty", "keeper"] as const;
 
@@ -77,23 +82,32 @@ export default async function TradesIndexPage({
 
   const { data: trades } = await query;
   const ids = (trades ?? []).map((t) => t.id);
-  let summariesById = new Map<string, Summary>();
+  // Aggregate vote counts directly from trade_votes — the trade_vote_summary
+  // view had a NULL-counting bug for anon votes (see migration 012). Going
+  // through the raw rows keeps the source of truth in one place and lets us
+  // hit it with a single IN-filtered query.
+  const summariesById = new Map<string, Summary>();
   if (ids.length > 0) {
-    const { data: summaries } = await supabase
-      .from("trade_vote_summary")
-      .select("*")
+    const { data: voteRows } = await supabase
+      .from("trade_votes")
+      .select("trade_id, winner")
       .in("trade_id", ids);
-    summariesById = new Map(
-      (summaries ?? []).map((s) => [
-        s.trade_id as string,
-        {
-          total_votes: Number(s.total_votes),
-          votes_a: Number(s.votes_a),
-          votes_b: Number(s.votes_b),
-          votes_even: Number(s.votes_even),
-        },
-      ]),
-    );
+    for (const v of (voteRows ?? []) as {
+      trade_id: string;
+      winner: "A" | "B" | "EVEN";
+    }[]) {
+      const s = summariesById.get(v.trade_id) ?? {
+        total_votes: 0,
+        votes_a: 0,
+        votes_b: 0,
+        votes_even: 0,
+      };
+      s.total_votes += 1;
+      if (v.winner === "A") s.votes_a += 1;
+      else if (v.winner === "B") s.votes_b += 1;
+      else if (v.winner === "EVEN") s.votes_even += 1;
+      summariesById.set(v.trade_id, s);
+    }
   }
 
   const rows: TradeCardData[] = (trades ?? []).map((t) => ({
@@ -111,21 +125,21 @@ export default async function TradesIndexPage({
   if (sortMode === "popular") {
     rows.sort((a, b) => (b.summary?.total_votes ?? 0) - (a.summary?.total_votes ?? 0));
   } else if (sortMode === "controversial") {
-    // Controversial = closest to even three-way split among A/B/EVEN votes.
+    // Controversial = lowest max(votes_a, votes_b, votes_even) / total share.
+    // Score is 1 - maxShare so HIGHER = more contested. Perfectly even three-
+    // way split → 2/3. Unanimous → 0. Sub-threshold items get -1 so a 1-1
+    // result with 2 votes can't dominate a real split with 200 votes.
     const split = (s: Summary | null): number => {
-      if (!s || s.total_votes === 0) return -1;
-      const a = s.votes_a / s.total_votes;
-      const b = s.votes_b / s.total_votes;
-      const e = s.votes_even / s.total_votes;
-      // 1 = perfectly split, 0 = unanimous
-      const ideal = 1 / 3;
-      return 1 - (Math.abs(a - ideal) + Math.abs(b - ideal) + Math.abs(e - ideal)) / 2;
+      if (!s || s.total_votes < MIN_VOTES_FOR_RANKED_SORT) return -1;
+      const maxShare =
+        Math.max(s.votes_a, s.votes_b, s.votes_even) / s.total_votes;
+      return 1 - maxShare;
     };
     rows.sort((a, b) => split(b.summary) - split(a.summary));
   } else if (sortMode === "lopsided") {
     // Lopsided = highest absolute consensus toward A or B (ignoring even votes for ranking)
     const lopsidedScore = (s: Summary | null): number => {
-      if (!s || s.total_votes === 0) return -1;
+      if (!s || s.total_votes < MIN_VOTES_FOR_RANKED_SORT) return -1;
       const a = s.votes_a / s.total_votes;
       const b = s.votes_b / s.total_votes;
       return Math.max(a, b);
