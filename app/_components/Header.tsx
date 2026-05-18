@@ -32,6 +32,7 @@ const UTILITY_NAV: NavItem[] = [
   { href: "/league", label: "League Analyzer" },
   { href: "/council", label: "Council Rankings" },
   { href: "/tiers", label: "Tiers" },
+  { href: "/rank", label: "Rank" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 
