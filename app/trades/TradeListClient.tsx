@@ -340,7 +340,10 @@ function TradeModal({
               Tap the side that won — or the buttons below.
             </p>
 
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row">
+            {/* Equal-height side-by-side. Grid guarantees both cells stretch
+                to the tallest content; the "for" sits in a narrow middle column
+                that centers vertically. Stacks on mobile. */}
+            <div className="mb-5 grid grid-cols-1 items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
               <ModalSidePanel
                 label="Team A receives"
                 side={trade.side_a}
