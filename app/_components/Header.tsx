@@ -8,6 +8,7 @@ import {
 } from "@/lib/projections";
 import type { FuturesResponse } from "@/lib/types";
 import PrimaryNav, { type NavItem } from "./PrimaryNav";
+import MoreMenu from "./MoreMenu";
 import SearchBar from "./SearchBar";
 import type {
   SearchIndex,
@@ -16,9 +17,10 @@ import type {
   SearchVerdict,
 } from "./SearchIndex";
 
-// Two-tier nav: priority surfaces always large on the top row, utility tools
-// rendered in a smaller, muted second row. The fixed prefix (Rankings, Judge,
-// Trade Court, Verdict) anchors the priority tier per the standing order rule.
+// Single-row nav: 4 priority tabs always visible (Rankings, Judge, Trade Court,
+// Verdict — fixed by the standing order rule) + a "More" overflow dropdown for
+// every other surface. Mirrors the Sleeper/KTC pattern so users instinctively
+// know where to look.
 const PRIORITY_NAV: NavItem[] = [
   { href: "/rankings", label: "Rankings" },
   { href: "/judge", label: "Judge" },
@@ -163,33 +165,32 @@ export default async function Header() {
     isAdmin = Boolean(data?.is_admin);
   }
 
-  // Utility tier on desktop also carries auth-gated entries (My Rankings,
-  // Admin) when relevant. Mobile combines both tiers into one scroll row.
-  const utilityNav: NavItem[] = [...UTILITY_NAV];
-  if (user) utilityNav.push({ href: "/council/rankings", label: "My Rankings" });
-  if (isAdmin) utilityNav.push({ href: "/council/admin", label: "Admin" });
-  const allNav: NavItem[] = [...PRIORITY_NAV, ...utilityNav];
+  // Overflow items (auth-gated entries slot in here too).
+  const moreNav: NavItem[] = [...UTILITY_NAV];
+  if (user) moreNav.push({ href: "/council/rankings", label: "My Rankings" });
+  if (isAdmin) moreNav.push({ href: "/council/admin", label: "Admin" });
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60">
-      <div className="mx-auto max-w-7xl px-3 pb-2 pt-3 sm:px-6">
-        {/* Top row: logo + priority nav + search + auth. */}
-        <div className="flex items-center justify-between gap-4">
+      <div className="mx-auto max-w-7xl px-3 py-3 sm:px-6">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/" className="shrink-0">
-            <h1 className="whitespace-nowrap font-mono text-xl font-bold tracking-tight text-emerald-400 sm:text-2xl md:text-[1.625rem]">
+            <h1 className="whitespace-nowrap font-mono text-lg font-bold tracking-tight text-emerald-400 sm:text-2xl md:text-[1.625rem]">
               FF COUNCIL
             </h1>
           </Link>
 
-          {/* Priority nav (md+): the 4 always-large surfaces. */}
+          {/* Priority nav: 4 tabs, visible on all sizes. Scrolls horizontally
+              on very narrow phones if needed. */}
           <PrimaryNav
             items={PRIORITY_NAV}
             variant="desktop"
-            className="hidden min-w-0 flex-1 items-center gap-x-5 text-sm md:flex"
+            className="flex min-w-0 flex-1 items-center gap-x-4 overflow-x-auto text-sm sm:gap-x-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           />
 
+          <MoreMenu items={moreNav} />
+
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm">
-            {/* Universal Cmd-K search — full input on sm+, icon-only at <sm. */}
             <SearchBar index={searchIndex} />
             {user ? (
               <>
@@ -200,10 +201,10 @@ export default async function Header() {
                 >
                   {displayName}
                 </Link>
-                <form action="/logout" method="post">
+                <form action="/logout" method="post" className="hidden sm:block">
                   <button
                     type="submit"
-                    className="text-xs text-zinc-500 transition hover:text-zinc-300"
+                    className="text-sm text-zinc-500 transition hover:text-zinc-300"
                   >
                     Sign out
                   </button>
@@ -219,21 +220,6 @@ export default async function Header() {
             )}
           </div>
         </div>
-
-        {/* Utility tier (md+): compact + muted, supporting tools row. */}
-        <PrimaryNav
-          items={utilityNav}
-          variant="desktop"
-          size="compact"
-          className="mt-1 hidden items-center gap-x-4 border-t border-zinc-800/60 pt-1 text-xs md:flex"
-        />
-
-        {/* Mobile (<md): single horizontal-scroll row with both tiers combined. */}
-        <PrimaryNav
-          items={allNav}
-          variant="mobile"
-          className="mt-2 -mx-2 flex items-center gap-x-5 overflow-x-auto px-2 text-sm md:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        />
       </div>
     </header>
   );
