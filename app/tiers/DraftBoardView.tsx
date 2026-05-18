@@ -6,7 +6,7 @@ import type {
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
-import { computeTiersForPosition, tierStyle } from "@/lib/tiers";
+import { computeTiersForPosition, tierStyle, tierLetter } from "@/lib/tiers";
 
 // ---------------------------------------------------------------------------
 // Draft board view — Sleeper-Tiers / Fantasy Footballers UDK pattern.
@@ -341,7 +341,7 @@ function PositionBoard({
                 <span
                   className={`inline-flex items-center gap-1.5 rounded px-2 py-1 font-mono text-xs font-semibold ring-1 ring-inset ${style.badge}`}
                 >
-                  T{tier}
+                  {tierLetter(tier)}
                 </span>
                 <span className="text-[11px] text-zinc-400">
                   {players.length}{" "}

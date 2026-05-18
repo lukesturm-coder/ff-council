@@ -31,6 +31,7 @@ import {
   computeTiersByPlayer,
   tierStyle,
   tierDescription,
+  tierLetter,
   type TierInfo,
 } from "@/lib/tiers";
 import { saveRanking } from "./actions";
@@ -333,7 +334,7 @@ function SortableRow({
           className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset transition hover:brightness-125 ${tierStyle(tier.tier).badge}`}
           title={tierDescription(tier.tier, tier.position, tier.tierSize)}
         >
-          T{tier.tier}
+          {tierLetter(tier.tier)}
         </Link>
       )}
       <span className="hidden w-10 font-mono text-xs text-zinc-400 sm:inline">

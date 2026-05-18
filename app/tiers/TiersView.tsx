@@ -7,7 +7,7 @@ import type {
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
-import { computeTiersForPosition, tierStyle } from "@/lib/tiers";
+import { computeTiersForPosition, tierStyle, tierLetter } from "@/lib/tiers";
 import DraftBoardView from "./DraftBoardView";
 
 // Scoring & source toggles are read/written via URL params so a Tier badge on
@@ -336,7 +336,7 @@ function PositionTierChart({
               className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ring-1 ring-inset ${s.badge}`}
               title={`Tier ${t.tier}: ${t.players} ${t.players === 1 ? "player" : "players"} · ${t.min.toFixed(1)}–${t.max.toFixed(1)} FPts`}
             >
-              <span className="font-mono font-semibold">T{t.tier}</span>
+              <span className="font-mono font-semibold">Tier {tierLetter(t.tier)}</span>
               <span className="text-zinc-300/90">
                 {t.players}p
               </span>

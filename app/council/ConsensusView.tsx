@@ -7,7 +7,7 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import Link from "next/link";
-import { computeTiersByPlayer, tierStyle, tierDescription } from "@/lib/tiers";
+import { computeTiersByPlayer, tierStyle, tierDescription, tierLetter } from "@/lib/tiers";
 
 export type ConsensusRow = {
   playerId: number;
@@ -189,7 +189,7 @@ export default function ConsensusView({
                           className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset transition hover:brightness-125 ${style.badge}`}
                           title={tierDescription(info.tier, info.position, info.tierSize)}
                         >
-                          T{info.tier}
+                          {tierLetter(info.tier)}
                         </Link>
                       );
                     })()}

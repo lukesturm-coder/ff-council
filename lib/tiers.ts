@@ -23,8 +23,18 @@ import type {
 // orphans into whichever neighbor is closer in mean.
 // ---------------------------------------------------------------------------
 
+// User preference: tier labels are S/A/B/C/D (5 fixed letter tiers).
+// We could still vary K dynamically and map to letters, but the user wants
+// the familiar five-tier rubric, so we cap K=5. Jenks + GVF still picks the
+// best K within [MIN_TIERS, MAX_TIERS] — usually lands at 4 or 5 anyway.
 export const MIN_TIERS = 3;
-export const MAX_TIERS = 8;
+export const MAX_TIERS = 5;
+
+// Tier number → letter. 1 = S (elite), 5 = D (replacement-level).
+const TIER_LETTERS = ["", "S", "A", "B", "C", "D"] as const;
+export function tierLetter(tier: number): string {
+  return TIER_LETTERS[tier] ?? "—";
+}
 export const MIN_TIER_SIZE = 2;
 export const GVF_THRESHOLD = 0.85;
 
@@ -450,5 +460,5 @@ export function tierDescription(
 ): string {
   const style = tierStyle(tier);
   const playersWord = size === 1 ? "player" : "players";
-  return `Tier ${tier} · ${style.label} ${position} (${size} ${playersWord})`;
+  return `Tier ${tierLetter(tier)} · ${style.label} ${position} (${size} ${playersWord})`;
 }
