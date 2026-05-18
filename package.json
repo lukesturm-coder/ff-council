@@ -10,7 +10,8 @@
     "explore": "tsx scripts/explore-api.ts",
     "fetch:espn": "tsx scripts/fetch-espn.ts",
     "fetch:fp": "tsx scripts/fetch-fantasypros.ts",
-    "scrape:vegas": "tsx scripts/scrape-vegas.ts"
+    "scrape:vegas": "tsx scripts/scrape-vegas.ts",
+    "fetch:vegas": "tsx scripts/fetch-vegas.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",

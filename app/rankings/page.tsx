@@ -29,8 +29,8 @@ export const metadata: Metadata = {
 async function loadProjections(): Promise<PlayerProjection[]> {
   const dataDir = path.join(process.cwd(), "data");
   const [futuresRaw, rosterRaw] = await Promise.all([
-    fs.readFile(path.join(dataDir, "futures-mock.json"), "utf8"),
-    fs.readFile(path.join(dataDir, "players-mock.json"), "utf8"),
+    fs.readFile(path.join(dataDir, "futures-vegas.json"), "utf8"),
+    fs.readFile(path.join(dataDir, "players-vegas.json"), "utf8"),
   ]);
   const futures: FuturesResponse = JSON.parse(futuresRaw);
   const roster: PlayerRosterEntry[] = JSON.parse(rosterRaw);

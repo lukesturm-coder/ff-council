@@ -1,0 +1,3818 @@
+[
+  {
+    "BettingEventID": 1627,
+    "Name": "NFL Futures 2026-27 (OddsBlaze)",
+    "Season": 2026,
+    "BettingEventType": "Future",
+    "StartDate": "2026-09-04T20:20:00",
+    "BettingMarkets": [
+      {
+        "BettingMarketID": 1165731215,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Matthew Stafford Passing Yards",
+        "PlayerID": 9038,
+        "PlayerName": "Matthew Stafford",
+        "TeamKey": "LAR",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1352755376,
+            "BettingMarketID": 1165731215,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3999.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 9038,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 547532524,
+            "BettingMarketID": 1165731215,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3999.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 9038,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 589311605,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "C.J. Stroud Passing Yards",
+        "PlayerID": 23239,
+        "PlayerName": "C.J. Stroud",
+        "TeamKey": "HOU",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1411211802,
+            "BettingMarketID": 589311605,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": 100,
+            "Value": 3649.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23239,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 599711314,
+            "BettingMarketID": 589311605,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -120,
+            "Value": 3649.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23239,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1853311770,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Trevor Lawrence Passing Yards",
+        "PlayerID": 22490,
+        "PlayerName": "Trevor Lawrence",
+        "TeamKey": "JAX",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 716113082,
+            "BettingMarketID": 1853311770,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": 100,
+            "Value": 3749.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22490,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 855309578,
+            "BettingMarketID": 1853311770,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -120,
+            "Value": 3749.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22490,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 309160407,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Jared Goff Passing Yards",
+        "PlayerID": 17922,
+        "PlayerName": "Jared Goff",
+        "TeamKey": "DET",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 276021578,
+            "BettingMarketID": 309160407,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": 100,
+            "Value": 4099.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 17922,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 864509786,
+            "BettingMarketID": 309160407,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -120,
+            "Value": 4099.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 17922,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1638771110,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Baker Mayfield Passing Yards",
+        "PlayerID": 19790,
+        "PlayerName": "Baker Mayfield",
+        "TeamKey": "TB",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 765861545,
+            "BettingMarketID": 1638771110,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": 100,
+            "Value": 3599.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19790,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1216939045,
+            "BettingMarketID": 1638771110,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -120,
+            "Value": 3599.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19790,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 64629049,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Tyler Shough Passing Yards",
+        "PlayerID": 23187,
+        "PlayerName": "Tyler Shough",
+        "TeamKey": "NO",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1671494372,
+            "BettingMarketID": 64629049,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3649.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23187,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1429439832,
+            "BettingMarketID": 64629049,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3649.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23187,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 2066731850,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Brock Purdy Passing Yards",
+        "PlayerID": 23241,
+        "PlayerName": "Brock Purdy",
+        "TeamKey": "SF",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1384471768,
+            "BettingMarketID": 2066731850,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3799.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23241,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1228431932,
+            "BettingMarketID": 2066731850,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3799.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23241,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 231224407,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Sam Darnold Passing Yards",
+        "PlayerID": 19812,
+        "PlayerName": "Sam Darnold",
+        "TeamKey": "SEA",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1880565857,
+            "BettingMarketID": 231224407,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": 100,
+            "Value": 3799.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19812,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 366070787,
+            "BettingMarketID": 231224407,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -120,
+            "Value": 3799.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19812,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 71683406,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Dak Prescott Passing Yards",
+        "PlayerID": 18055,
+        "PlayerName": "Dak Prescott",
+        "TeamKey": "DAL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 465983973,
+            "BettingMarketID": 71683406,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3999.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 18055,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1283598229,
+            "BettingMarketID": 71683406,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3999.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 18055,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 434933039,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Jayden Daniels Passing Yards",
+        "PlayerID": 23235,
+        "PlayerName": "Jayden Daniels",
+        "TeamKey": "WAS",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 349018686,
+            "BettingMarketID": 434933039,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3399.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23235,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 940705370,
+            "BettingMarketID": 434933039,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3399.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23235,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1187111943,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Bo Nix Passing Yards",
+        "PlayerID": 25069,
+        "PlayerName": "Bo Nix",
+        "TeamKey": "DEN",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1699832010,
+            "BettingMarketID": 1187111943,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3499.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25069,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 447039706,
+            "BettingMarketID": 1187111943,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3499.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25069,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1523061595,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Joe Burrow Passing Yards",
+        "PlayerID": 21693,
+        "PlayerName": "Joe Burrow",
+        "TeamKey": "CIN",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 813124509,
+            "BettingMarketID": 1523061595,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3999.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21693,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 920995821,
+            "BettingMarketID": 1523061595,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3999.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21693,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 577965408,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Lamar Jackson Passing Yards",
+        "PlayerID": 19781,
+        "PlayerName": "Lamar Jackson",
+        "TeamKey": "BAL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1811796229,
+            "BettingMarketID": 577965408,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3249.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19781,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 796951575,
+            "BettingMarketID": 577965408,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3249.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19781,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 131926743,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Caleb Williams Passing Yards",
+        "PlayerID": 24927,
+        "PlayerName": "Caleb Williams",
+        "TeamKey": "CHI",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 701006292,
+            "BettingMarketID": 131926743,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3599.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24927,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 2092155848,
+            "BettingMarketID": 131926743,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3599.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24927,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 867066688,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Drake Maye Passing Yards",
+        "PlayerID": 24958,
+        "PlayerName": "Drake Maye",
+        "TeamKey": "NE",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1435390063,
+            "BettingMarketID": 867066688,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -120,
+            "Value": 3799.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24958,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 316891463,
+            "BettingMarketID": 867066688,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": 100,
+            "Value": 3799.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24958,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 843404415,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Josh Allen Passing Yards",
+        "PlayerID": 19801,
+        "PlayerName": "Josh Allen",
+        "TeamKey": "BUF",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1207158775,
+            "BettingMarketID": 843404415,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3549.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19801,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 484744635,
+            "BettingMarketID": 843404415,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3549.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19801,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 2143969307,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Justin Herbert Passing Yards",
+        "PlayerID": 21681,
+        "PlayerName": "Justin Herbert",
+        "TeamKey": "LAC",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 300116814,
+            "BettingMarketID": 2143969307,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3574.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21681,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 36439690,
+            "BettingMarketID": 2143969307,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3574.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21681,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1248728581,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Jordan Love Passing Yards",
+        "PlayerID": 21841,
+        "PlayerName": "Jordan Love",
+        "TeamKey": "GB",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1704056910,
+            "BettingMarketID": 1248728581,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3549.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21841,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1111384694,
+            "BettingMarketID": 1248728581,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3549.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21841,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1417086595,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Jalen Hurts Passing Yards",
+        "PlayerID": 21831,
+        "PlayerName": "Jalen Hurts",
+        "TeamKey": "PHI",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 919850626,
+            "BettingMarketID": 1417086595,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 3249.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21831,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 745762406,
+            "BettingMarketID": 1417086595,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 3249.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21831,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 730519567,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Passing Yards",
+        "Name": "Fernando Mendoza Passing Yards",
+        "PlayerID": 26740,
+        "PlayerName": "Fernando Mendoza",
+        "TeamKey": "LV",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1642277155,
+            "BettingMarketID": 730519567,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 2499.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26740,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1358219347,
+            "BettingMarketID": 730519567,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 2499.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26740,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 53120581,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Touchdowns",
+        "Name": "Travis Kelce Receiving Touchdowns",
+        "PlayerID": 15048,
+        "PlayerName": "Travis Kelce",
+        "TeamKey": "KC",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 2138398601,
+            "BettingMarketID": 53120581,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": 110,
+            "Value": 4.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 15048,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 252503505,
+            "BettingMarketID": 53120581,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -140,
+            "Value": 4.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 15048,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1998549686,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Mike Evans Receiving Yards",
+        "PlayerID": 16597,
+        "PlayerName": "Mike Evans",
+        "TeamKey": "SF",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1405051613,
+            "BettingMarketID": 1998549686,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -105,
+            "Value": 899.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 16597,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1071066195,
+            "BettingMarketID": 1998549686,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -115,
+            "Value": 899.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 16597,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1579521605,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Alec Pierce Receiving Yards",
+        "PlayerID": 23232,
+        "PlayerName": "Alec Pierce",
+        "TeamKey": "IND",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 488710255,
+            "BettingMarketID": 1579521605,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 900.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23232,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1526863789,
+            "BettingMarketID": 1579521605,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 900.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23232,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 2056693476,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "DJ Moore Receiving Yards",
+        "PlayerID": 19844,
+        "PlayerName": "DJ Moore",
+        "TeamKey": "BUF",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 350080862,
+            "BettingMarketID": 2056693476,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -115,
+            "Value": 774.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19844,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 47958266,
+            "BettingMarketID": 2056693476,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -105,
+            "Value": 774.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19844,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 432113354,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Chris Olave Receiving Yards",
+        "PlayerID": 22565,
+        "PlayerName": "Chris Olave",
+        "TeamKey": "NO",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1622054766,
+            "BettingMarketID": 432113354,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1024.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22565,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1778329118,
+            "BettingMarketID": 432113354,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1024.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22565,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1385395084,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Tetairoa McMillan Receiving Yards",
+        "PlayerID": 26054,
+        "PlayerName": "Tetairoa McMillan",
+        "TeamKey": "CAR",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1112012926,
+            "BettingMarketID": 1385395084,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 949.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26054,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 810293422,
+            "BettingMarketID": 1385395084,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 949.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26054,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1675988459,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Garrett Wilson Receiving Yards",
+        "PlayerID": 23122,
+        "PlayerName": "Garrett Wilson",
+        "TeamKey": "NYJ",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 74855424,
+            "BettingMarketID": 1675988459,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23122,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 2037957724,
+            "BettingMarketID": 1675988459,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23122,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 703156343,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Luther Burden III Receiving Yards",
+        "PlayerID": 26044,
+        "PlayerName": "Luther Burden III",
+        "TeamKey": "CHI",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 789874146,
+            "BettingMarketID": 703156343,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -115,
+            "Value": 799.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26044,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1156017806,
+            "BettingMarketID": 703156343,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -105,
+            "Value": 799.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26044,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 82026874,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Khalil Shakir Receiving Yards",
+        "PlayerID": 23227,
+        "PlayerName": "Khalil Shakir",
+        "TeamKey": "BUF",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1081657861,
+            "BettingMarketID": 82026874,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 674.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23227,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1391034601,
+            "BettingMarketID": 82026874,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 674.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23227,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 2085567894,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Jameson Williams Receiving Yards",
+        "PlayerID": 23234,
+        "PlayerName": "Jameson Williams",
+        "TeamKey": "DET",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 592634372,
+            "BettingMarketID": 2085567894,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 899.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23234,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 873713480,
+            "BettingMarketID": 2085567894,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 899.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23234,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 986724524,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Rome Odunze Receiving Yards",
+        "PlayerID": 24977,
+        "PlayerName": "Rome Odunze",
+        "TeamKey": "CHI",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1238260469,
+            "BettingMarketID": 986724524,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 799.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24977,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 197625125,
+            "BettingMarketID": 986724524,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 799.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24977,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1550931540,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Courtland Sutton Receiving Yards",
+        "PlayerID": 19800,
+        "PlayerName": "Courtland Sutton",
+        "TeamKey": "DEN",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1026966725,
+            "BettingMarketID": 1550931540,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 799.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19800,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 606739241,
+            "BettingMarketID": 1550931540,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 799.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19800,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1044269492,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Mark Andrews Receiving Yards",
+        "PlayerID": 19803,
+        "PlayerName": "Mark Andrews",
+        "TeamKey": "BAL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 63395493,
+            "BettingMarketID": 1044269492,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 474.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19803,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 331234347,
+            "BettingMarketID": 1044269492,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 474.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19803,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 2100567440,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Trey McBride Receiving Yards",
+        "PlayerID": 23251,
+        "PlayerName": "Trey McBride",
+        "TeamKey": "ARI",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 699375229,
+            "BettingMarketID": 2100567440,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23251,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1001277727,
+            "BettingMarketID": 2100567440,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23251,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 925254851,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "George Pickens Receiving Yards",
+        "PlayerID": 23153,
+        "PlayerName": "George Pickens",
+        "TeamKey": "DAL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 983842883,
+            "BettingMarketID": 925254851,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23153,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 914578611,
+            "BettingMarketID": 925254851,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23153,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 627484273,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Puka Nacua Receiving Yards",
+        "PlayerID": 24172,
+        "PlayerName": "Puka Nacua",
+        "TeamKey": "LAR",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1225745315,
+            "BettingMarketID": 627484273,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1324.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24172,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 430657325,
+            "BettingMarketID": 627484273,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1324.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24172,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 662104461,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Terry McLaurin Receiving Yards",
+        "PlayerID": 20873,
+        "PlayerName": "Terry McLaurin",
+        "TeamKey": "WAS",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 186032368,
+            "BettingMarketID": 662104461,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 949.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 20873,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 791732172,
+            "BettingMarketID": 662104461,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 949.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 20873,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1936058941,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Dalton Kincaid Receiving Yards",
+        "PlayerID": 24102,
+        "PlayerName": "Dalton Kincaid",
+        "TeamKey": "BUF",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1572342084,
+            "BettingMarketID": 1936058941,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 549.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24102,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 336538032,
+            "BettingMarketID": 1936058941,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 549.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24102,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 224144370,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Nico Collins Receiving Yards",
+        "PlayerID": 21756,
+        "PlayerName": "Nico Collins",
+        "TeamKey": "HOU",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 141386045,
+            "BettingMarketID": 224144370,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1074.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21756,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 502049503,
+            "BettingMarketID": 224144370,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1074.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21756,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1923738054,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Zay Flowers Receiving Yards",
+        "PlayerID": 23120,
+        "PlayerName": "Zay Flowers",
+        "TeamKey": "BAL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1757378250,
+            "BettingMarketID": 1923738054,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 974.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23120,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1839521218,
+            "BettingMarketID": 1923738054,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 974.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23120,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 148800435,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Ladd McConkey Receiving Yards",
+        "PlayerID": 25097,
+        "PlayerName": "Ladd McConkey",
+        "TeamKey": "LAC",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 2020216507,
+            "BettingMarketID": 148800435,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 849.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25097,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1886548567,
+            "BettingMarketID": 148800435,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 849.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25097,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1017115515,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "DK Metcalf Receiving Yards",
+        "PlayerID": 20875,
+        "PlayerName": "DK Metcalf",
+        "TeamKey": "PIT",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 663710987,
+            "BettingMarketID": 1017115515,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 824.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 20875,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 2107024091,
+            "BettingMarketID": 1017115515,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 824.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 20875,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 588958018,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Christian Watson Receiving Yards",
+        "PlayerID": 23395,
+        "PlayerName": "Christian Watson",
+        "TeamKey": "GB",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 53126778,
+            "BettingMarketID": 588958018,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 799.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23395,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1101584970,
+            "BettingMarketID": 588958018,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 799.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23395,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1070436933,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Colston Loveland Receiving Yards",
+        "PlayerID": 25869,
+        "PlayerName": "Colston Loveland",
+        "TeamKey": "CHI",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 943502664,
+            "BettingMarketID": 1070436933,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 749.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25869,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1691029796,
+            "BettingMarketID": 1070436933,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 749.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25869,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 848716309,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Tyler Warren Receiving Yards",
+        "PlayerID": 25874,
+        "PlayerName": "Tyler Warren",
+        "TeamKey": "IND",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1069455118,
+            "BettingMarketID": 848716309,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 724.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25874,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 431322370,
+            "BettingMarketID": 848716309,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 724.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25874,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1633438031,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Jake Ferguson Receiving Yards",
+        "PlayerID": 23138,
+        "PlayerName": "Jake Ferguson",
+        "TeamKey": "DAL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1123171632,
+            "BettingMarketID": 1633438031,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 524.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23138,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 367080556,
+            "BettingMarketID": 1633438031,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 524.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23138,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 836600536,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Emeka Egbuka Receiving Yards",
+        "PlayerID": 26092,
+        "PlayerName": "Emeka Egbuka",
+        "TeamKey": "TB",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 948769005,
+            "BettingMarketID": 836600536,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 874.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26092,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 2049479485,
+            "BettingMarketID": 836600536,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 874.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26092,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1307126347,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Tee Higgins Receiving Yards",
+        "PlayerID": 21690,
+        "PlayerName": "Tee Higgins",
+        "TeamKey": "CIN",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1084758288,
+            "BettingMarketID": 1307126347,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 874.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21690,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 505121492,
+            "BettingMarketID": 1307126347,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 874.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21690,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1868470773,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Davante Adams Receiving Yards",
+        "PlayerID": 16470,
+        "PlayerName": "Davante Adams",
+        "TeamKey": "LAR",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1734170499,
+            "BettingMarketID": 1868470773,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 774.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 16470,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 465107169,
+            "BettingMarketID": 1868470773,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 774.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 16470,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1916243217,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Brock Bowers Receiving Yards",
+        "PlayerID": 24943,
+        "PlayerName": "Brock Bowers",
+        "TeamKey": "LV",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 588038838,
+            "BettingMarketID": 1916243217,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -115,
+            "Value": 874.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24943,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1188506458,
+            "BettingMarketID": 1916243217,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -105,
+            "Value": 874.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 24943,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 723149023,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Drake London Receiving Yards",
+        "PlayerID": 23151,
+        "PlayerName": "Drake London",
+        "TeamKey": "ATL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1651750845,
+            "BettingMarketID": 723149023,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1149.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23151,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 2093038413,
+            "BettingMarketID": 723149023,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1149.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23151,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1679630724,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Jaxon Smith-Njigba Receiving Yards",
+        "PlayerID": 23157,
+        "PlayerName": "Jaxon Smith-Njigba",
+        "TeamKey": "SEA",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 758463215,
+            "BettingMarketID": 1679630724,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1324.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23157,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 387987911,
+            "BettingMarketID": 1679630724,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1324.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23157,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 677180410,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Justin Jefferson Receiving Yards",
+        "PlayerID": 28099,
+        "PlayerName": "Justin Jefferson",
+        "TeamKey": "CLE",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1821531622,
+            "BettingMarketID": 677180410,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1149.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 28099,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 935910870,
+            "BettingMarketID": 677180410,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1149.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 28099,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 521443083,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Ja'Marr Chase Receiving Yards",
+        "PlayerID": 22564,
+        "PlayerName": "Ja'Marr Chase",
+        "TeamKey": "CIN",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1294342434,
+            "BettingMarketID": 521443083,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1324.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22564,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 2033155122,
+            "BettingMarketID": 521443083,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1324.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22564,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1406537275,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Amon-Ra St. Brown Receiving Yards",
+        "PlayerID": 22587,
+        "PlayerName": "Amon-Ra St. Brown",
+        "TeamKey": "DET",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 234066910,
+            "BettingMarketID": 1406537275,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1249.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22587,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1608507782,
+            "BettingMarketID": 1406537275,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1249.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22587,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 2048375765,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "CeeDee Lamb Receiving Yards",
+        "PlayerID": 21679,
+        "PlayerName": "CeeDee Lamb",
+        "TeamKey": "DAL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1322284761,
+            "BettingMarketID": 2048375765,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1199.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21679,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 255664299,
+            "BettingMarketID": 2048375765,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1199.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21679,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 939976280,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Makai Lemon Receiving Yards",
+        "PlayerID": 26748,
+        "PlayerName": "Makai Lemon",
+        "TeamKey": "PHI",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1077696803,
+            "BettingMarketID": 939976280,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 649.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26748,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 914657791,
+            "BettingMarketID": 939976280,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 649.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26748,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1926373888,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Kenyon Sadiq Receiving Yards",
+        "PlayerID": 26755,
+        "PlayerName": "Kenyon Sadiq",
+        "TeamKey": "NYJ",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1686582589,
+            "BettingMarketID": 1926373888,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 474.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26755,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1206736179,
+            "BettingMarketID": 1926373888,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 474.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26755,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 946096479,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Denzel Boston Receiving Yards",
+        "PlayerID": 26747,
+        "PlayerName": "Denzel Boston",
+        "TeamKey": "CLE",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1391007546,
+            "BettingMarketID": 946096479,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -115,
+            "Value": 474.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26747,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1603263882,
+            "BettingMarketID": 946096479,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -105,
+            "Value": 474.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26747,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1364499890,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Jordyn Tyson Receiving Yards",
+        "PlayerID": 26751,
+        "PlayerName": "Jordyn Tyson",
+        "TeamKey": "NO",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1232975549,
+            "BettingMarketID": 1364499890,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 774.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26751,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 178471775,
+            "BettingMarketID": 1364499890,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 774.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26751,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1280787764,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Carnell Tate Receiving Yards",
+        "PlayerID": 26752,
+        "PlayerName": "Carnell Tate",
+        "TeamKey": "TEN",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1373617588,
+            "BettingMarketID": 1280787764,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 774.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26752,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1788219296,
+            "BettingMarketID": 1280787764,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 774.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26752,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 334743112,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Omar Cooper Jr. Receiving Yards",
+        "PlayerID": 26760,
+        "PlayerName": "Omar Cooper Jr.",
+        "TeamKey": "NYJ",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 955166820,
+            "BettingMarketID": 334743112,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 549.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26760,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 199150808,
+            "BettingMarketID": 334743112,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 549.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26760,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1448673386,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "KC Concepcion Receiving Yards",
+        "PlayerID": 26762,
+        "PlayerName": "KC Concepcion",
+        "TeamKey": "CLE",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1402599526,
+            "BettingMarketID": 1448673386,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 624.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26762,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1453173294,
+            "BettingMarketID": 1448673386,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 624.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26762,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 54196393,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Jaylen Waddle Receiving Yards",
+        "PlayerID": 22598,
+        "PlayerName": "Jaylen Waddle",
+        "TeamKey": "DEN",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1963415536,
+            "BettingMarketID": 54196393,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -120,
+            "Value": 874.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22598,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 451717076,
+            "BettingMarketID": 54196393,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": 100,
+            "Value": 874.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22598,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1263584022,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Receiving Yards",
+        "Name": "Travis Kelce Receiving Yards",
+        "PlayerID": 15048,
+        "PlayerName": "Travis Kelce",
+        "TeamKey": "KC",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 212771405,
+            "BettingMarketID": 1263584022,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -115,
+            "Value": 699.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 15048,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 2011464497,
+            "BettingMarketID": 1263584022,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -105,
+            "Value": 699.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 15048,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 454138621,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "David Montgomery Rushing Yards",
+        "PlayerID": 20882,
+        "PlayerName": "David Montgomery",
+        "TeamKey": "HOU",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1926379836,
+            "BettingMarketID": 454138621,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 774.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 20882,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 575284944,
+            "BettingMarketID": 454138621,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 774.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 20882,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 455514135,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Kenneth Walker III Rushing Yards",
+        "PlayerID": 23214,
+        "PlayerName": "Kenneth Walker III",
+        "TeamKey": "KC",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 859833075,
+            "BettingMarketID": 455514135,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -115,
+            "Value": 924.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23214,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1336647823,
+            "BettingMarketID": 455514135,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -105,
+            "Value": 924.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23214,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 201947355,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Jahmyr Gibbs Rushing Yards",
+        "PlayerID": 23200,
+        "PlayerName": "Jahmyr Gibbs",
+        "TeamKey": "DET",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1653823082,
+            "BettingMarketID": 201947355,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1249.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23200,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 622535866,
+            "BettingMarketID": 201947355,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1249.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23200,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 59902833,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Javonte Williams Rushing Yards",
+        "PlayerID": 22558,
+        "PlayerName": "Javonte Williams",
+        "TeamKey": "DAL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1445750741,
+            "BettingMarketID": 59902833,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22558,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1929015099,
+            "BettingMarketID": 59902833,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22558,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 211103311,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Omarion Hampton Rushing Yards",
+        "PlayerID": 25956,
+        "PlayerName": "Omarion Hampton",
+        "TeamKey": "LAC",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1675264951,
+            "BettingMarketID": 211103311,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 949.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25956,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1573535249,
+            "BettingMarketID": 211103311,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 949.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25956,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1966230712,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Kyren Williams Rushing Yards",
+        "PlayerID": 23212,
+        "PlayerName": "Kyren Williams",
+        "TeamKey": "LAR",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 2045669211,
+            "BettingMarketID": 1966230712,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23212,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 781683243,
+            "BettingMarketID": 1966230712,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23212,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1992614215,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Breece Hall Rushing Yards",
+        "PlayerID": 22526,
+        "PlayerName": "Breece Hall",
+        "TeamKey": "NYJ",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 538078904,
+            "BettingMarketID": 1992614215,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 899.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22526,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 153201196,
+            "BettingMarketID": 1992614215,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 899.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 22526,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 800204050,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Ashton Jeanty Rushing Yards",
+        "PlayerID": 25868,
+        "PlayerName": "Ashton Jeanty",
+        "TeamKey": "LV",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 2062177207,
+            "BettingMarketID": 800204050,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1024.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25868,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 397201925,
+            "BettingMarketID": 800204050,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1024.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 25868,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1470980756,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "James Cook III Rushing Yards",
+        "PlayerID": 23247,
+        "PlayerName": "James Cook III",
+        "TeamKey": "BUF",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 482023005,
+            "BettingMarketID": 1470980756,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1249.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23247,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 269031551,
+            "BettingMarketID": 1470980756,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1249.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23247,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1116863110,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Jonathan Taylor Rushing Yards",
+        "PlayerID": 21682,
+        "PlayerName": "Jonathan Taylor",
+        "TeamKey": "IND",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1072006002,
+            "BettingMarketID": 1116863110,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1249.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21682,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1436566142,
+            "BettingMarketID": 1116863110,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1249.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 21682,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 747077793,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Saquon Barkley Rushing Yards",
+        "PlayerID": 19766,
+        "PlayerName": "Saquon Barkley",
+        "TeamKey": "PHI",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 850581053,
+            "BettingMarketID": 747077793,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1099.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19766,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1455171105,
+            "BettingMarketID": 747077793,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1099.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 19766,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 2059814834,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Derrick Henry Rushing Yards",
+        "PlayerID": 17959,
+        "PlayerName": "Derrick Henry",
+        "TeamKey": "BAL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1687306492,
+            "BettingMarketID": 2059814834,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -105,
+            "Value": 1274.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 17959,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 1180546632,
+            "BettingMarketID": 2059814834,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -115,
+            "Value": 1274.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 17959,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1340066536,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Bijan Robinson Rushing Yards",
+        "PlayerID": 23189,
+        "PlayerName": "Bijan Robinson",
+        "TeamKey": "ATL",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 662773438,
+            "BettingMarketID": 1340066536,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 1174.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23189,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 682335194,
+            "BettingMarketID": 1340066536,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1174.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 23189,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 465216597,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Josh Jacobs Rushing Yards",
+        "PlayerID": 20824,
+        "PlayerName": "Josh Jacobs",
+        "TeamKey": "GB",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1463756167,
+            "BettingMarketID": 465216597,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 20824,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 818173823,
+            "BettingMarketID": 465216597,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 999.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 20824,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1151620084,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Christian McCaffrey Rushing Yards",
+        "PlayerID": 18877,
+        "PlayerName": "Christian McCaffrey",
+        "TeamKey": "SF",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1380523264,
+            "BettingMarketID": 1151620084,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": -105,
+            "Value": 975.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 18877,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 145049436,
+            "BettingMarketID": 1151620084,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -115,
+            "Value": 975.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 18877,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      },
+      {
+        "BettingMarketID": 1563740703,
+        "BettingMarketType": "Player Prop",
+        "BettingBetType": "Rushing Yards",
+        "Name": "Jeremiyah Love Rushing Yards",
+        "PlayerID": 26768,
+        "PlayerName": "Jeremiyah Love",
+        "TeamKey": "ARI",
+        "BettingOutcomes": [
+          {
+            "BettingOutcomeID": 1879916898,
+            "BettingMarketID": 1563740703,
+            "BettingOutcomeType": "Over",
+            "PayoutAmerican": 950,
+            "Value": 1499.5,
+            "Participant": "Over",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26768,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          },
+          {
+            "BettingOutcomeID": 209099022,
+            "BettingMarketID": 1563740703,
+            "BettingOutcomeType": "Under",
+            "PayoutAmerican": -110,
+            "Value": 1499.5,
+            "Participant": "Under",
+            "IsAvailable": true,
+            "IsAlternate": false,
+            "PlayerID": 26768,
+            "SportsBook": {
+              "SportsbookID": 19,
+              "Name": "DraftKings"
+            }
+          }
+        ],
+        "AvailableSportsbooks": [
+          {
+            "SportsbookID": 19,
+            "Name": "DraftKings"
+          }
+        ]
+      }
+    ]
+  }
+]

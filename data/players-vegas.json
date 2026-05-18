@@ -1,0 +1,476 @@
+[
+  {
+    "PlayerID": 23232,
+    "Name": "Alec Pierce",
+    "Team": "IND",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 22587,
+    "Name": "Amon-Ra St. Brown",
+    "Team": "DET",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 25868,
+    "Name": "Ashton Jeanty",
+    "Team": "LV",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 19790,
+    "Name": "Baker Mayfield",
+    "Team": "TB",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 23189,
+    "Name": "Bijan Robinson",
+    "Team": "ATL",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 25069,
+    "Name": "Bo Nix",
+    "Team": "DEN",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 22526,
+    "Name": "Breece Hall",
+    "Team": "NYJ",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 24943,
+    "Name": "Brock Bowers",
+    "Team": "LV",
+    "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 23241,
+    "Name": "Brock Purdy",
+    "Team": "SF",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 23239,
+    "Name": "C.J. Stroud",
+    "Team": "HOU",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 24927,
+    "Name": "Caleb Williams",
+    "Team": "CHI",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 26752,
+    "Name": "Carnell Tate",
+    "Team": "TEN",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 21679,
+    "Name": "CeeDee Lamb",
+    "Team": "DAL",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 22565,
+    "Name": "Chris Olave",
+    "Team": "NO",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 18877,
+    "Name": "Christian McCaffrey",
+    "Team": "SF",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 23395,
+    "Name": "Christian Watson",
+    "Team": "GB",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 25869,
+    "Name": "Colston Loveland",
+    "Team": "CHI",
+    "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 19800,
+    "Name": "Courtland Sutton",
+    "Team": "DEN",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 18055,
+    "Name": "Dak Prescott",
+    "Team": "DAL",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 24102,
+    "Name": "Dalton Kincaid",
+    "Team": "BUF",
+    "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 16470,
+    "Name": "Davante Adams",
+    "Team": "LAR",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 20882,
+    "Name": "David Montgomery",
+    "Team": "HOU",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 26747,
+    "Name": "Denzel Boston",
+    "Team": "CLE",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 17959,
+    "Name": "Derrick Henry",
+    "Team": "BAL",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 19844,
+    "Name": "DJ Moore",
+    "Team": "BUF",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 20875,
+    "Name": "DK Metcalf",
+    "Team": "PIT",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 23151,
+    "Name": "Drake London",
+    "Team": "ATL",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 24958,
+    "Name": "Drake Maye",
+    "Team": "NE",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 26092,
+    "Name": "Emeka Egbuka",
+    "Team": "TB",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 26740,
+    "Name": "Fernando Mendoza",
+    "Team": "LV",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 23122,
+    "Name": "Garrett Wilson",
+    "Team": "NYJ",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 23153,
+    "Name": "George Pickens",
+    "Team": "DAL",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 22564,
+    "Name": "Ja'Marr Chase",
+    "Team": "CIN",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 23200,
+    "Name": "Jahmyr Gibbs",
+    "Team": "DET",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 23138,
+    "Name": "Jake Ferguson",
+    "Team": "DAL",
+    "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 21831,
+    "Name": "Jalen Hurts",
+    "Team": "PHI",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 23247,
+    "Name": "James Cook III",
+    "Team": "BUF",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 23234,
+    "Name": "Jameson Williams",
+    "Team": "DET",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 17922,
+    "Name": "Jared Goff",
+    "Team": "DET",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 22558,
+    "Name": "Javonte Williams",
+    "Team": "DAL",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 23157,
+    "Name": "Jaxon Smith-Njigba",
+    "Team": "SEA",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 23235,
+    "Name": "Jayden Daniels",
+    "Team": "WAS",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 22598,
+    "Name": "Jaylen Waddle",
+    "Team": "DEN",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 26768,
+    "Name": "Jeremiyah Love",
+    "Team": "ARI",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 21693,
+    "Name": "Joe Burrow",
+    "Team": "CIN",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 21682,
+    "Name": "Jonathan Taylor",
+    "Team": "IND",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 21841,
+    "Name": "Jordan Love",
+    "Team": "GB",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 26751,
+    "Name": "Jordyn Tyson",
+    "Team": "NO",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 19801,
+    "Name": "Josh Allen",
+    "Team": "BUF",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 20824,
+    "Name": "Josh Jacobs",
+    "Team": "GB",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 21681,
+    "Name": "Justin Herbert",
+    "Team": "LAC",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 26762,
+    "Name": "KC Concepcion",
+    "Team": "CLE",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 23214,
+    "Name": "Kenneth Walker III",
+    "Team": "KC",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 26755,
+    "Name": "Kenyon Sadiq",
+    "Team": "NYJ",
+    "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 23227,
+    "Name": "Khalil Shakir",
+    "Team": "BUF",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 23212,
+    "Name": "Kyren Williams",
+    "Team": "LAR",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 25097,
+    "Name": "Ladd McConkey",
+    "Team": "LAC",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 19781,
+    "Name": "Lamar Jackson",
+    "Team": "BAL",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 26044,
+    "Name": "Luther Burden III",
+    "Team": "CHI",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 26748,
+    "Name": "Makai Lemon",
+    "Team": "PHI",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 19803,
+    "Name": "Mark Andrews",
+    "Team": "BAL",
+    "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 9038,
+    "Name": "Matthew Stafford",
+    "Team": "LAR",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 16597,
+    "Name": "Mike Evans",
+    "Team": "SF",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 21756,
+    "Name": "Nico Collins",
+    "Team": "HOU",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 26760,
+    "Name": "Omar Cooper Jr.",
+    "Team": "NYJ",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 25956,
+    "Name": "Omarion Hampton",
+    "Team": "LAC",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 24172,
+    "Name": "Puka Nacua",
+    "Team": "LAR",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 24977,
+    "Name": "Rome Odunze",
+    "Team": "CHI",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 19812,
+    "Name": "Sam Darnold",
+    "Team": "SEA",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 19766,
+    "Name": "Saquon Barkley",
+    "Team": "PHI",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 21690,
+    "Name": "Tee Higgins",
+    "Team": "CIN",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 20873,
+    "Name": "Terry McLaurin",
+    "Team": "WAS",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 26054,
+    "Name": "Tetairoa McMillan",
+    "Team": "CAR",
+    "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 15048,
+    "Name": "Travis Kelce",
+    "Team": "KC",
+    "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 22490,
+    "Name": "Trevor Lawrence",
+    "Team": "JAX",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 23251,
+    "Name": "Trey McBride",
+    "Team": "ARI",
+    "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 23187,
+    "Name": "Tyler Shough",
+    "Team": "NO",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 25874,
+    "Name": "Tyler Warren",
+    "Team": "IND",
+    "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 23120,
+    "Name": "Zay Flowers",
+    "Team": "BAL",
+    "FantasyPosition": "WR"
+  }
+]
