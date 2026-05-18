@@ -88,6 +88,12 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
   // Track which option the user just picked so we can ring-pulse it
   // before the card advances. Cleared on advance().
   const [justPicked, setJustPicked] = useState<string | null>(null);
+  // For trade scenarios: when the user picks Team A or Team B, we stage the
+  // winner and show magnitude buttons (slight / clear / major / extreme)
+  // before submitting. Even votes skip this step. Cleared on advance.
+  const [pendingTradeWinner, setPendingTradeWinner] = useState<"A" | "B" | null>(
+    null,
+  );
   const [pending, startTransition] = useTransition();
 
   const current = feed[index];
@@ -102,6 +108,7 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
     }
     setIndex((i) => i + 1);
     setJustPicked(null);
+    setPendingTradeWinner(null);
   }
 
   function skip() {
@@ -147,13 +154,36 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
     return parts.length > 1 ? parts[parts.length - 1] : name;
   }
 
-  function tradeQuickVote(tradeId: string, winner: "A" | "B" | "EVEN") {
+  // Trade voting is now two-step on /judge:
+  //   1) tap Team A / Even / Team B → stage the winner
+  //   2) if non-Even, tap a magnitude (slight / clear / major / extreme) →
+  //      submits + advances
+  // Even votes skip step 2 (forced "balanced" tier) so they're still one tap.
+  function pickTradeWinner(tradeId: string, winner: "A" | "B" | "EVEN") {
+    if (pending) return;
+    if (winner === "EVEN") {
+      submitTradeVote(tradeId, "EVEN", "balanced");
+    } else {
+      setPendingTradeWinner(winner);
+    }
+  }
+
+  function submitTradeVote(
+    tradeId: string,
+    winner: "A" | "B" | "EVEN",
+    tier:
+      | "balanced"
+      | "slight_edge"
+      | "clear_advantage"
+      | "major_advantage"
+      | "extreme_imbalance",
+  ) {
     if (pending) return;
     startTransition(async () => {
       const res = await castVote({
         tradeId,
         winner,
-        fairnessTier: winner === "EVEN" ? "balanced" : "slight_edge",
+        fairnessTier: tier,
         fairnessLean: winner === "EVEN" ? null : winner,
       });
       if (res.ok) {
@@ -340,7 +370,13 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
             item={current}
             pending={pending}
             justPicked={justPicked}
-            onPick={(w) => tradeQuickVote(current.id, w)}
+            pendingWinner={pendingTradeWinner}
+            onPick={(w) => pickTradeWinner(current.id, w)}
+            onMagnitude={(tier) =>
+              pendingTradeWinner &&
+              submitTradeVote(current.id, pendingTradeWinner, tier)
+            }
+            onClearPending={() => setPendingTradeWinner(null)}
           />
         ) : (
           <VerdictCard
@@ -379,20 +415,102 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
   );
 }
 
+const MAGNITUDE_TIERS: Array<{
+  value: "slight_edge" | "clear_advantage" | "major_advantage" | "extreme_imbalance";
+  label: string;
+  description: string;
+}> = [
+  { value: "slight_edge", label: "Slight edge", description: "Marginally ahead — close to fair." },
+  { value: "clear_advantage", label: "Clear advantage", description: "Noticeably better deal for the winning side." },
+  { value: "major_advantage", label: "Major advantage", description: "Strongly favors one side." },
+  { value: "extreme_imbalance", label: "Extreme imbalance", description: "Lopsided. Worth a league-level look." },
+];
+
 function TradeCard({
   item,
   pending,
   justPicked,
+  pendingWinner,
   onPick,
+  onMagnitude,
+  onClearPending,
 }: {
   item: JudgeTradeItem;
   pending: boolean;
   justPicked: string | null;
+  pendingWinner: "A" | "B" | null;
   onPick: (w: "A" | "B" | "EVEN") => void;
+  onMagnitude: (
+    tier:
+      | "slight_edge"
+      | "clear_advantage"
+      | "major_advantage"
+      | "extreme_imbalance",
+  ) => void;
+  onClearPending: () => void;
 }) {
   const pickedA = justPicked === "trade:A";
   const pickedB = justPicked === "trade:B";
   const pickedEven = justPicked === "trade:EVEN";
+  // Step 2: a winner has been picked, ask how lopsided.
+  if (pendingWinner) {
+    const accent = pendingWinner === "A" ? "rose" : "sky";
+    return (
+      <div>
+        <div className="mb-3 flex items-baseline justify-between gap-2">
+          <span className="inline-flex items-center rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-200 ring-1 ring-inset ring-amber-500/30">
+            Trade
+          </span>
+          <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+            {item.league_type} · {item.scoring}
+          </span>
+        </div>
+
+        <p className="mb-2 text-sm text-zinc-300">
+          <span className="font-semibold text-zinc-100">
+            Team {pendingWinner} wins.
+          </span>{" "}
+          <span className="text-zinc-500">By how much?</span>
+        </p>
+
+        <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {MAGNITUDE_TIERS.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              disabled={pending}
+              onClick={() => onMagnitude(t.value)}
+              className={`min-h-[60px] rounded-lg border p-3 text-left transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
+                accent === "rose"
+                  ? "border-zinc-800 bg-zinc-950/60 hover:border-rose-500/60 hover:bg-rose-500/10"
+                  : "border-zinc-800 bg-zinc-950/60 hover:border-sky-500/60 hover:bg-sky-500/10"
+              }`}
+            >
+              <div
+                className={`text-sm font-semibold ${
+                  accent === "rose" ? "text-rose-200" : "text-sky-200"
+                }`}
+              >
+                {t.label}
+              </div>
+              <div className="mt-0.5 text-xs text-zinc-500">{t.description}</div>
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          disabled={pending}
+          onClick={onClearPending}
+          className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline disabled:opacity-50"
+        >
+          ← Pick a different side
+        </button>
+      </div>
+    );
+  }
+
+  // Step 1: who won?
   return (
     <div>
       <div className="mb-3 flex items-baseline justify-between gap-2">
@@ -406,7 +524,7 @@ function TradeCard({
 
       <p className="mb-3 text-sm text-zinc-300">
         <span className="font-semibold text-zinc-100">Who won?</span>{" "}
-        <span className="text-zinc-500">Tap a side.</span>
+        <span className="text-zinc-500">Tap a side, then how lopsided.</span>
       </p>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
