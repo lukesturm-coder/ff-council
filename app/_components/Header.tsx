@@ -19,7 +19,7 @@ import type {
 const PRIMARY_NAV: NavItem[] = [
   // Standing order: Rankings, Judge, Trade Court, Verdict come first.
   // Any new additions slot after this fixed prefix.
-  { href: "/", label: "Rankings" },
+  { href: "/rankings", label: "Rankings" },
   { href: "/judge", label: "Judge" },
   { href: "/trades", label: "Trade Court" },
   { href: "/verdict", label: "Verdict" },

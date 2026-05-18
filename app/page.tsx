@@ -1,131 +1,151 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import type { Metadata } from "next";
+import Link from "next/link";
 import {
-  projectionsFromFutures,
-  type PlayerRosterEntry,
-} from "@/lib/projections";
-import type {
-  FuturesResponse,
-  PlayerProjection,
-  ScoringSystem,
-} from "@/lib/types";
-import { createClient } from "@/lib/supabase/server";
-import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
-import TradePrompt from "./_components/TradePrompt";
+  BarChart3,
+  Calculator,
+  ClipboardList,
+  Gavel,
+  Layers,
+  MessageSquareQuote,
+  Network,
+  Scale,
+  Trophy,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import HomeHero, { loadHeroStats } from "./_components/HomeHero";
 import ActivityTicker from "./_components/ActivityTicker";
 import CouncilActivity from "./_components/CouncilActivity";
-import RankingsTable, {
-  type CouncilConsensusMap,
-  type PlatformRankingsMap,
-} from "./_components/RankingsTable";
 
-async function loadProjections(): Promise<PlayerProjection[]> {
-  const dataDir = path.join(process.cwd(), "data");
-  const [futuresRaw, rosterRaw] = await Promise.all([
-    fs.readFile(path.join(dataDir, "futures-mock.json"), "utf8"),
-    fs.readFile(path.join(dataDir, "players-mock.json"), "utf8"),
-  ]);
-  const futures: FuturesResponse = JSON.parse(futuresRaw);
-  const roster: PlayerRosterEntry[] = JSON.parse(rosterRaw);
-  return projectionsFromFutures(futures, roster);
-}
-
-type PlatformRow = {
-  player_id: number;
-  source: string;
-  ranking_type: "editorial" | "adp";
-  scoring_system: ScoringSystem;
-  rank_value: number;
+export const metadata: Metadata = {
+  title: "FF Council — Crowdsourced fantasy verdicts",
+  description:
+    "Real fantasy football consensus, not buried in Reddit comments. Judge trades, post tough calls, build your draft.",
 };
 
-/**
- * Group platform_rankings rows into a nested map for cheap lookup in the UI:
- *   playerId → source → rankingType → scoringSystem → rank
- */
-async function loadPlatformRankings(): Promise<PlatformRankingsMap> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("platform_rankings")
-    .select("player_id, source, ranking_type, scoring_system, rank_value");
+// Landing tiles. Order matches the primary nav, which keeps Rankings → Judge
+// → Trade Court → Verdict as the priority surfaces. Icons are picked from
+// lucide-react with one-line semantic fits (gavel for verdicts, scale for
+// court, etc.) rather than literal player or sport icons.
+type Tile = {
+  href: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+};
 
-  const map: PlatformRankingsMap = {};
-  for (const r of (data ?? []) as PlatformRow[]) {
-    const player = map[r.player_id] ?? (map[r.player_id] = {});
-    const source = player[r.source] ?? (player[r.source] = {});
-    const byType = source[r.ranking_type] ?? (source[r.ranking_type] = {});
-    byType[r.scoring_system] = Number(r.rank_value);
-  }
-  return map;
-}
+const TILES: Tile[] = [
+  {
+    href: "/rankings",
+    title: "Rankings",
+    description:
+      "Council-derived ranks with Vegas, ESPN, FP, and 4 more sources side-by-side.",
+    icon: BarChart3,
+  },
+  {
+    href: "/judge",
+    title: "Judge",
+    description:
+      "Speed-vote on unvoted trades + verdicts. One tap, advance, repeat.",
+    icon: Gavel,
+  },
+  {
+    href: "/trades",
+    title: "Trade Court",
+    description: "Submit a trade. The council decides who won.",
+    icon: Scale,
+  },
+  {
+    href: "/verdict",
+    title: "Verdict",
+    description:
+      "Post a tough call. Draft pick or start/sit. Get the verdict.",
+    icon: MessageSquareQuote,
+  },
+  {
+    href: "/trade",
+    title: "Trade Calc",
+    description: "Side-by-side value comparison. Shareable links.",
+    icon: Calculator,
+  },
+  {
+    href: "/draft",
+    title: "Mock Draft",
+    description: "Practice your draft against an AI board.",
+    icon: ClipboardList,
+  },
+  {
+    href: "/league",
+    title: "League Analyzer",
+    description: "Connect a Sleeper league. Power rankings + trade targets.",
+    icon: Network,
+  },
+  {
+    href: "/council",
+    title: "Council Rankings",
+    description: "What the council collectively ranks.",
+    icon: Users,
+  },
+  {
+    href: "/tiers",
+    title: "Tiers",
+    description: "S/A/B/C/D tiers with the on-the-clock draft board.",
+    icon: Layers,
+  },
+  {
+    href: "/leaderboard",
+    title: "Leaderboard",
+    description: "Top voters by activity, agreement, and contrarian takes.",
+    icon: Trophy,
+  },
+];
 
-async function loadCouncilConsensus(): Promise<CouncilConsensusMap> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("council_consensus")
-    .select("scoring_system, player_id, avg_rank, ranker_count");
-
-  const map: CouncilConsensusMap = {};
-  for (const row of data ?? []) {
-    const pid = row.player_id as number;
-    const scoring = row.scoring_system as ScoringSystem;
-    if (!map[pid]) map[pid] = {} as Record<ScoringSystem, { avgRank: number; rankerCount: number }>;
-    map[pid][scoring] = {
-      avgRank: Number(row.avg_rank),
-      rankerCount: Number(row.ranker_count),
-    };
-  }
-  return map;
+function FeatureTile({ tile }: { tile: Tile }) {
+  const Icon = tile.icon;
+  return (
+    <Link
+      href={tile.href}
+      className="group relative flex flex-col rounded-xl border border-zinc-800/80 bg-zinc-900/60 p-5 transition hover:scale-[1.015] hover:border-emerald-500/30"
+    >
+      <Icon className="h-5 w-5 text-emerald-300" aria-hidden />
+      <h3 className="mt-3 text-base font-semibold text-zinc-100">
+        {tile.title}
+      </h3>
+      <p className="mt-1 text-sm text-zinc-400">{tile.description}</p>
+      <span
+        aria-hidden
+        className="mt-4 self-end text-xs font-medium text-emerald-400 opacity-80 transition group-hover:opacity-100"
+      >
+        View →
+      </span>
+    </Link>
+  );
 }
 
 export default async function Page() {
-  const [projections, realPlatformRankings, councilConsensus, heroStats] =
-    await Promise.all([
-      loadProjections(),
-      loadPlatformRankings(),
-      loadCouncilConsensus(),
-      loadHeroStats(),
-    ]);
-
-  // Real platforms only have ESPN + FantasyPros so far. Layer mock Sleeper /
-  // NFL / CBS / Yahoo ranks on top so we can design the multi-source table
-  // UX while we wait for those platforms to publish 2026 preseason data.
-  const platformRankings = withMockPlatformRankings(realPlatformRankings, projections);
-
-  const hasEspn = Object.values(platformRankings).some((p) => p.espn);
-  const hasCouncil = Object.keys(councilConsensus).length > 0;
+  const heroStats = await loadHeroStats();
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
-
-        <TradePrompt />
-
         <HomeHero stats={heroStats} />
 
-        <ActivityTicker />
+        <section aria-label="Features" className="mt-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+            {TILES.map((tile) => (
+              <FeatureTile key={tile.href} tile={tile} />
+            ))}
+          </div>
+        </section>
 
-        <RankingsTable
-          projections={projections}
-          platformRankings={platformRankings}
-          councilConsensus={councilConsensus}
-        />
+        <ActivityTicker />
 
         <CouncilActivity />
 
         <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">
           <p>
-            Council{" "}
-            {hasCouncil
-              ? "consensus active"
-              : "(submit at /council/rankings)"}
-            {" · "}
-            ESPN {hasEspn ? "rankings + ADP wired" : "(run `npm run fetch:espn`)"}
-            {" · "}
-            <span className="text-amber-400/70">
-              Vegas column is placeholder
-            </span>{" "}
-            (illustrative pending live data feed) · {projections.length} players
+            Council verdicts, live now. Vegas-anchored rankings, side-by-side
+            sources, and the trades the council is judging this minute.
           </p>
           <p>
             <a
