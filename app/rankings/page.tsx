@@ -14,7 +14,6 @@ import { createClient } from "@/lib/supabase/server";
 import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
 import TradePrompt from "../_components/TradePrompt";
 import ActivityTicker from "../_components/ActivityTicker";
-import CouncilActivity from "../_components/CouncilActivity";
 import RankingsTable, {
   type CouncilConsensusMap,
   type PlatformRankingsMap,
@@ -113,8 +112,6 @@ export default async function RankingsPage() {
           platformRankings={platformRankings}
           councilConsensus={councilConsensus}
         />
-
-        <CouncilActivity />
 
         <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">
           <p>
