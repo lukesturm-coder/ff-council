@@ -3,15 +3,17 @@ import { createClient } from "@/lib/supabase/server";
 import PrimaryNav, { type NavItem } from "./PrimaryNav";
 
 const PRIMARY_NAV: NavItem[] = [
+  // Standing order: Rankings, Judge, Trade Court, Verdict come first.
+  // Any new additions slot after this fixed prefix.
   { href: "/", label: "Rankings" },
-  { href: "/tiers", label: "Tiers" },
   { href: "/judge", label: "Judge" },
   { href: "/trades", label: "Trade Court" },
   { href: "/verdict", label: "Verdict" },
   { href: "/trade", label: "Trade Calc" },
   { href: "/draft", label: "Mock Draft" },
   { href: "/league", label: "League Analyzer" },
-  { href: "/council", label: "Council" },
+  { href: "/council", label: "Council Rankings" },
+  { href: "/tiers", label: "Tiers" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 

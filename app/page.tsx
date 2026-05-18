@@ -12,6 +12,7 @@ import type {
 import { createClient } from "@/lib/supabase/server";
 import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
 import TradePrompt from "./_components/TradePrompt";
+import ActivityTicker from "./_components/ActivityTicker";
 import CouncilActivity from "./_components/CouncilActivity";
 import RankingsTable, {
   type CouncilConsensusMap,
@@ -96,6 +97,8 @@ export default async function Page() {
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
 
         <TradePrompt />
+
+        <ActivityTicker />
 
         <RankingsTable
           projections={projections}

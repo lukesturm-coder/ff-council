@@ -8,6 +8,7 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { computeTiersForPosition, tierStyle } from "@/lib/tiers";
+import DraftBoardView from "./DraftBoardView";
 
 // Scoring & source toggles are read/written via URL params so a Tier badge on
 // another page can deep-link straight to the right view without us juggling
@@ -20,6 +21,7 @@ const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
 // PPR FPts and mislabel it as "Superflex".
 
 type Source = "vegas" | "council";
+type Mode = "chart" | "board";
 const POSITIONS: FantasyPosition[] = ["QB", "RB", "WR", "TE"];
 const POSITION_LABELS: Record<FantasyPosition, string> = {
   QB: "Quarterbacks",
@@ -55,8 +57,9 @@ export default function TiersView({
   const requested: Source = sourceParam === "council" ? "council" : "vegas";
   const source: Source =
     requested === "council" && hasCouncilData ? "council" : "vegas";
+  const mode: Mode = sp.get("mode") === "board" ? "board" : "chart";
 
-  function setParam(key: "scoring" | "source", value: string) {
+  function setParam(key: "scoring" | "source" | "mode", value: string) {
     const params = new URLSearchParams(sp.toString());
     params.set(key, value);
     router.replace(`/tiers?${params.toString()}`, { scroll: false });
@@ -69,9 +72,11 @@ export default function TiersView({
       <Controls
         scoring={scoring}
         source={source}
+        mode={mode}
         hasCouncilData={hasCouncilData}
         onScoring={(s) => setParam("scoring", s)}
         onSource={(s) => setParam("source", s)}
+        onMode={(m) => setParam("mode", m)}
       />
 
       {requested === "council" && !hasCouncilData && (
@@ -80,16 +85,25 @@ export default function TiersView({
         </div>
       )}
 
-      {POSITIONS.map((pos) => (
-        <PositionTierChart
-          key={pos}
-          position={pos}
+      {mode === "board" ? (
+        <DraftBoardView
           projections={projections}
           scoring={scoring}
           source={source}
           councilAvgRank={councilForScoring}
         />
-      ))}
+      ) : (
+        POSITIONS.map((pos) => (
+          <PositionTierChart
+            key={pos}
+            position={pos}
+            projections={projections}
+            scoring={scoring}
+            source={source}
+            councilAvgRank={councilForScoring}
+          />
+        ))
+      )}
     </div>
   );
 }
@@ -102,18 +116,49 @@ function parseScoring(v: string | null): ScoringSystem {
 function Controls({
   scoring,
   source,
+  mode,
   hasCouncilData,
   onScoring,
   onSource,
+  onMode,
 }: {
   scoring: ScoringSystem;
   source: Source;
+  mode: Mode;
   hasCouncilData: boolean;
   onScoring: (s: ScoringSystem) => void;
   onSource: (s: Source) => void;
+  onMode: (m: Mode) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+        <span className="px-2 text-xs uppercase tracking-wider text-zinc-500">
+          View
+        </span>
+        <button
+          onClick={() => onMode("chart")}
+          className={`rounded-md px-2 py-1 text-sm font-medium transition sm:px-3 ${
+            mode === "chart"
+              ? "bg-emerald-500/20 text-emerald-200"
+              : "text-zinc-400 hover:text-zinc-200"
+          }`}
+          title="Browse tiers as a value-bar chart"
+        >
+          Chart
+        </button>
+        <button
+          onClick={() => onMode("board")}
+          className={`rounded-md px-2 py-1 text-sm font-medium transition sm:px-3 ${
+            mode === "board"
+              ? "bg-emerald-500/20 text-emerald-200"
+              : "text-zinc-400 hover:text-zinc-200"
+          }`}
+          title="On-the-clock draft board — click to mark drafted"
+        >
+          Draft board
+        </button>
+      </div>
       <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
         <span className="px-2 text-xs uppercase tracking-wider text-zinc-500">
           Scoring

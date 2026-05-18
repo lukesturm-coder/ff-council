@@ -13,7 +13,24 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
+import { computeTiersByPlayer, tierStyle } from "@/lib/tiers";
+import { relativeTimeShort } from "@/lib/relative-time";
 import SourceComparisonChart from "./SourceComparisonChart";
+
+type VerdictCandidate = {
+  player_id: number;
+  name: string;
+  team: string;
+  position: FantasyPosition;
+};
+type VerdictContextShape = {
+  scoring?: string;
+  week?: number | null;
+  position_needed?: string | null;
+  league_size?: number | null;
+  slot_type?: string | null;
+  round?: number | null;
+};
 
 const POSITION_STYLES: Record<FantasyPosition, string> = {
   QB: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
@@ -45,6 +62,9 @@ type TradeRow = {
   league_type: string;
   created_at: string;
   total_votes: number;
+  votes_a: number;
+  votes_b: number;
+  votes_even: number;
 };
 
 export default async function PlayerDetailPage({
@@ -58,7 +78,7 @@ export default async function PlayerDetailPage({
 
   const supabase = await createClient();
 
-  const [projections, platformRows, councilRows, allTradesRes] =
+  const [projections, platformRows, councilRows, allTradesRes, verdictRes] =
     await Promise.all([
       loadProjections(),
       supabase
@@ -72,6 +92,17 @@ export default async function PlayerDetailPage({
       supabase
         .from("trade_submissions")
         .select("id, side_a, side_b, scoring, league_type, created_at")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      // Pull a recent slice of verdict scenarios and filter client-side
+      // for ones containing this player. The candidates jsonb is small
+      // (2–5 items) and we're capped at 200 scenarios, so this stays
+      // cheap and avoids depending on a jsonb-containment index.
+      supabase
+        .from("verdict_scenarios")
+        .select(
+          "id, scenario_type, candidates, context, notes, created_at",
+        )
         .order("created_at", { ascending: false })
         .limit(200),
     ]);
@@ -112,6 +143,41 @@ export default async function PlayerDetailPage({
     councilByScoring[row.scoring_system as ScoringSystem] = {
       avgRank: Number(row.avg_rank),
       rankerCount: Number(row.ranker_count),
+    };
+  }
+
+  // Tier callout: compute this player's tier in each scoring system, plus
+  // their rank within their position so we can render
+  // "Tier 2 · PPR · top 6 RBs"-style copy. Tiers are derived from Vegas
+  // FPts (same as /tiers), so this is fully consistent with that page.
+  const SCORINGS: ScoringSystem[] = ["PPR", "Half", "Standard"];
+  const tierByScoring: Partial<
+    Record<
+      ScoringSystem,
+      {
+        tier: number;
+        totalTiers: number;
+        positionRank: number; // 1-based rank within position for that scoring
+        position: FantasyPosition;
+      }
+    >
+  > = {};
+  for (const s of SCORINGS) {
+    const tiers = computeTiersByPlayer(projections, s);
+    const info = tiers.get(playerId);
+    if (!info) continue;
+    // Position rank for this scoring: where this player sits when his
+    // position is sorted descending by FPts in this scoring system.
+    const sortedInPos = [...projections]
+      .filter((p) => p.position === player.position)
+      .sort((a, b) => b.fantasyPoints[s] - a.fantasyPoints[s]);
+    const posRank =
+      sortedInPos.findIndex((p) => p.playerId === playerId) + 1;
+    tierByScoring[s] = {
+      tier: info.tier,
+      totalTiers: info.totalTiers,
+      positionRank: posRank,
+      position: info.position,
     };
   }
 
@@ -166,15 +232,79 @@ export default async function PlayerDetailPage({
     }
   }
 
-  const relevantTrades: TradeRow[] = playerTrades.map((t) => ({
-    id: t.id,
-    side_a: t.side_a,
-    side_b: t.side_b,
-    scoring: t.scoring,
-    league_type: t.league_type,
-    created_at: t.created_at,
-    total_votes: voteCountsByTrade.get(t.id)?.total ?? 0,
-  }));
+  // Cap at 5 most recent (the source query is already ordered desc).
+  const relevantTrades: TradeRow[] = playerTrades.slice(0, 5).map((t) => {
+    const c = voteCountsByTrade.get(t.id);
+    return {
+      id: t.id,
+      side_a: t.side_a,
+      side_b: t.side_b,
+      scoring: t.scoring,
+      league_type: t.league_type,
+      created_at: t.created_at,
+      total_votes: c?.total ?? 0,
+      votes_a: c?.votes_a ?? 0,
+      votes_b: c?.votes_b ?? 0,
+      votes_even: c?.votes_even ?? 0,
+    };
+  });
+
+  // Verdict appearances: scenarios where this player_id appears in
+  // the candidates jsonb array. We over-fetch 200 recent scenarios and
+  // filter in JS (cheap given the small candidates payload), then take
+  // the 5 most recent. For each we resolve current vote tallies in one
+  // round-trip against verdict_votes and compute the leading candidate.
+  type VerdictRow = {
+    id: string;
+    scenario_type: "draft" | "start_sit";
+    candidates: VerdictCandidate[];
+    context: VerdictContextShape;
+    notes: string | null;
+    created_at: string;
+  };
+  const playerVerdicts: VerdictRow[] = [];
+  for (const v of (verdictRes.data ?? []) as Array<{
+    id: string;
+    scenario_type: string;
+    candidates: unknown;
+    context: unknown;
+    notes: string | null;
+    created_at: string;
+  }>) {
+    const cands = (v.candidates as VerdictCandidate[] | null) ?? [];
+    if (!cands.some((c) => c.player_id === playerId)) continue;
+    playerVerdicts.push({
+      id: v.id,
+      scenario_type: v.scenario_type as "draft" | "start_sit",
+      candidates: cands,
+      context: (v.context as VerdictContextShape | null) ?? {},
+      notes: v.notes,
+      created_at: v.created_at,
+    });
+    if (playerVerdicts.length >= 5) break;
+  }
+
+  const verdictTallies = new Map<
+    string,
+    { byPlayer: Record<number, number>; total: number }
+  >();
+  if (playerVerdicts.length > 0) {
+    const { data: vvotes } = await supabase
+      .from("verdict_votes")
+      .select("scenario_id, pick_player_id")
+      .in(
+        "scenario_id",
+        playerVerdicts.map((v) => v.id),
+      );
+    for (const row of vvotes ?? []) {
+      const sid = row.scenario_id as string;
+      const pid = row.pick_player_id as number;
+      const t = verdictTallies.get(sid) ?? { byPlayer: {}, total: 0 };
+      t.byPlayer[pid] = (t.byPlayer[pid] ?? 0) + 1;
+      t.total += 1;
+      verdictTallies.set(sid, t);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -206,6 +336,48 @@ export default async function PlayerDetailPage({
             ← Rankings
           </Link>
         </div>
+
+        {/* Tier callout — this player's Jenks tier under each scoring system,
+           color-coded by tier color so you can read it at a glance. Each card
+           deep-links into /tiers?scoring=… so the user can see the full
+           position grid. Renders nothing if we somehow don't have tier data
+           (very small position pools, etc.). */}
+        {SCORINGS.some((s) => tierByScoring[s]) && (
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {SCORINGS.map((s) => {
+              const info = tierByScoring[s];
+              if (!info) return null;
+              const style = tierStyle(info.tier);
+              return (
+                <Link
+                  key={s}
+                  href={`/tiers?scoring=${s}`}
+                  className={`group rounded-lg border ${style.border} ${style.row} p-3 transition hover:brightness-125`}
+                >
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span
+                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-bold ring-1 ring-inset ${style.badge}`}
+                    >
+                      Tier {info.tier}
+                    </span>
+                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
+                      {s}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-200">
+                    <span className="font-semibold text-zinc-100">
+                      #{info.positionRank}
+                    </span>{" "}
+                    of {info.position}s · {style.label}
+                  </p>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    Tier {info.tier} of {info.totalTiers} · view tiers →
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
         {/* Headline stats grid */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -331,16 +503,26 @@ export default async function PlayerDetailPage({
           </div>
         )}
 
-        {/* Trades involving this player */}
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            Trade Court appearances
-          </h3>
+        {/* In the news — recent trades involving this player. Shows the
+           current council split per trade ("Team A 73% · 322 votes") so the
+           card carries actionable weight, not just a body count. */}
+        <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              In the news — Trade Court
+            </h3>
+            <Link
+              href="/trades"
+              className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+            >
+              All trades →
+            </Link>
+          </div>
           {relevantTrades.length === 0 ? (
             <p className="text-sm text-zinc-500">
-              No trades involving {player.name} have been submitted yet.{" "}
+              No trades involving {player.name} yet.{" "}
               <Link
-                href={`/trades/new`}
+                href="/trades/new"
                 className="text-emerald-300 underline-offset-4 hover:underline"
               >
                 Submit one
@@ -349,32 +531,185 @@ export default async function PlayerDetailPage({
             </p>
           ) : (
             <ul className="space-y-2">
-              {relevantTrades.map((t) => (
-                <li
-                  key={t.id}
-                  className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
-                >
-                  <Link
-                    href={`/trades/${t.id}`}
-                    className="block hover:bg-zinc-900/30"
+              {relevantTrades.map((t) => {
+                // Derive the leading side + consensus pct. With a known view
+                // bug (012) total_votes can drift on older data, so we always
+                // re-derive from raw counts on this page even though we also
+                // re-aggregate above. votes_a + votes_b + votes_even should
+                // equal total_votes; if they don't (stale/missing rows), we
+                // trust the sum of the three component counts.
+                const componentSum = t.votes_a + t.votes_b + t.votes_even;
+                const totalSafe =
+                  t.total_votes === componentSum
+                    ? t.total_votes
+                    : Math.max(t.total_votes, componentSum);
+                let leaderLabel: string | null = null;
+                let leaderPct = 0;
+                if (totalSafe > 0) {
+                  const aPct = Math.round((t.votes_a / totalSafe) * 100);
+                  const bPct = Math.round((t.votes_b / totalSafe) * 100);
+                  const evenPct = Math.round((t.votes_even / totalSafe) * 100);
+                  if (t.votes_a >= t.votes_b && t.votes_a >= t.votes_even) {
+                    leaderLabel = "Team A";
+                    leaderPct = aPct;
+                  } else if (t.votes_b >= t.votes_a && t.votes_b >= t.votes_even) {
+                    leaderLabel = "Team B";
+                    leaderPct = bPct;
+                  } else {
+                    leaderLabel = "Even";
+                    leaderPct = evenPct;
+                  }
+                }
+                return (
+                  <li
+                    key={t.id}
+                    className="rounded-md border border-zinc-800 bg-zinc-950 text-sm transition hover:border-zinc-700"
                   >
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
-                      <span className="text-zinc-200">
-                        {t.side_a.players.map((p) => p.name).join(" + ") || "—"}{" "}
-                        ↔{" "}
-                        {t.side_b.players.map((p) => p.name).join(" + ") || "—"}
-                      </span>
-                      <span className="shrink-0 font-mono text-xs text-zinc-500">
-                        {t.total_votes} vote{t.total_votes === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 text-xs text-zinc-500">
-                      {t.league_type} · {t.scoring} ·{" "}
-                      {new Date(t.created_at).toLocaleDateString()}
-                    </div>
-                  </Link>
-                </li>
-              ))}
+                    <Link href={`/trades/${t.id}`} className="block px-3 py-2">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
+                        <span className="text-zinc-200">
+                          {t.side_a.players.map((p) => p.name).join(" + ") ||
+                            "—"}{" "}
+                          ↔{" "}
+                          {t.side_b.players.map((p) => p.name).join(" + ") ||
+                            "—"}
+                        </span>
+                        <span className="shrink-0 font-mono text-xs">
+                          {leaderLabel ? (
+                            <>
+                              <span className="text-emerald-300">
+                                {leaderLabel} {leaderPct}%
+                              </span>
+                              <span className="text-zinc-500">
+                                {" · "}
+                                {totalSafe} vote{totalSafe === 1 ? "" : "s"}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-zinc-500">
+                              No votes yet
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-xs text-zinc-500">
+                        {t.league_type} · {t.scoring} ·{" "}
+                        {relativeTimeShort(t.created_at)}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Verdict appearances — recent draft/start-sit scenarios where this
+           player is one of the candidates. Shows the leading pick + total
+           votes so the user can see whether the crowd is reaching for or
+           passing on this player. */}
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              Verdict appearances
+            </h3>
+            <Link
+              href="/verdict"
+              className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+            >
+              All verdicts →
+            </Link>
+          </div>
+          {playerVerdicts.length === 0 ? (
+            <p className="text-sm text-zinc-500">
+              No verdict scenarios featuring {player.name} yet.{" "}
+              <Link
+                href="/verdict/new"
+                className="text-emerald-300 underline-offset-4 hover:underline"
+              >
+                Post one
+              </Link>
+              .
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {playerVerdicts.map((v) => {
+                const tally =
+                  verdictTallies.get(v.id) ?? { byPlayer: {}, total: 0 };
+                // Leading candidate by raw count; ties resolve to the first
+                // candidate in array order (stable + mirrors /verdict/[id]).
+                let leader: VerdictCandidate | null = null;
+                let leaderCount = 0;
+                for (const c of v.candidates) {
+                  const n = tally.byPlayer[c.player_id] ?? 0;
+                  if (n > leaderCount) {
+                    leaderCount = n;
+                    leader = c;
+                  }
+                }
+                const leaderPct =
+                  tally.total > 0 && leader
+                    ? Math.round((leaderCount / tally.total) * 100)
+                    : 0;
+                const isThisPlayerLeading =
+                  leader?.player_id === playerId && leaderCount > 0;
+                // One-line scenario summary; mirrors the verdict detail page.
+                const summary =
+                  v.scenario_type === "draft"
+                    ? `${v.context.round ? `Round ${v.context.round}` : "Draft pick"}${
+                        v.context.position_needed
+                          ? ` — ${v.context.position_needed} needed`
+                          : ""
+                      }`
+                    : `Start/Sit — ${
+                        v.context.week ? `Week ${v.context.week}` : ""
+                      }${v.context.slot_type ? ` ${v.context.slot_type}` : ""}`
+                        .replace(/\s+/g, " ")
+                        .trim();
+                return (
+                  <li
+                    key={v.id}
+                    className="rounded-md border border-zinc-800 bg-zinc-950 text-sm transition hover:border-zinc-700"
+                  >
+                    <Link href={`/verdict/${v.id}`} className="block px-3 py-2">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
+                        <span className="text-zinc-200">
+                          {summary || "Verdict"}
+                          <span className="ml-2 text-xs text-zinc-500">
+                            ({v.candidates.map((c) => c.name).join(" vs ")})
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-mono text-xs">
+                          {tally.total > 0 && leader ? (
+                            <>
+                              <span
+                                className={
+                                  isThisPlayerLeading
+                                    ? "text-emerald-300"
+                                    : "text-zinc-300"
+                                }
+                              >
+                                {leader.name} {leaderPct}%
+                              </span>
+                              <span className="text-zinc-500">
+                                {" · "}
+                                {tally.total} vote
+                                {tally.total === 1 ? "" : "s"}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-zinc-500">No votes yet</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-xs text-zinc-500">
+                        {v.context.scoring ?? "—"} ·{" "}
+                        {relativeTimeShort(v.created_at)}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
