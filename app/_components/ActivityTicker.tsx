@@ -316,8 +316,8 @@ export default async function ActivityTicker() {
         }
         @keyframes ticker-scroll {
           from { transform: translate3d(0, 0, 0); }
-          /* Translate exactly one copy's width so the second copy lands
-             where the first started — seamless loop. */
+          /* Translate one full copy width so the second copy lands
+             where the first started, producing a seamless loop. */
           to   { transform: translate3d(-50%, 0, 0); }
         }
         @media (prefers-reduced-motion: reduce) {
