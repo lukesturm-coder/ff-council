@@ -12,6 +12,7 @@ import type {
 import { createClient } from "@/lib/supabase/server";
 import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
 import TradePrompt from "./_components/TradePrompt";
+import HomeHero, { loadHeroStats } from "./_components/HomeHero";
 import ActivityTicker from "./_components/ActivityTicker";
 import CouncilActivity from "./_components/CouncilActivity";
 import RankingsTable, {
@@ -78,11 +79,13 @@ async function loadCouncilConsensus(): Promise<CouncilConsensusMap> {
 }
 
 export default async function Page() {
-  const [projections, realPlatformRankings, councilConsensus] = await Promise.all([
-    loadProjections(),
-    loadPlatformRankings(),
-    loadCouncilConsensus(),
-  ]);
+  const [projections, realPlatformRankings, councilConsensus, heroStats] =
+    await Promise.all([
+      loadProjections(),
+      loadPlatformRankings(),
+      loadCouncilConsensus(),
+      loadHeroStats(),
+    ]);
 
   // Real platforms only have ESPN + FantasyPros so far. Layer mock Sleeper /
   // NFL / CBS / Yahoo ranks on top so we can design the multi-source table
@@ -97,6 +100,8 @@ export default async function Page() {
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
 
         <TradePrompt />
+
+        <HomeHero stats={heroStats} />
 
         <ActivityTicker />
 
