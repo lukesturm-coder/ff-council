@@ -113,10 +113,10 @@ export default function RankingsTable({
   const [scoring, setScoring] = useState<ScoringSystem>("PPR");
   const [position, setPosition] = useState<PositionFilter>("ALL");
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  // Council is the primary ranking source; fall back to Vegas when no
-  // council submissions exist yet so the table still has a useful default.
-  const initialSortKey: SortKey =
-    Object.keys(councilConsensus).length > 0 ? "COUNCIL" : "VEGAS";
+  // AVG (the consensus across every source) is the default sort — it's the
+  // integrated verdict that this multi-source comparison page is for. Single
+  // sources stay clickable for users who want to see one perspective.
+  const initialSortKey: SortKey = "AVG";
   const [sortKey, setSortKey] = useState<SortKey>(initialSortKey);
 
   function toggleSort(key: SortKey) {
@@ -278,8 +278,16 @@ export default function RankingsTable({
             <tr>
               <th className="w-8 py-3 pl-3"></th>
               <th className="w-10 py-3 pr-2 text-right">#</th>
-              <th className="sticky left-0 z-20 min-w-[140px] border-r border-zinc-800/60 bg-zinc-900 py-3 pl-2 whitespace-nowrap sm:min-w-[200px] sm:pl-4">Player</th>
+              <th className="sticky left-0 z-20 min-w-[140px] bg-zinc-900 py-3 pl-2 whitespace-nowrap sm:min-w-[200px] sm:pl-4">Player</th>
               <th className="w-12 py-3 text-center">Pos</th>
+              <SortHeader
+                label="AVG"
+                sortKey="AVG"
+                color="text-zinc-100"
+                title="Average rank across every available source — the consensus across Council, Vegas, ESPN, FP, Sleeper, NFL, CBS, Yahoo. Default sort."
+                active={sortKey}
+                onClick={toggleSort}
+              />
               {hasCouncil && (
                 <SortHeader
                   label="Council"
@@ -329,14 +337,6 @@ export default function RankingsTable({
                   onClick={toggleSort}
                 />
               ))}
-              <SortHeader
-                label="AVG"
-                sortKey="AVG"
-                color="text-zinc-200"
-                title="Average of Council / ESPN / FP / Sleeper / NFL / CBS / Yahoo ranks"
-                active={sortKey}
-                onClick={toggleSort}
-              />
               <th className="w-3 sm:w-4" aria-hidden="true" />
             </tr>
           </thead>
@@ -372,7 +372,7 @@ export default function RankingsTable({
 
       <p className="text-xs text-zinc-500">
         <span className="text-zinc-300">#</span> is the player&apos;s rank in
-        the current sort — Council Consensus by default. Other columns show
+        the current sort — average across all sources by default. Other columns show
         each source&apos;s rank for comparison; sort by any column to find
         disagreements. Sleeper / NFL / CBS / Yahoo are mock numbers until
         those platforms publish 2026 preseason rankings.
@@ -500,7 +500,7 @@ function RankRow({
           )}
         </td>
         <td className="py-3 pr-2 text-right font-mono text-zinc-500">{rank}</td>
-        <td className="sticky left-0 z-10 border-r border-zinc-800/60 bg-zinc-900 py-3 pl-2 font-medium whitespace-nowrap group-hover:bg-zinc-800 sm:pl-4">
+        <td className="sticky left-0 z-10 bg-zinc-900 py-3 pl-2 font-medium whitespace-nowrap group-hover:bg-zinc-800 sm:pl-4">
           <Link
             href={`/player/${player.playerId}`}
             onClick={(e) => e.stopPropagation()}
@@ -519,9 +519,18 @@ function RankRow({
             {player.position}
           </span>
         </td>
+        {/* AVG is the leftmost data column — the consensus across every
+            source, sorted by default. Single-source columns follow. */}
+        <td className="min-w-[5rem] py-3 text-center font-mono text-xs font-semibold tabular-nums">
+          {avgRank != null ? (
+            <span className="text-zinc-100">{avgRank.toFixed(1)}</span>
+          ) : (
+            <span className="text-zinc-600">—</span>
+          )}
+        </td>
         {hasCouncil && (
           <td
-            className="min-w-[5rem] py-3 text-center font-mono text-xs font-semibold tabular-nums"
+            className="min-w-[5rem] py-3 text-center font-mono text-xs tabular-nums"
             title={
               councilRankerCount
                 ? `${councilRankerCount} ranker${councilRankerCount === 1 ? "" : "s"}`
@@ -566,13 +575,6 @@ function RankRow({
             </span>
           </td>
         ))}
-        <td className="min-w-[5rem] py-3 text-center font-mono text-xs font-semibold tabular-nums">
-          {avgRank != null ? (
-            <span className="text-zinc-200">{avgRank.toFixed(1)}</span>
-          ) : (
-            <span className="text-zinc-600">—</span>
-          )}
-        </td>
         <td aria-hidden="true" />
       </tr>
       {isExpanded && (
