@@ -17,18 +17,25 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: summary } = await supabase
-    .from("trade_vote_summary")
-    .select("total_votes, votes_a, votes_b, votes_even")
-    .eq("trade_id", id)
-    .maybeSingle();
+  // Aggregate raw vote rows directly — trade_vote_summary undercounts
+  // anonymous votes because count(voter_id) drops NULLs (migration 012
+  // fixed the view but the deploy isn't guaranteed to have run it yet).
+  const { data: voteRows } = await supabase
+    .from("trade_votes")
+    .select("winner")
+    .eq("trade_id", id);
+  const counts = { A: 0, B: 0, EVEN: 0 };
+  for (const v of voteRows ?? []) {
+    const w = v.winner as "A" | "B" | "EVEN";
+    if (w === "A" || w === "B" || w === "EVEN") counts[w] += 1;
+  }
+  const total = counts.A + counts.B + counts.EVEN;
 
-  const total = (summary?.total_votes as number | undefined) ?? 0;
   let title: string;
   let description: string;
   if (total > 0) {
-    const aPct = Math.round(((summary?.votes_a ?? 0) / total) * 100);
-    const bPct = Math.round(((summary?.votes_b ?? 0) / total) * 100);
+    const aPct = Math.round((counts.A / total) * 100);
+    const bPct = Math.round((counts.B / total) * 100);
     title = `Team A ${aPct}% vs Team B ${bPct}% · FF Council`;
     description = `Crowdsourced trade verdict from ${total} council vote${
       total === 1 ? "" : "s"
@@ -83,7 +90,7 @@ export default async function TradeDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: trade }, { data: summary }, authResult] = await Promise.all([
+  const [{ data: trade }, { data: voteRows }, authResult] = await Promise.all([
     supabase
       .from("trade_submissions")
       .select(
@@ -91,7 +98,12 @@ export default async function TradeDetailPage({
       )
       .eq("id", id)
       .maybeSingle(),
-    supabase.from("trade_vote_summary").select("*").eq("trade_id", id).maybeSingle(),
+    // Aggregate raw votes directly so anon votes count (the trade_vote_summary
+    // view undercounts NULL voter_ids; we also need tier/lean fields below).
+    supabase
+      .from("trade_votes")
+      .select("winner, fairness_tier, fairness_lean")
+      .eq("trade_id", id),
     supabase.auth.getUser(),
   ]);
 
@@ -118,9 +130,54 @@ export default async function TradeDetailPage({
     myVote = myVoteRow as typeof myVote;
   }
 
-  const total = (summary?.total_votes as number | undefined) ?? 0;
-  const aPct = total > 0 ? Math.round(((summary?.votes_a ?? 0) / total) * 100) : 0;
-  const bPct = total > 0 ? Math.round(((summary?.votes_b ?? 0) / total) * 100) : 0;
+  // Build the same summary shape the JSX downstream expects from the view.
+  type SummaryShape = {
+    total_votes: number;
+    votes_a: number;
+    votes_b: number;
+    votes_even: number;
+    tier_balanced: number;
+    tier_slight_edge: number;
+    tier_clear_advantage: number;
+    tier_major_advantage: number;
+    tier_extreme_imbalance: number;
+    lean_a: number;
+    lean_b: number;
+  };
+  const summary: SummaryShape = {
+    total_votes: 0,
+    votes_a: 0,
+    votes_b: 0,
+    votes_even: 0,
+    tier_balanced: 0,
+    tier_slight_edge: 0,
+    tier_clear_advantage: 0,
+    tier_major_advantage: 0,
+    tier_extreme_imbalance: 0,
+    lean_a: 0,
+    lean_b: 0,
+  };
+  for (const v of (voteRows ?? []) as Array<{
+    winner: string;
+    fairness_tier: string | null;
+    fairness_lean: string | null;
+  }>) {
+    summary.total_votes += 1;
+    if (v.winner === "A") summary.votes_a += 1;
+    else if (v.winner === "B") summary.votes_b += 1;
+    else if (v.winner === "EVEN") summary.votes_even += 1;
+    if (v.fairness_tier === "balanced") summary.tier_balanced += 1;
+    else if (v.fairness_tier === "slight_edge") summary.tier_slight_edge += 1;
+    else if (v.fairness_tier === "clear_advantage") summary.tier_clear_advantage += 1;
+    else if (v.fairness_tier === "major_advantage") summary.tier_major_advantage += 1;
+    else if (v.fairness_tier === "extreme_imbalance") summary.tier_extreme_imbalance += 1;
+    if (v.fairness_lean === "A") summary.lean_a += 1;
+    else if (v.fairness_lean === "B") summary.lean_b += 1;
+  }
+
+  const total = summary.total_votes;
+  const aPct = total > 0 ? Math.round((summary.votes_a / total) * 100) : 0;
+  const bPct = total > 0 ? Math.round((summary.votes_b / total) * 100) : 0;
   const evenPct = total > 0 ? 100 - aPct - bPct : 0;
 
   return (
