@@ -16,13 +16,17 @@ import type {
   SearchVerdict,
 } from "./SearchIndex";
 
-const PRIMARY_NAV: NavItem[] = [
-  // Standing order: Rankings, Judge, Trade Court, Verdict come first.
-  // Any new additions slot after this fixed prefix.
+// Two-tier nav: priority surfaces always large on the top row, utility tools
+// rendered in a smaller, muted second row. The fixed prefix (Rankings, Judge,
+// Trade Court, Verdict) anchors the priority tier per the standing order rule.
+const PRIORITY_NAV: NavItem[] = [
   { href: "/rankings", label: "Rankings" },
   { href: "/judge", label: "Judge" },
   { href: "/trades", label: "Trade Court" },
   { href: "/verdict", label: "Verdict" },
+];
+
+const UTILITY_NAV: NavItem[] = [
   { href: "/trade", label: "Trade Calc" },
   { href: "/draft", label: "Mock Draft" },
   { href: "/league", label: "League Analyzer" },
@@ -158,14 +162,17 @@ export default async function Header() {
     isAdmin = Boolean(data?.is_admin);
   }
 
-  const navItems: NavItem[] = [...PRIMARY_NAV];
-  if (user) navItems.push({ href: "/council/rankings", label: "My Rankings" });
-  if (isAdmin) navItems.push({ href: "/council/admin", label: "Admin" });
+  // Utility tier on desktop also carries auth-gated entries (My Rankings,
+  // Admin) when relevant. Mobile combines both tiers into one scroll row.
+  const utilityNav: NavItem[] = [...UTILITY_NAV];
+  if (user) utilityNav.push({ href: "/council/rankings", label: "My Rankings" });
+  if (isAdmin) utilityNav.push({ href: "/council/admin", label: "Admin" });
+  const allNav: NavItem[] = [...PRIORITY_NAV, ...utilityNav];
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60">
-      <div className="mx-auto max-w-7xl px-3 pb-3 pt-3 sm:px-6">
-        {/* Top row: logo + auth. Stays a single row at all widths. */}
+      <div className="mx-auto max-w-7xl px-3 pb-2 pt-3 sm:px-6">
+        {/* Top row: logo + priority nav + search + auth. */}
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="shrink-0">
             <h1 className="whitespace-nowrap font-mono text-xl font-bold tracking-tight text-emerald-400 sm:text-2xl md:text-[1.625rem]">
@@ -173,11 +180,11 @@ export default async function Header() {
             </h1>
           </Link>
 
-          {/* On md+, nav lives between logo and auth so the layout stays compact. */}
+          {/* Priority nav (md+): the 4 always-large surfaces. */}
           <PrimaryNav
-            items={navItems}
+            items={PRIORITY_NAV}
             variant="desktop"
-            className="hidden min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-sm md:flex"
+            className="hidden min-w-0 flex-1 items-center gap-x-5 text-sm md:flex"
           />
 
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm">
@@ -212,9 +219,17 @@ export default async function Header() {
           </div>
         </div>
 
-        {/* Mobile-only nav: horizontal scroll so all links stay on one row. */}
+        {/* Utility tier (md+): compact + muted, supporting tools row. */}
         <PrimaryNav
-          items={navItems}
+          items={utilityNav}
+          variant="desktop"
+          size="compact"
+          className="mt-1 hidden items-center gap-x-4 border-t border-zinc-800/60 pt-1 text-xs md:flex"
+        />
+
+        {/* Mobile (<md): single horizontal-scroll row with both tiers combined. */}
+        <PrimaryNav
+          items={allNav}
           variant="mobile"
           className="mt-2 -mx-2 flex items-center gap-x-5 overflow-x-auto px-2 text-sm md:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         />

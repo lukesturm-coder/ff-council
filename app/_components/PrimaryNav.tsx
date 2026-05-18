@@ -24,10 +24,16 @@ export default function PrimaryNav({
   items,
   className,
   variant = "desktop",
+  size = "default",
 }: {
   items: NavItem[];
   className?: string;
   variant?: "desktop" | "mobile";
+  /**
+   * "compact" renders a smaller, more-muted secondary tier of nav links
+   * — used for the utility row beneath the primary surfaces.
+   */
+  size?: "default" | "compact";
 }) {
   const pathname = usePathname();
   const activeHref = pickActiveHref(pathname, items);
@@ -36,12 +42,18 @@ export default function PrimaryNav({
       {items.map((item) => {
         const isActive = item.href === activeHref;
         // Desktop gets a real "current tab" underline; mobile (horizontal
-        // scroller) stays color-only. We add a transparent border on inactive
-        // desktop links so the active border doesn't shift adjacent items.
+        // scroller) stays color-only. Inactive desktop links carry a
+        // transparent border so the active state doesn't shift neighbors.
         const desktopBase =
           "border-b-2 border-transparent -mb-px pb-0.5";
-        const desktopActive = "border-emerald-400 text-emerald-400";
-        const desktopInactive = "text-zinc-400 hover:text-zinc-100";
+        const desktopActive =
+          size === "compact"
+            ? "border-emerald-400/60 text-emerald-300"
+            : "border-emerald-400 text-emerald-400";
+        const desktopInactive =
+          size === "compact"
+            ? "text-zinc-500 hover:text-zinc-200"
+            : "text-zinc-400 hover:text-zinc-100";
         const mobileActive = "text-emerald-400";
         const mobileInactive = "text-zinc-400 hover:text-zinc-100";
         const classes =
