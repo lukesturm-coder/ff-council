@@ -114,7 +114,7 @@ function FeatureTile({ tile }: { tile: Tile }) {
       <p className="mt-1 text-sm text-zinc-400">{tile.description}</p>
       <span
         aria-hidden
-        className="mt-4 self-end text-xs font-medium text-emerald-400 opacity-80 transition group-hover:opacity-100"
+        className="mt-4 self-end text-sm font-medium text-emerald-400 opacity-80 transition group-hover:opacity-100"
       >
         View →
       </span>

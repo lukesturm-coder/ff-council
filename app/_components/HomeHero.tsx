@@ -89,7 +89,7 @@ function StatCard({
       <div className="text-xl font-semibold tracking-tight text-emerald-400 sm:text-2xl">
         {value}
       </div>
-      <div className="mt-0.5 text-[11px] uppercase tracking-wide text-zinc-400">
+      <div className="mt-0.5 text-xs uppercase tracking-wide text-zinc-400">
         {label}
       </div>
     </div>
@@ -106,7 +106,7 @@ function LiveCard() {
         </span>
         <span className="text-sm font-semibold text-emerald-300">Live</span>
       </div>
-      <div className="mt-0.5 text-[11px] uppercase tracking-wide text-zinc-400">
+      <div className="mt-0.5 text-xs uppercase tracking-wide text-zinc-400">
         Council is voting now
       </div>
     </div>

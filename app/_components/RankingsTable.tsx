@@ -274,7 +274,7 @@ export default function RankingsTable({
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900">
         <table className="w-full text-sm">
-          <thead className="border-b border-zinc-800 bg-zinc-900/50 text-left text-xs uppercase tracking-wider text-zinc-500">
+          <thead className="border-b border-zinc-800 bg-zinc-900/50 text-left text-sm uppercase tracking-wider text-zinc-500">
             <tr>
               <th className="w-8 py-3 pl-3"></th>
               <th className="w-10 py-3 pr-2 text-right">#</th>
@@ -508,7 +508,7 @@ function RankRow({
           >
             {player.name}
           </Link>
-          <span className="ml-2 font-mono text-xs text-zinc-500">
+          <span className="ml-2 font-mono text-sm text-zinc-500">
             ({player.team})
           </span>
         </td>
@@ -521,7 +521,7 @@ function RankRow({
         </td>
         {/* AVG is the leftmost data column — the consensus across every
             source, sorted by default. Single-source columns follow. */}
-        <td className="min-w-[5rem] py-3 text-center font-mono text-xs font-semibold tabular-nums">
+        <td className="min-w-[5rem] py-3 text-center font-mono text-sm font-semibold tabular-nums">
           {avgRank != null ? (
             <span className="text-zinc-100">{avgRank.toFixed(1)}</span>
           ) : (
@@ -530,7 +530,7 @@ function RankRow({
         </td>
         {hasCouncil && (
           <td
-            className="min-w-[5rem] py-3 text-center font-mono text-xs tabular-nums"
+            className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
             title={
               councilRankerCount
                 ? `${councilRankerCount} ranker${councilRankerCount === 1 ? "" : "s"}`
@@ -546,20 +546,20 @@ function RankRow({
             </span>
           </td>
         )}
-        <td className="min-w-[5rem] py-3 text-center font-mono text-xs tabular-nums">
+        <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
           <span className="text-amber-400">
             {vegasRank != null ? vegasRank.toFixed(0) : "—"}
           </span>
         </td>
         {hasEspn && (
-          <td className="min-w-[5rem] py-3 text-center font-mono text-xs tabular-nums">
+          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
             <span className="text-red-400">
               {espnRank != null ? espnRank.toFixed(0) : "—"}
             </span>
           </td>
         )}
         {hasFp && (
-          <td className="min-w-[5rem] py-3 text-center font-mono text-xs tabular-nums">
+          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
             <span className="text-teal-400">
               {fpRank != null ? fpRank.toFixed(0) : "—"}
             </span>
@@ -568,7 +568,7 @@ function RankRow({
         {extraRanks.map((r, idx) => (
           <td
             key={EXTRA_PLATFORMS[idx].key}
-            className="min-w-[5rem] py-3 text-center font-mono text-xs tabular-nums"
+            className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
           >
             <span className={EXTRA_PLATFORMS[idx].accent}>
               {r != null ? r.toFixed(0) : "—"}

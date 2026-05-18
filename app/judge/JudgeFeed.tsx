@@ -371,7 +371,7 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
         )}
 
         {/* Skip + view-full footer */}
-        <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-500">
+        <div className="mt-4 flex items-center justify-between gap-3 text-sm text-zinc-500">
           <button
             type="button"
             onClick={skip}
