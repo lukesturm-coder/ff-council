@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
-import VotingPanel from "./[id]/VotingPanel";
+import { Loader2, X } from "lucide-react";
+import { castVote } from "./[id]/actions";
 
 type SidePlayer = {
   player_id: number | null;
@@ -252,10 +252,31 @@ function TradeModal({
   onNext: (() => void) | null;
 }) {
   const [voted, setVoted] = useState(false);
-  // Winner state lives up here so clicking the Team A / Team B side panel
-  // at the top of the modal can drive the verdict — VotingPanel below
-  // mirrors the selection.
-  const [winner, setWinner] = useState<"A" | "B" | "EVEN" | null>(null);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function submitVote(
+    winner: "A" | "B" | "EVEN",
+    tier:
+      | "balanced"
+      | "slight_edge"
+      | "clear_advantage"
+      | "major_advantage"
+      | "extreme_imbalance",
+  ) {
+    if (pending) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await castVote({
+        tradeId: trade.id,
+        winner,
+        fairnessTier: tier,
+        fairnessLean: winner === "EVEN" ? null : winner,
+      });
+      if (res.ok) setVoted(true);
+      else setError(res.error);
+    });
+  }
 
   // Lock body scroll while open + close on Escape.
   useEffect(() => {
@@ -337,41 +358,89 @@ function TradeModal({
             </div>
 
             <p className="-mt-2 mb-3 text-xs text-zinc-500">
-              Tap the side that won — or the buttons below.
+              One tap on a magnitude under either team — your full verdict in
+              a single click.
             </p>
 
-            {/* Equal-height side-by-side. Grid guarantees both cells stretch
-                to the tallest content; the "for" sits in a narrow middle column
-                that centers vertically. Stacks on mobile. */}
-            <div className="mb-5 grid grid-cols-1 items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
-              <ModalSidePanel
-                label="Team A receives"
-                side={trade.side_a}
-                accent="text-rose-300"
-                team="A"
-                selected={winner === "A"}
-                onSelect={() => setWinner("A")}
-              />
-              <div className="flex items-center justify-center text-xs uppercase tracking-wider text-zinc-600">
-                for
+            {/* 3-column one-click grid:
+                  [ Team A receives + 4 magnitudes ] [ Even ] [ Team B receives + 4 magnitudes ]
+                Each magnitude submits (winner, tier) directly. Stacks on mobile. */}
+            <div className="mb-3 grid grid-cols-1 items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
+              {/* Team A column */}
+              <div className="flex flex-col gap-2">
+                <ModalSidePreview
+                  label="Team A receives"
+                  side={trade.side_a}
+                  accent="text-rose-300"
+                />
+                {MAGNITUDE_TIERS.map((t) => (
+                  <button
+                    key={`A-${t.value}`}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => submitVote("A", t.value)}
+                    className="min-h-[52px] rounded-lg border border-zinc-800 bg-zinc-950/60 p-2.5 text-left transition hover:border-rose-500/60 hover:bg-rose-500/10 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <div className="text-sm font-semibold text-rose-200">
+                      {t.label}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-zinc-500">
+                      {t.description}
+                    </div>
+                  </button>
+                ))}
               </div>
-              <ModalSidePanel
-                label="Team B receives"
-                side={trade.side_b}
-                accent="text-sky-300"
-                team="B"
-                selected={winner === "B"}
-                onSelect={() => setWinner("B")}
-              />
+
+              {/* Even column — single tall button */}
+              <div className="flex sm:min-w-[120px]">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => submitVote("EVEN", "balanced")}
+                  className="flex w-full min-h-[80px] sm:min-h-0 sm:w-32 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-3 text-sm font-semibold text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-800/40 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {pending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <span className="flex flex-col items-center gap-0.5">
+                      <span>Even</span>
+                      <span className="text-[11px] font-normal text-zinc-500">
+                        Balanced trade
+                      </span>
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Team B column */}
+              <div className="flex flex-col gap-2">
+                <ModalSidePreview
+                  label="Team B receives"
+                  side={trade.side_b}
+                  accent="text-sky-300"
+                />
+                {MAGNITUDE_TIERS.map((t) => (
+                  <button
+                    key={`B-${t.value}`}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => submitVote("B", t.value)}
+                    className="min-h-[52px] rounded-lg border border-zinc-800 bg-zinc-950/60 p-2.5 text-left transition hover:border-sky-500/60 hover:bg-sky-500/10 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <div className="text-sm font-semibold text-sky-200">
+                      {t.label}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-zinc-500">
+                      {t.description}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <VotingPanel
-              tradeId={trade.id}
-              winner={winner}
-              onWinnerChange={setWinner}
-              myVote={null}
-              onVoted={() => setVoted(true)}
-            />
+            {error && (
+              <p className="mb-3 text-xs text-rose-300">Error: {error}</p>
+            )}
 
             <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-500">
               {onNext ? (
@@ -400,47 +469,36 @@ function TradeModal({
   );
 }
 
-function ModalSidePanel({
+// Magnitude tiers shown under each team column in the modal.
+// Mirrors the same constants used in /judge JudgeFeed.tsx.
+const MAGNITUDE_TIERS: Array<{
+  value: "slight_edge" | "clear_advantage" | "major_advantage" | "extreme_imbalance";
+  label: string;
+  description: string;
+}> = [
+  { value: "slight_edge", label: "Slight edge", description: "Marginally ahead — close to fair." },
+  { value: "clear_advantage", label: "Clear advantage", description: "Noticeably better deal for the winning side." },
+  { value: "major_advantage", label: "Major advantage", description: "Strongly favors one side." },
+  { value: "extreme_imbalance", label: "Extreme imbalance", description: "Lopsided. Worth a league-level look." },
+];
+
+// Read-only preview of one side's players + picks. Sits at the top of each
+// team column in the modal; the clickable magnitude buttons live below it.
+function ModalSidePreview({
   label,
   side,
   accent,
-  team,
-  selected,
-  onSelect,
 }: {
   label: string;
   side: Side;
   accent: string;
-  team: "A" | "B";
-  selected: boolean;
-  onSelect: () => void;
 }) {
-  const selectedBorder =
-    team === "A"
-      ? "border-rose-500/60 bg-rose-500/5 ring-1 ring-rose-500/30"
-      : "border-sky-500/60 bg-sky-500/5 ring-1 ring-sky-500/30";
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={`flex-1 cursor-pointer rounded-md border p-3 text-left transition ${
-        selected
-          ? selectedBorder
-          : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-700"
-      }`}
-    >
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <span
-          className={`text-xs font-semibold uppercase tracking-wider ${accent}`}
-        >
-          {label}
-        </span>
-        {selected && (
-          <span className="text-[10px] font-medium uppercase tracking-wider text-emerald-300">
-            ✓ Your pick
-          </span>
-        )}
+    <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+      <div
+        className={`mb-2 text-xs font-semibold uppercase tracking-wider ${accent}`}
+      >
+        {label}
       </div>
       <div className="space-y-1.5">
         {side.players.map((p, idx) => (
@@ -474,6 +532,6 @@ function ModalSidePanel({
           <span className="text-xs text-zinc-600">—</span>
         )}
       </div>
-    </button>
+    </div>
   );
 }
