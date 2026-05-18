@@ -15,7 +15,10 @@ import type {
 import { createClient } from "@/lib/supabase/server";
 import { computeTiersByPlayer, tierStyle } from "@/lib/tiers";
 import { relativeTimeShort } from "@/lib/relative-time";
+import { buildSyntheticAdpHistory } from "@/lib/synthetic-adp";
+import type { SyntheticAdpSource } from "@/lib/synthetic-adp-sources";
 import SourceComparisonChart from "./SourceComparisonChart";
+import AdpChart from "./AdpChart";
 
 type VerdictCandidate = {
   player_id: number;
@@ -461,6 +464,67 @@ export default async function PlayerDetailPage({
             sell signal; one that ranks lower is a buy signal).
           </p>
         </div>
+
+        {/* ADP movement over the last 12 preseason weeks. Synthetic placeholder
+           data today (see lib/synthetic-adp.ts) — once a real snapshots table
+           lands, only that builder swaps in. Hidden unless we have at least
+           2 sources with a current rank for this player. */}
+        {(() => {
+          // Pick a representative current rank per source from platformRows.
+          // Preference: editorial > adp > whatever PPR row we can find.
+          // Vegas + Council aren't in platform_rankings; we inject them from
+          // the values already computed above.
+          const pickFromPlatformRows = (
+            source: string,
+          ): number | null => {
+            const rows = (platformRows.data ?? []).filter(
+              (r) => r.source === source && r.scoring_system === "PPR",
+            );
+            if (rows.length === 0) return null;
+            const editorial = rows.find((r) => r.ranking_type === "editorial");
+            const adp = rows.find((r) => r.ranking_type === "adp");
+            const pick = editorial ?? adp ?? rows[0];
+            return pick ? Number(pick.rank_value) : null;
+          };
+
+          const currentRanksBySource: Partial<
+            Record<SyntheticAdpSource, number | null>
+          > = {
+            vegas: overallRank,
+            council: councilByScoring.PPR
+              ? Math.round(councilByScoring.PPR.avgRank)
+              : null,
+            espn:
+              platformByScoring.PPR.espnEditorial ??
+              (platformByScoring.PPR.espnAdp != null
+                ? Math.round(platformByScoring.PPR.espnAdp)
+                : null),
+            fantasypros:
+              platformByScoring.PPR.fpAdp != null
+                ? Math.round(platformByScoring.PPR.fpAdp)
+                : null,
+            sleeper: pickFromPlatformRows("sleeper"),
+            nfl: pickFromPlatformRows("nfl"),
+            cbs: pickFromPlatformRows("cbs"),
+            yahoo: pickFromPlatformRows("yahoo"),
+          };
+
+          const sourcesWithRank = Object.values(currentRanksBySource).filter(
+            (r): r is number => r != null,
+          ).length;
+          if (sourcesWithRank < 2) return null;
+
+          const history = buildSyntheticAdpHistory(playerId, currentRanksBySource);
+
+          return (
+            <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                ADP movement (12 weeks)
+              </h3>
+              <AdpChart history={history} />
+            </div>
+          );
+        })()}
 
         {/* Markets feeding the projection */}
         {player.markets.length > 0 && (
