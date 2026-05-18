@@ -13,7 +13,12 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import { computeTiersByPlayer, tierStyle } from "@/lib/tiers";
+import {
+  computeTiersByPlayer,
+  tierLetter,
+  tierStyle,
+  tierDescription,
+} from "@/lib/tiers";
 import { relativeTimeShort } from "@/lib/relative-time";
 import { buildSyntheticAdpHistory } from "@/lib/synthetic-adp";
 import type { SyntheticAdpSource } from "@/lib/synthetic-adp-sources";
@@ -339,6 +344,504 @@ export default async function PlayerDetailPage({
             ← Rankings
           </Link>
         </div>
+
+        {/* ───── NEW ANALYTICAL SECTIONS ─────
+           Section A (stat block): tier letter + projection + Vegas VBD.
+           Section B (rank across sources): horizontal bars built from inline SVG.
+           Section C (Council vs Vegas disagreement gauge).
+           Section D (In the news — recent trades + verdicts).
+           All four use PPR as the canonical scoring system to keep the page
+           focused (the existing tier callout below still surfaces all three
+           scorings). */}
+        {(() => {
+          const ppr = "PPR" as const;
+          const tierMap = computeTiersByPlayer(projections, ppr);
+          const tierInfo = tierMap.get(playerId);
+          const sectionATier = tierInfo
+            ? {
+                tier: tierInfo.tier,
+                style: tierStyle(tierInfo.tier),
+                letter: tierLetter(tierInfo.tier),
+                desc: tierDescription(
+                  tierInfo.tier,
+                  tierInfo.position,
+                  tierInfo.tierSize,
+                ),
+              }
+            : null;
+
+          // Section B: gather all sources where this player has a rank.
+          // Color hex map mirrors the Tailwind accents used in RankingsTable.tsx
+          // so the same player reads as the same "Council green" / "Vegas amber"
+          // everywhere on the site.
+          const SOURCE_COLOR: Record<string, string> = {
+            Council: "#34d399", // emerald-400
+            Vegas: "#fbbf24", // amber-400
+            ESPN: "#f87171", // red-400
+            FantasyPros: "#2dd4bf", // teal-400
+            Sleeper: "#22d3ee", // cyan-400
+            NFL: "#60a5fa", // blue-400
+            CBS: "#818cf8", // indigo-400
+            Yahoo: "#c084fc", // purple-400
+          };
+
+          const pickFromPlatformRowsPPR = (source: string): number | null => {
+            const rows = (platformRows.data ?? []).filter(
+              (r) => r.source === source && r.scoring_system === "PPR",
+            );
+            if (rows.length === 0) return null;
+            const editorial = rows.find((r) => r.ranking_type === "editorial");
+            const adp = rows.find((r) => r.ranking_type === "adp");
+            const pick = editorial ?? adp ?? rows[0];
+            return pick ? Number(pick.rank_value) : null;
+          };
+
+          const councilPpr = councilByScoring.PPR
+            ? Math.round(councilByScoring.PPR.avgRank)
+            : null;
+          const vegasPpr = overallRank; // overall VBD-derived Vegas rank
+          const espnPpr =
+            platformByScoring.PPR.espnEditorial ??
+            (platformByScoring.PPR.espnAdp != null
+              ? Math.round(platformByScoring.PPR.espnAdp)
+              : null);
+          const fpPpr =
+            platformByScoring.PPR.fpAdp != null
+              ? Math.round(platformByScoring.PPR.fpAdp)
+              : null;
+          const sleeperPpr = pickFromPlatformRowsPPR("sleeper");
+          const nflPpr = pickFromPlatformRowsPPR("nfl");
+          const cbsPpr = pickFromPlatformRowsPPR("cbs");
+          const yahooPpr = pickFromPlatformRowsPPR("yahoo");
+
+          // Order chosen for cognitive consistency: house brands first
+          // (Council = us, Vegas = our model), then external networks.
+          const sourceRanks: Array<{ source: string; rank: number }> = [
+            { source: "Council", rank: councilPpr ?? Number.NaN },
+            { source: "Vegas", rank: vegasPpr },
+            { source: "ESPN", rank: espnPpr ?? Number.NaN },
+            { source: "FantasyPros", rank: fpPpr ?? Number.NaN },
+            { source: "Sleeper", rank: sleeperPpr ?? Number.NaN },
+            { source: "NFL", rank: nflPpr ?? Number.NaN },
+            { source: "CBS", rank: cbsPpr ?? Number.NaN },
+            { source: "Yahoo", rank: yahooPpr ?? Number.NaN },
+          ].filter((s) => Number.isFinite(s.rank)) as Array<{
+            source: string;
+            rank: number;
+          }>;
+
+          // Bar widths are normalized to the WORST rank present so the best
+          // rank visually fills the row. A single-source player would yield a
+          // 100% bar with no spread to compare — acceptable, since
+          // "consensus disagreement" needs ≥2 sources anyway.
+          const maxRank = sourceRanks.reduce(
+            (m, s) => Math.max(m, s.rank),
+            1,
+          );
+          const minRank = sourceRanks.reduce(
+            (m, s) => Math.min(m, s.rank),
+            Number.POSITIVE_INFINITY,
+          );
+
+          // Section C: Council vs Vegas delta. Positive = Council ranks the
+          // player HIGHER (lower number) than Vegas → emerald, swings right.
+          // Negative = Council is lower than Vegas → rose, swings left.
+          const councilVegasDelta =
+            councilPpr != null ? vegasPpr - councilPpr : null;
+          // Scale: cap the gauge at ±20 spots. Beyond that the bar pegs the
+          // edge and the magnitude is conveyed by the numeric label. 20 was
+          // chosen because it's roughly two rounds of fantasy draft variance,
+          // which is the largest "interesting" disagreement before it becomes
+          // a stats-sample issue (one ranker hated the player, etc.).
+          const GAUGE_CAP = 20;
+
+          return (
+            <>
+              {/* Section A — stat block */}
+              <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
+                {/* Card 1 — Tier */}
+                <div
+                  className={`flex min-h-[120px] flex-col justify-between rounded-lg border ${
+                    sectionATier?.style.border ?? "border-zinc-800"
+                  } ${sectionATier?.style.row ?? "bg-zinc-900"} p-3 sm:p-4`}
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 sm:text-xs">
+                    Tier
+                  </p>
+                  {sectionATier ? (
+                    <>
+                      <p
+                        className={`font-mono text-3xl font-bold leading-none sm:text-5xl ${
+                          sectionATier.style.badge
+                            .split(" ")
+                            .find((c) => c.startsWith("text-")) ??
+                          "text-zinc-100"
+                        }`}
+                      >
+                        {sectionATier.letter}
+                      </p>
+                      <p className="text-[10px] leading-tight text-zinc-400 sm:text-xs">
+                        {sectionATier.desc}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="font-mono text-2xl text-zinc-600">—</p>
+                  )}
+                </div>
+
+                {/* Card 2 — Projection */}
+                <div className="flex min-h-[120px] flex-col justify-between rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 sm:text-xs">
+                    Projection
+                  </p>
+                  <p className="font-mono text-3xl font-bold leading-none text-zinc-100 sm:text-5xl">
+                    {player.fantasyPoints.PPR.toFixed(1)}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 sm:text-xs">
+                    <span className="font-mono text-zinc-300">
+                      {(player.fantasyPoints.PPR / 17).toFixed(1)}
+                    </span>{" "}
+                    per/wk · PPR
+                  </p>
+                </div>
+
+                {/* Card 3 — Vegas VBD */}
+                <div className="flex min-h-[120px] flex-col justify-between rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 sm:text-xs">
+                    Vegas VBD
+                  </p>
+                  <p
+                    className={`font-mono text-3xl font-bold leading-none sm:text-5xl ${
+                      player.vbd.PPR > 0
+                        ? "text-emerald-300"
+                        : player.vbd.PPR < 0
+                          ? "text-rose-300"
+                          : "text-zinc-300"
+                    }`}
+                  >
+                    {player.vbd.PPR > 0 ? "+" : ""}
+                    {player.vbd.PPR.toFixed(1)}
+                  </p>
+                  <p className="text-[10px] text-zinc-500 sm:text-xs">
+                    vs replacement
+                  </p>
+                </div>
+              </div>
+
+              {/* Section B — Rank across sources */}
+              {sourceRanks.length > 0 && (
+                <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                    Rank across sources
+                  </h3>
+                  <div className="space-y-1.5">
+                    {sourceRanks.map((s) => {
+                      // Width formula per spec: 1 - (rank-1)/maxRank.
+                      // Clamp to a small minimum so the bar is always visible
+                      // for the worst-ranked source (rank === maxRank yields a
+                      // very thin sliver otherwise).
+                      const raw = 1 - (s.rank - 1) / maxRank;
+                      const pct = Math.max(2, Math.min(100, raw * 100));
+                      const isBest = s.rank === minRank;
+                      const isWorst =
+                        s.rank === maxRank && minRank !== maxRank;
+                      const color = SOURCE_COLOR[s.source] ?? "#a1a1aa";
+                      return (
+                        <div
+                          key={s.source}
+                          className="flex items-center gap-2 sm:gap-3"
+                        >
+                          <span className="w-[72px] shrink-0 text-xs text-zinc-400 sm:w-[80px] sm:text-sm">
+                            {s.source}
+                          </span>
+                          <div className="relative h-5 flex-1 overflow-hidden rounded bg-zinc-800/50 sm:h-6">
+                            <div
+                              className="h-full rounded transition-all"
+                              style={{
+                                width: `${pct}%`,
+                                backgroundColor: color,
+                                boxShadow: isBest
+                                  ? "0 0 12px 1px rgba(52, 211, 153, 0.55)"
+                                  : isWorst
+                                    ? "0 0 12px 1px rgba(244, 63, 94, 0.45)"
+                                    : undefined,
+                              }}
+                              aria-label={`${s.source} rank ${s.rank}`}
+                            />
+                          </div>
+                          <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-zinc-300 sm:w-12 sm:text-sm">
+                            #{s.rank}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-3 text-[10px] text-zinc-500 sm:text-xs">
+                    Longer bar = ranked higher. Emerald glow = highest-ranking
+                    source · rose glow = lowest. Disagreement = trade signal.
+                  </p>
+                </div>
+              )}
+
+              {/* Section C — Council vs Vegas disagreement gauge */}
+              {councilVegasDelta != null && (
+                <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                    Council vs Vegas
+                  </h3>
+                  {(() => {
+                    const delta = councilVegasDelta;
+                    const absDelta = Math.abs(delta);
+                    const magnitude = Math.min(absDelta, GAUGE_CAP);
+                    // Each half of the gauge represents up to GAUGE_CAP spots.
+                    const halfPct = (magnitude / GAUGE_CAP) * 50;
+                    const isUp = delta > 0;
+                    const isDown = delta < 0;
+                    const label =
+                      delta === 0
+                        ? "Even with Vegas"
+                        : isUp
+                          ? `+${absDelta} spot${absDelta === 1 ? "" : "s"} vs Vegas`
+                          : `−${absDelta} spot${absDelta === 1 ? "" : "s"} vs Vegas`;
+                    const color = isUp
+                      ? "#34d399"
+                      : isDown
+                        ? "#fb7185"
+                        : "#71717a";
+                    return (
+                      <>
+                        <div className="relative h-8 w-full overflow-hidden rounded bg-zinc-800/40">
+                          {/* Center line */}
+                          <div className="absolute left-1/2 top-0 z-10 h-full w-px -translate-x-1/2 bg-zinc-600" />
+                          {/* The bar swings from the center outward */}
+                          {delta !== 0 && (
+                            <div
+                              className="absolute top-0 h-full transition-all"
+                              style={{
+                                width: `${halfPct}%`,
+                                backgroundColor: color,
+                                left: isUp ? "50%" : undefined,
+                                right: isDown ? "50%" : undefined,
+                                boxShadow: isUp
+                                  ? "0 0 10px rgba(52, 211, 153, 0.45)"
+                                  : "0 0 10px rgba(251, 113, 133, 0.45)",
+                              }}
+                              aria-label={label}
+                            />
+                          )}
+                        </div>
+                        <div className="mt-2 flex items-baseline justify-between text-xs text-zinc-400">
+                          <span>
+                            <span className="text-rose-300">Vegas higher</span>{" "}
+                            ←
+                          </span>
+                          <span
+                            className={`font-mono text-sm font-semibold ${
+                              isUp
+                                ? "text-emerald-300"
+                                : isDown
+                                  ? "text-rose-300"
+                                  : "text-zinc-400"
+                            }`}
+                          >
+                            {label}
+                          </span>
+                          <span>
+                            → <span className="text-emerald-300">Council higher</span>
+                          </span>
+                        </div>
+                        <p className="mt-2 text-[10px] text-zinc-500 sm:text-xs">
+                          Council #{councilPpr} · Vegas #{vegasPpr}.{" "}
+                          {isUp
+                            ? "The council is higher on this player than Vegas — sell candidate if you believe the market."
+                            : isDown
+                              ? "Vegas is higher than the council — potential buy-low if you trust the Vegas signal."
+                              : "Both rank this player identically."}
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Section D — In the news (compact two-column) */}
+              <div className="mb-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                {/* D-left: Recent trades */}
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-4">
+                  <div className="mb-2 flex items-baseline justify-between gap-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 sm:text-sm">
+                      Recent trades
+                    </h3>
+                    <Link
+                      href="/trades"
+                      className="text-[10px] text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline sm:text-xs"
+                    >
+                      All →
+                    </Link>
+                  </div>
+                  {relevantTrades.length === 0 ? (
+                    <p className="text-xs text-zinc-500">
+                      No trades involving {player.name} yet.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {relevantTrades.slice(0, 3).map((t) => {
+                        const componentSum =
+                          t.votes_a + t.votes_b + t.votes_even;
+                        const totalSafe =
+                          t.total_votes === componentSum
+                            ? t.total_votes
+                            : Math.max(t.total_votes, componentSum);
+                        let leaderLabel: string | null = null;
+                        let leaderPct = 0;
+                        if (totalSafe > 0) {
+                          if (
+                            t.votes_a >= t.votes_b &&
+                            t.votes_a >= t.votes_even
+                          ) {
+                            leaderLabel = "A";
+                            leaderPct = Math.round(
+                              (t.votes_a / totalSafe) * 100,
+                            );
+                          } else if (
+                            t.votes_b >= t.votes_a &&
+                            t.votes_b >= t.votes_even
+                          ) {
+                            leaderLabel = "B";
+                            leaderPct = Math.round(
+                              (t.votes_b / totalSafe) * 100,
+                            );
+                          } else {
+                            leaderLabel = "Even";
+                            leaderPct = Math.round(
+                              (t.votes_even / totalSafe) * 100,
+                            );
+                          }
+                        }
+                        const aSummary =
+                          t.side_a.players.map((p) => p.name).join(" + ") || "—";
+                        const bSummary =
+                          t.side_b.players.map((p) => p.name).join(" + ") || "—";
+                        return (
+                          <li key={t.id}>
+                            <Link
+                              href={`/trades/${t.id}`}
+                              className="block rounded border border-zinc-800 bg-zinc-950 px-2.5 py-2 text-xs transition hover:border-zinc-700"
+                            >
+                              <div className="flex items-baseline justify-between gap-2">
+                                <span className="line-clamp-1 text-zinc-200">
+                                  {aSummary} ↔ {bSummary}
+                                </span>
+                                {leaderLabel && (
+                                  <span className="shrink-0 font-mono text-[10px] text-emerald-300">
+                                    {leaderLabel} {leaderPct}%
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-0.5 text-[10px] text-zinc-500">
+                                {totalSafe} vote{totalSafe === 1 ? "" : "s"} ·{" "}
+                                {relativeTimeShort(t.created_at)}
+                              </div>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                {/* D-right: Recent verdicts */}
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-4">
+                  <div className="mb-2 flex items-baseline justify-between gap-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 sm:text-sm">
+                      Recent verdicts
+                    </h3>
+                    <Link
+                      href="/verdict"
+                      className="text-[10px] text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline sm:text-xs"
+                    >
+                      All →
+                    </Link>
+                  </div>
+                  {playerVerdicts.length === 0 ? (
+                    <p className="text-xs text-zinc-500">
+                      No verdicts featuring {player.name} yet.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {playerVerdicts.slice(0, 3).map((v) => {
+                        const tally =
+                          verdictTallies.get(v.id) ?? {
+                            byPlayer: {},
+                            total: 0,
+                          };
+                        let leader: VerdictCandidate | null = null;
+                        let leaderCount = 0;
+                        for (const c of v.candidates) {
+                          const n = tally.byPlayer[c.player_id] ?? 0;
+                          if (n > leaderCount) {
+                            leaderCount = n;
+                            leader = c;
+                          }
+                        }
+                        const leaderPct =
+                          tally.total > 0 && leader
+                            ? Math.round((leaderCount / tally.total) * 100)
+                            : 0;
+                        const isThisPlayerLeading =
+                          leader?.player_id === playerId && leaderCount > 0;
+                        const summary =
+                          v.scenario_type === "draft"
+                            ? `${v.context.round ? `R${v.context.round}` : "Draft"}${
+                                v.context.position_needed
+                                  ? ` · ${v.context.position_needed}`
+                                  : ""
+                              }`
+                            : `Start/Sit${
+                                v.context.week ? ` · W${v.context.week}` : ""
+                              }`;
+                        return (
+                          <li key={v.id}>
+                            <Link
+                              href={`/verdict/${v.id}`}
+                              className="block rounded border border-zinc-800 bg-zinc-950 px-2.5 py-2 text-xs transition hover:border-zinc-700"
+                            >
+                              <div className="flex items-baseline justify-between gap-2">
+                                <span className="line-clamp-1 text-zinc-200">
+                                  {summary} —{" "}
+                                  {v.candidates
+                                    .map((c) => c.name)
+                                    .join(" vs ")}
+                                </span>
+                                {leader && tally.total > 0 && (
+                                  <span
+                                    className={`shrink-0 font-mono text-[10px] ${
+                                      isThisPlayerLeading
+                                        ? "text-emerald-300"
+                                        : "text-zinc-300"
+                                    }`}
+                                  >
+                                    {leader.name.split(" ").slice(-1)[0]}{" "}
+                                    {leaderPct}%
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-0.5 text-[10px] text-zinc-500">
+                                {tally.total} vote
+                                {tally.total === 1 ? "" : "s"} ·{" "}
+                                {relativeTimeShort(v.created_at)}
+                              </div>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         {/* Tier callout — this player's Jenks tier under each scoring system,
            color-coded by tier color so you can read it at a glance. Each card

@@ -65,7 +65,49 @@ export default function TiersView({
     router.replace(`/tiers?${params.toString()}`, { scroll: false });
   }
 
-  const councilForScoring = councilByScoring[scoring] ?? {};
+  // Memoize the lookup so the per-position useMemo below has a stable dep
+  // identity (otherwise the `?? {}` fallback creates a new empty object every
+  // render and re-triggers the heavy clustering work).
+  const councilForScoring = useMemo(
+    () => councilByScoring[scoring] ?? {},
+    [councilByScoring, scoring],
+  );
+
+  // Pre-compute per-position tier shape for the comparison summary. Mirrors
+  // the same clustering logic used inside PositionTierChart so the summary
+  // counts agree with what each chart actually renders.
+  const positionShapes = useMemo(() => {
+    return POSITIONS.map((pos) => {
+      const positionPlayers = projections.filter((p) => p.position === pos);
+      let clustered;
+      if (source === "council") {
+        const ranked = positionPlayers.filter(
+          (p) => councilForScoring[p.playerId] != null,
+        );
+        if (ranked.length === 0) {
+          clustered = computeTiersForPosition(
+            positionPlayers,
+            (p) => p.fantasyPoints[scoring],
+          );
+        } else {
+          clustered = computeTiersForPosition(
+            ranked,
+            (p) => -councilForScoring[p.playerId],
+          );
+        }
+      } else {
+        clustered = computeTiersForPosition(
+          positionPlayers,
+          (p) => p.fantasyPoints[scoring],
+        );
+      }
+      const totalTiers = clustered.tiers.reduce(
+        (m, t) => Math.max(m, t.tier),
+        0,
+      );
+      return { pos, tiers: totalTiers, players: clustered.tiers.length };
+    });
+  }, [projections, scoring, source, councilForScoring]);
 
   return (
     <div className="space-y-6">
@@ -93,17 +135,57 @@ export default function TiersView({
           councilAvgRank={councilForScoring}
         />
       ) : (
-        POSITIONS.map((pos) => (
-          <PositionTierChart
-            key={pos}
-            position={pos}
-            projections={projections}
-            scoring={scoring}
-            source={source}
-            councilAvgRank={councilForScoring}
-          />
-        ))
+        <>
+          <PositionComparisonSummary shapes={positionShapes} />
+          {POSITIONS.map((pos) => (
+            <PositionTierChart
+              key={pos}
+              position={pos}
+              projections={projections}
+              scoring={scoring}
+              source={source}
+              councilAvgRank={councilForScoring}
+            />
+          ))}
+        </>
       )}
+    </div>
+  );
+}
+
+/**
+ * One-liner showing tier counts per position so you can see at a glance
+ * which position groups are stratified vs flat. Stays visible on mobile.
+ */
+function PositionComparisonSummary({
+  shapes,
+}: {
+  shapes: Array<{ pos: FantasyPosition; tiers: number; players: number }>;
+}) {
+  const nonEmpty = shapes.filter((s) => s.players > 0);
+  if (nonEmpty.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 sm:text-sm">
+      <span className="mr-2 text-[10px] uppercase tracking-wider text-zinc-500 sm:text-xs">
+        Shape
+      </span>
+      <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 font-mono tabular-nums">
+        {nonEmpty.map((s, idx) => (
+          <span key={s.pos} className="inline-flex items-center gap-1.5">
+            <span
+              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${POSITION_CHIP[s.pos]}`}
+            >
+              {s.pos}
+            </span>
+            <span>
+              {s.tiers} {s.tiers === 1 ? "tier" : "tiers"} · {s.players} players
+            </span>
+            {idx < nonEmpty.length - 1 && (
+              <span className="text-zinc-600">|</span>
+            )}
+          </span>
+        ))}
+      </span>
     </div>
   );
 }
@@ -280,9 +362,15 @@ function PositionTierChart({
     );
   }, [positionPlayers, scoring, source, councilAvgRank]);
 
-  // Compute tier-level summary chips (Tier 1: 2 players · 412.3-389.1 FPts).
+  // Compute tier-level summary chips (Tier S · 3p · 412-389 FPts · σ 11.4).
   // Computed before any early return so hook order stays stable.
+  //
+  // We bucket FPts within each tier into 5 equal-width bins for the inline
+  // mini-histogram. Why 5 bins: matches the eye's ability to read a tiny
+  // sparkline without overplotting, and lines up with the bar count the spec
+  // calls for. Single-player tiers collapse to a single 1-tall bar.
   const tierSummaries = useMemo(() => {
+    const HIST_BINS = 5;
     const byTier = new Map<number, { players: number; fpts: number[] }>();
     for (const p of clustered.tiers) {
       const entry = byTier.get(p.tier) ?? { players: 0, fpts: [] };
@@ -292,12 +380,43 @@ function PositionTierChart({
     }
     return Array.from(byTier.entries())
       .sort((a, b) => a[0] - b[0])
-      .map(([tier, s]) => ({
-        tier,
-        players: s.players,
-        max: Math.max(...s.fpts),
-        min: Math.min(...s.fpts),
-      }));
+      .map(([tier, s]) => {
+        const min = Math.min(...s.fpts);
+        const max = Math.max(...s.fpts);
+        const mean = s.fpts.reduce((a, b) => a + b, 0) / s.fpts.length;
+        // Population std-dev — tiers are the whole population at hand, not
+        // a sample of some hidden distribution. With n=1 we just return 0.
+        const variance =
+          s.fpts.length > 1
+            ? s.fpts.reduce((a, v) => a + (v - mean) * (v - mean), 0) /
+              s.fpts.length
+            : 0;
+        const stdev = Math.sqrt(variance);
+        // Build histogram buckets. Range==0 (single-value tier) → one filled bin.
+        const range = max - min;
+        const bins = new Array<number>(HIST_BINS).fill(0);
+        for (const v of s.fpts) {
+          if (range === 0) {
+            bins[0] += 1;
+          } else {
+            // Clamp the top-end so the max value lands in the last bin
+            // rather than overflowing.
+            const idx = Math.min(
+              HIST_BINS - 1,
+              Math.floor(((v - min) / range) * HIST_BINS),
+            );
+            bins[idx] += 1;
+          }
+        }
+        return {
+          tier,
+          players: s.players,
+          max,
+          min,
+          stdev,
+          bins,
+        };
+      });
   }, [clustered, scoring]);
 
   if (clustered.tiers.length === 0) {
@@ -326,24 +445,34 @@ function PositionTierChart({
         </span>
       </div>
 
-      {/* Tier summary chips */}
-      <div className="mb-3 flex flex-wrap gap-1.5">
+      {/* Tier summary strip — one chip per tier with count, FPts range, σ.
+          On sm+ we tuck a tiny inline FPts histogram to the right of each chip
+          so you can spot whether a tier is bottom-heavy / top-heavy / even. */}
+      <div className="mb-3 flex flex-wrap gap-x-2 gap-y-1.5">
         {tierSummaries.map((t) => {
           const s = tierStyle(t.tier);
           return (
-            <span
+            <div
               key={t.tier}
-              className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ring-1 ring-inset ${s.badge}`}
-              title={`Tier ${t.tier}: ${t.players} ${t.players === 1 ? "player" : "players"} · ${t.min.toFixed(1)}–${t.max.toFixed(1)} FPts`}
+              className="inline-flex items-center gap-1.5"
             >
-              <span className="font-mono font-semibold">Tier {tierLetter(t.tier)}</span>
-              <span className="text-zinc-300/90">
-                {t.players}p
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ring-1 ring-inset ${s.badge}`}
+                title={`Tier ${tierLetter(t.tier)}: ${t.players} ${t.players === 1 ? "player" : "players"} · ${t.min.toFixed(1)}–${t.max.toFixed(1)} FPts · σ ${t.stdev.toFixed(1)}`}
+              >
+                <span className="font-mono font-semibold">
+                  Tier {tierLetter(t.tier)}
+                </span>
+                <span className="text-zinc-300/90">{t.players}p</span>
+                <span className="hidden font-mono tabular-nums text-zinc-300/80 sm:inline">
+                  {t.min.toFixed(0)}–{t.max.toFixed(0)}
+                </span>
+                <span className="hidden font-mono tabular-nums text-zinc-300/70 sm:inline">
+                  σ {t.stdev.toFixed(1)}
+                </span>
               </span>
-              <span className="hidden font-mono tabular-nums text-zinc-300/80 sm:inline">
-                {t.min.toFixed(0)}–{t.max.toFixed(0)}
-              </span>
-            </span>
+              <TierHistogram bins={t.bins} tier={t.tier} />
+            </div>
           );
         })}
       </div>
@@ -418,5 +547,60 @@ function PositionTierChart({
         })}
       </ol>
     </section>
+  );
+}
+
+/**
+ * Inline FPts mini-histogram for a single tier. Renders as a tiny SVG of
+ * vertical bars whose height is proportional to how many players fall into
+ * that FPts bucket within the tier. Tinted to the tier's color via
+ * tierStyle(tier).badge classes on a wrapper.
+ *
+ * Desktop-only (sm:): on mobile we hide it to keep the strip from wrapping
+ * uncontrollably — the chip itself already shows player count + range + σ,
+ * which are the most important numbers.
+ */
+function TierHistogram({ bins, tier }: { bins: number[]; tier: number }) {
+  const style = tierStyle(tier);
+  const max = Math.max(...bins, 1);
+  // 80x20 viewBox. With 5 bins and a 1px gap we get ~15px per bar — readable
+  // at the natural rendered width without artifacts.
+  const W = 80;
+  const H = 20;
+  const gap = 1;
+  const barW = (W - gap * (bins.length - 1)) / bins.length;
+  return (
+    <span
+      className={`hidden items-center rounded px-1 py-0.5 ring-1 ring-inset sm:inline-flex ${style.badge}`}
+      title={`FPts distribution within tier (${bins.length} bins)`}
+      aria-hidden
+    >
+      <svg
+        width={W}
+        height={H}
+        viewBox={`0 0 ${W} ${H}`}
+        className="block"
+        role="img"
+      >
+        {bins.map((count, i) => {
+          // Min visible height of 1 if any players, so single-player bins
+          // still draw as a tick rather than vanishing entirely.
+          const h = count === 0 ? 0 : Math.max(1, (count / max) * (H - 2));
+          const x = i * (barW + gap);
+          const y = H - h;
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={y}
+              width={barW}
+              height={h}
+              fill="currentColor"
+              opacity={count === 0 ? 0.15 : 0.85}
+            />
+          );
+        })}
+      </svg>
+    </span>
   );
 }
