@@ -28,8 +28,8 @@ import { relativeTime } from "@/lib/relative-time";
 //  3. Merge, sort by created_at desc, take top 10.
 // =====================================================================
 
-const TICKER_LIMIT = 5;
-const FETCH_LIMIT = 10;
+const TICKER_LIMIT = 10;
+const FETCH_LIMIT = 15;
 
 type TradeVoteRow = {
   trade_id: string;
