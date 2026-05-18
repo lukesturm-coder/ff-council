@@ -357,25 +357,42 @@ function TradeModal({
               </p>
             </div>
 
-            <p className="-mt-2 mb-3 text-xs text-zinc-500">
+            {/* THE TRADE — the headline. Big, scannable, anchored at the
+                top of the modal so the user sees what's being voted on
+                before they see the voting columns. Faint team-color washes
+                tie each side back to its column below. */}
+            <div className="mb-4 grid grid-cols-1 items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
+              <TradeHeadlineSide
+                label="Team A"
+                side={trade.side_a}
+                accent="rose"
+              />
+              <div className="flex items-center justify-center text-2xl text-zinc-600 sm:text-3xl">
+                ↔
+              </div>
+              <TradeHeadlineSide
+                label="Team B"
+                side={trade.side_b}
+                accent="sky"
+              />
+            </div>
+
+            <p className="mb-3 text-xs text-zinc-500">
               One tap on a magnitude under either team — your full verdict in
               a single click.
             </p>
 
             {/* 3-column one-click grid:
-                  [ Team A receives + 4 magnitudes ] [ Even ] [ Team B receives + 4 magnitudes ]
-                Each magnitude submits (winner, tier) directly. Stacks on mobile.
-                Columns get a faint team-color wash at rest so identity reads
-                before tap; the wash + intensity ramp on the buttons forms a
-                tower-of-escalation visual rhythm. */}
+                  [ Team A label + 4 magnitudes ] [ Even ] [ Team B label + 4 magnitudes ]
+                Each magnitude submits (winner, tier) directly. Stacks on
+                mobile. Columns get a faint team-color wash at rest so
+                identity reads before tap. */}
             <div className="mb-3 grid grid-cols-1 items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
               {/* Team A column */}
               <div className="flex flex-col gap-2 rounded-xl bg-rose-500/[0.03] p-2 ring-1 ring-inset ring-rose-500/10">
-                <ModalSidePreview
-                  label="Team A receives"
-                  side={trade.side_a}
-                  accent="text-rose-300"
-                />
+                <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-rose-300">
+                  Team A wins by…
+                </div>
                 {MAGNITUDE_TIERS.map((t, idx) => (
                   <MagnitudeButton
                     key={`A-${t.value}`}
@@ -415,11 +432,9 @@ function TradeModal({
 
               {/* Team B column */}
               <div className="flex flex-col gap-2 rounded-xl bg-sky-500/[0.03] p-2 ring-1 ring-inset ring-sky-500/10">
-                <ModalSidePreview
-                  label="Team B receives"
-                  side={trade.side_b}
-                  accent="text-sky-300"
-                />
+                <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-sky-300">
+                  Team B wins by…
+                </div>
                 {MAGNITUDE_TIERS.map((t, idx) => (
                   <MagnitudeButton
                     key={`B-${t.value}`}
@@ -481,25 +496,39 @@ const MAGNITUDE_TIERS: Array<{
 // team column in the modal as a "quiet header" — borderless, just a divider
 // under the label — so the tactile magnitude buttons below feel like the
 // primary affordance.
-function ModalSidePreview({
+// Prominent player + pick display for each side at the top of the modal.
+// This is the actual trade — readable at a glance — so the voter sees
+// WHAT they're judging before they see the voting columns.
+function TradeHeadlineSide({
   label,
   side,
   accent,
 }: {
   label: string;
   side: Side;
-  accent: string;
+  accent: "rose" | "sky";
 }) {
+  const tints =
+    accent === "rose"
+      ? "bg-rose-500/[0.06] ring-rose-500/30"
+      : "bg-sky-500/[0.06] ring-sky-500/30";
+  const labelColor =
+    accent === "rose" ? "text-rose-300" : "text-sky-300";
   return (
-    <div className="px-2 pb-2 pt-1">
+    <div
+      className={`rounded-lg p-3 ring-1 ring-inset ${tints}`}
+    >
       <div
-        className={`mb-2 border-b border-zinc-800/70 pb-1.5 text-xs font-semibold uppercase tracking-wider ${accent}`}
+        className={`mb-2 text-[11px] font-semibold uppercase tracking-wider ${labelColor}`}
       >
         {label}
       </div>
       <div className="space-y-1.5">
         {side.players.map((p, idx) => (
-          <div key={`p-${idx}`} className="flex items-center gap-2 text-sm">
+          <div
+            key={`p-${idx}`}
+            className="flex items-center gap-2 text-base font-medium"
+          >
             <span
               className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
                 POSITION_STYLES[p.position] ??
@@ -508,8 +537,8 @@ function ModalSidePreview({
             >
               {p.position}
             </span>
-            <span className="text-zinc-200">{p.name}</span>
-            <span className="ml-auto font-mono text-xs text-zinc-500">
+            <span className="text-zinc-100">{p.name}</span>
+            <span className="ml-auto font-mono text-[11px] text-zinc-500">
               {p.team}
             </span>
           </div>
@@ -517,9 +546,9 @@ function ModalSidePreview({
         {side.picks.map((p, idx) => (
           <div
             key={`pk-${idx}`}
-            className="flex items-center gap-2 text-xs text-zinc-400"
+            className="flex items-center gap-2 text-sm text-zinc-300"
           >
-            <span className="inline-flex shrink-0 rounded bg-zinc-800/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-300">
+            <span className="inline-flex shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-300">
               pick
             </span>
             <span className="font-mono">{pickLabel(p)}</span>

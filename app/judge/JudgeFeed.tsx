@@ -446,25 +446,28 @@ function TradeCard({
         </span>
       </div>
 
+      {/* THE TRADE — the headline. Big, scannable, anchored at the top so
+          the voter sees WHAT they're judging before they see the columns. */}
+      <div className="mb-4 grid grid-cols-1 items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
+        <JudgeTradeHeadlineSide label="Team A" side={item.side_a} accent="rose" />
+        <div className="flex items-center justify-center text-2xl text-zinc-600 sm:text-3xl">
+          ↔
+        </div>
+        <JudgeTradeHeadlineSide label="Team B" side={item.side_b} accent="sky" />
+      </div>
+
       <p className="mb-3 text-sm text-zinc-300">
         <span className="font-semibold text-zinc-100">Who won?</span>{" "}
         <span className="text-zinc-500">One tap — the council records your verdict.</span>
       </p>
 
-      {/* 3-column grid on desktop, stacked on mobile. Each side column wears
-          a faint team-color wash + ring at rest so column identity reads
-          before tap. The trade preview at the top is a "quiet header"
-          (borderless, label-divider only) so the tactile magnitude buttons
-          below feel like the primary affordance. Magnitudes ramp in
-          saturation + show a 1-4 bar intensity meter. */}
+      {/* 3-column voting grid. Each side column wears a faint team-color
+          wash + ring at rest so column identity reads before tap. */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr]">
         {/* Team A column */}
         <div className="flex flex-col gap-2 rounded-xl bg-rose-500/[0.03] p-2 ring-1 ring-inset ring-rose-500/10">
-          <div className="px-2 pb-2 pt-1">
-            <div className="mb-2 border-b border-zinc-800/70 pb-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300">
-              Team A receives
-            </div>
-            <SideBody side={item.side_a} />
+          <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-rose-300">
+            Team A wins by…
           </div>
           {MAGNITUDE_TIERS.map((t, idx) => (
             <JudgeMagnitudeButton
@@ -510,11 +513,8 @@ function TradeCard({
 
         {/* Team B column */}
         <div className="flex flex-col gap-2 rounded-xl bg-sky-500/[0.03] p-2 ring-1 ring-inset ring-sky-500/10">
-          <div className="px-2 pb-2 pt-1">
-            <div className="mb-2 border-b border-zinc-800/70 pb-1.5 text-xs font-semibold uppercase tracking-wider text-sky-300">
-              Team B receives
-            </div>
-            <SideBody side={item.side_b} />
+          <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-sky-300">
+            Team B wins by…
           </div>
           {MAGNITUDE_TIERS.map((t, idx) => (
             <JudgeMagnitudeButton
@@ -754,6 +754,74 @@ function JudgeMagnitudeButton({
         {tier.description}
       </div>
     </button>
+  );
+}
+
+// Prominent player + pick display for each side at the top of the /judge
+// trade card. Mirrors TradeHeadlineSide in TradeListClient — kept in
+// lockstep so the modal and the feed look identical.
+function JudgeTradeHeadlineSide({
+  label,
+  side,
+  accent,
+}: {
+  label: string;
+  side: Side;
+  accent: "rose" | "sky";
+}) {
+  const tints =
+    accent === "rose"
+      ? "bg-rose-500/[0.06] ring-rose-500/30"
+      : "bg-sky-500/[0.06] ring-sky-500/30";
+  const labelColor = accent === "rose" ? "text-rose-300" : "text-sky-300";
+  return (
+    <div className={`rounded-lg p-3 ring-1 ring-inset ${tints}`}>
+      <div
+        className={`mb-2 text-[11px] font-semibold uppercase tracking-wider ${labelColor}`}
+      >
+        {label}
+      </div>
+      <div className="space-y-1.5">
+        {side.players.slice(0, 4).map((p, idx) => (
+          <div
+            key={`p-${idx}`}
+            className="flex items-center gap-2 text-base font-medium"
+          >
+            <span
+              className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
+                POSITION_STYLES[p.position] ??
+                "bg-zinc-500/10 text-zinc-300 ring-zinc-500/30"
+              }`}
+            >
+              {p.position}
+            </span>
+            <span className="truncate text-zinc-100">{p.name}</span>
+            <span className="ml-auto font-mono text-[11px] text-zinc-500">
+              {p.team}
+            </span>
+          </div>
+        ))}
+        {side.picks.slice(0, 3).map((p, idx) => (
+          <div
+            key={`pk-${idx}`}
+            className="flex items-center gap-2 text-sm text-zinc-300"
+          >
+            <span className="inline-flex shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-300">
+              pick
+            </span>
+            <span className="font-mono">{pickLabel(p)}</span>
+          </div>
+        ))}
+        {side.players.length + side.picks.length > 7 && (
+          <p className="text-[11px] text-zinc-500">
+            + {side.players.length + side.picks.length - 7} more
+          </p>
+        )}
+        {side.players.length + side.picks.length === 0 && (
+          <span className="text-xs text-zinc-600">—</span>
+        )}
+      </div>
+    </div>
   );
 }
 
