@@ -393,11 +393,10 @@ function TradeModal({
                 <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-rose-300">
                   Team A wins by…
                 </div>
-                {MAGNITUDE_TIERS.map((t, idx) => (
+                {MAGNITUDE_TIERS.map((t) => (
                   <MagnitudeButton
                     key={`A-${t.value}`}
                     tier={t}
-                    intensityIndex={idx}
                     team="A"
                     disabled={pending}
                     onClick={() => submitVote("A", t.value)}
@@ -435,11 +434,10 @@ function TradeModal({
                 <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-sky-300">
                   Team B wins by…
                 </div>
-                {MAGNITUDE_TIERS.map((t, idx) => (
+                {MAGNITUDE_TIERS.map((t) => (
                   <MagnitudeButton
                     key={`B-${t.value}`}
                     tier={t}
-                    intensityIndex={idx}
                     team="B"
                     disabled={pending}
                     onClick={() => submitVote("B", t.value)}
@@ -489,7 +487,7 @@ const MAGNITUDE_TIERS: Array<{
   { value: "slight_edge", label: "Slight edge", description: "Marginally ahead — close to fair." },
   { value: "clear_advantage", label: "Clear advantage", description: "Noticeably better deal for the winning side." },
   { value: "major_advantage", label: "Major advantage", description: "Strongly favors one side." },
-  { value: "extreme_imbalance", label: "Extreme imbalance", description: "Lopsided. Worth a league-level look." },
+  { value: "extreme_imbalance", label: "Extreme imbalance", description: "Commissioner is corrupt." },
 ];
 
 // Read-only preview of one side's players + picks. Sits at the top of each
@@ -562,82 +560,37 @@ function TradeHeadlineSide({
   );
 }
 
-// One magnitude button (slight / clear / major / extreme). The intensityIndex
-// 0..3 drives the visible escalation ramp:
-//   • bg + border + text saturation step up
-//   • a row of 4 small bar segments fills in (1, 2, 3, 4) as a tactile
-//     "intensity meter" on the right edge
-// Both A (rose) and B (sky) share the ramp; the color comes from `team`.
+// One magnitude button. All four tiers (slight / clear / major / extreme)
+// render at the SAME shade so visual weight doesn't bias the click —
+// the user's choice should be driven by the label text, not by which
+// button looks loudest. Team color (rose for A, sky for B) is the only
+// hue applied, and equally across all four.
 function MagnitudeButton({
   tier,
-  intensityIndex,
   team,
   disabled,
   onClick,
 }: {
   tier: { value: string; label: string; description: string };
-  intensityIndex: 0 | 1 | 2 | 3 | number;
   team: "A" | "B";
   disabled: boolean;
   onClick: () => void;
 }) {
-  const rose = [
-    "border-rose-500/15 bg-rose-500/[0.04] hover:border-rose-400/60 hover:bg-rose-500/15",
-    "border-rose-500/25 bg-rose-500/[0.07] hover:border-rose-400/70 hover:bg-rose-500/20",
-    "border-rose-500/40 bg-rose-500/[0.11] hover:border-rose-400/80 hover:bg-rose-500/25",
-    "border-rose-500/60 bg-rose-500/[0.16] hover:border-rose-400 hover:bg-rose-500/30",
-  ];
-  const sky = [
-    "border-sky-500/15 bg-sky-500/[0.04] hover:border-sky-400/60 hover:bg-sky-500/15",
-    "border-sky-500/25 bg-sky-500/[0.07] hover:border-sky-400/70 hover:bg-sky-500/20",
-    "border-sky-500/40 bg-sky-500/[0.11] hover:border-sky-400/80 hover:bg-sky-500/25",
-    "border-sky-500/60 bg-sky-500/[0.16] hover:border-sky-400 hover:bg-sky-500/30",
-  ];
-  const textRose = [
-    "text-rose-200/80",
-    "text-rose-200/90",
-    "text-rose-100",
-    "text-rose-50",
-  ];
-  const textSky = [
-    "text-sky-200/80",
-    "text-sky-200/90",
-    "text-sky-100",
-    "text-sky-50",
-  ];
-  const ramp = team === "A" ? rose[intensityIndex] : sky[intensityIndex];
-  const textRamp =
-    team === "A" ? textRose[intensityIndex] : textSky[intensityIndex];
-  const filledBarColor =
-    team === "A" ? "bg-rose-400" : "bg-sky-400";
-  const filled = intensityIndex + 1;
+  const restClasses =
+    team === "A"
+      ? "border-rose-500/25 bg-rose-500/[0.06] hover:border-rose-400/60 hover:bg-rose-500/15"
+      : "border-sky-500/25 bg-sky-500/[0.06] hover:border-sky-400/60 hover:bg-sky-500/15";
+  const labelColor =
+    team === "A" ? "text-rose-100" : "text-sky-100";
 
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`group/btn relative min-h-[56px] rounded-lg border p-2.5 pr-3 text-left shadow-sm transition-all duration-150 hover:scale-[1.015] hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${ramp}`}
+      className={`group/btn relative min-h-[56px] rounded-lg border p-2.5 text-left shadow-sm transition-all duration-150 hover:scale-[1.015] hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${restClasses}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className={`text-sm font-semibold ${textRamp}`}>{tier.label}</div>
-        {/* Intensity meter — 4 segments, taller as intensity grows */}
-        <div className="flex shrink-0 items-end gap-[2px]" aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
-            <span
-              key={i}
-              className={`w-[3px] rounded-sm transition ${
-                i < filled
-                  ? filledBarColor
-                  : team === "A"
-                    ? "bg-rose-500/15"
-                    : "bg-sky-500/15"
-              }`}
-              style={{ height: `${6 + i * 3}px` }}
-            />
-          ))}
-        </div>
-      </div>
+      <div className={`text-sm font-semibold ${labelColor}`}>{tier.label}</div>
       <div className="mt-0.5 text-[11px] text-zinc-400 group-hover/btn:text-zinc-300">
         {tier.description}
       </div>

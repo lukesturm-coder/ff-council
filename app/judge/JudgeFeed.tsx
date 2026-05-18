@@ -405,7 +405,7 @@ const MAGNITUDE_TIERS: Array<{
   { value: "slight_edge", label: "Slight edge", description: "Marginally ahead — close to fair." },
   { value: "clear_advantage", label: "Clear advantage", description: "Noticeably better deal for the winning side." },
   { value: "major_advantage", label: "Major advantage", description: "Strongly favors one side." },
-  { value: "extreme_imbalance", label: "Extreme imbalance", description: "Lopsided. Worth a league-level look." },
+  { value: "extreme_imbalance", label: "Extreme imbalance", description: "Commissioner is corrupt." },
 ];
 
 type TradeTier =
@@ -469,11 +469,10 @@ function TradeCard({
           <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-rose-300">
             Team A wins by…
           </div>
-          {MAGNITUDE_TIERS.map((t, idx) => (
+          {MAGNITUDE_TIERS.map((t) => (
             <JudgeMagnitudeButton
               key={`A-${t.value}`}
               tier={t}
-              intensityIndex={idx}
               team="A"
               picked={justPicked === pickedKey("A", t.value)}
               disabled={pending}
@@ -516,11 +515,10 @@ function TradeCard({
           <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-sky-300">
             Team B wins by…
           </div>
-          {MAGNITUDE_TIERS.map((t, idx) => (
+          {MAGNITUDE_TIERS.map((t) => (
             <JudgeMagnitudeButton
               key={`B-${t.value}`}
               tier={t}
-              intensityIndex={idx}
               team="B"
               picked={justPicked === pickedKey("B", t.value)}
               disabled={pending}
@@ -656,99 +654,53 @@ function VerdictCard({
   );
 }
 
-// One magnitude button (slight / clear / major / extreme) on the /judge
-// feed. Mirrors the modal version in TradeListClient.tsx — intensityIndex
-// 0..3 drives the saturation ramp + a 1..4 bar intensity meter. When
-// `picked` is true we swap to the emerald pulse used elsewhere on the
-// feed for "just voted" feedback before the card advances.
+// One magnitude button on the /judge feed. All four tiers render at the
+// same shade so visual weight doesn't bias the click — the label text is
+// the only differentiator between Slight edge and Extreme imbalance.
+// `picked` swaps to the emerald pulse for "just voted" feedback before
+// the card advances.
 function JudgeMagnitudeButton({
   tier,
-  intensityIndex,
   team,
   picked,
   disabled,
   onClick,
 }: {
   tier: { value: string; label: string; description: string };
-  intensityIndex: 0 | 1 | 2 | 3 | number;
   team: "A" | "B";
   picked: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
-  const rose = [
-    "border-rose-500/15 bg-rose-500/[0.04] hover:border-rose-400/60 hover:bg-rose-500/15",
-    "border-rose-500/25 bg-rose-500/[0.07] hover:border-rose-400/70 hover:bg-rose-500/20",
-    "border-rose-500/40 bg-rose-500/[0.11] hover:border-rose-400/80 hover:bg-rose-500/25",
-    "border-rose-500/60 bg-rose-500/[0.16] hover:border-rose-400 hover:bg-rose-500/30",
-  ];
-  const sky = [
-    "border-sky-500/15 bg-sky-500/[0.04] hover:border-sky-400/60 hover:bg-sky-500/15",
-    "border-sky-500/25 bg-sky-500/[0.07] hover:border-sky-400/70 hover:bg-sky-500/20",
-    "border-sky-500/40 bg-sky-500/[0.11] hover:border-sky-400/80 hover:bg-sky-500/25",
-    "border-sky-500/60 bg-sky-500/[0.16] hover:border-sky-400 hover:bg-sky-500/30",
-  ];
-  const textRose = [
-    "text-rose-200/80",
-    "text-rose-200/90",
-    "text-rose-100",
-    "text-rose-50",
-  ];
-  const textSky = [
-    "text-sky-200/80",
-    "text-sky-200/90",
-    "text-sky-100",
-    "text-sky-50",
-  ];
-  const ramp = team === "A" ? rose[intensityIndex] : sky[intensityIndex];
-  const textRamp =
-    team === "A" ? textRose[intensityIndex] : textSky[intensityIndex];
-  const filledBarColor =
-    team === "A" ? "bg-rose-400" : "bg-sky-400";
-  const filled = intensityIndex + 1;
+  const restClasses =
+    team === "A"
+      ? "border-rose-500/25 bg-rose-500/[0.06] hover:border-rose-400/60 hover:bg-rose-500/15"
+      : "border-sky-500/25 bg-sky-500/[0.06] hover:border-sky-400/60 hover:bg-sky-500/15";
+  const labelColor = team === "A" ? "text-rose-100" : "text-sky-100";
 
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`group/btn relative min-h-[56px] rounded-lg border p-2.5 pr-3 text-left shadow-sm transition-all duration-150 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`group/btn relative min-h-[56px] rounded-lg border p-2.5 text-left shadow-sm transition-all duration-150 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
         picked
           ? "animate-ring-pulse border-emerald-400/70 bg-emerald-500/10"
-          : `${ramp} hover:scale-[1.015] hover:shadow-md`
+          : `${restClasses} hover:scale-[1.015] hover:shadow-md`
       }`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div
-          className={`text-sm font-semibold ${
-            picked ? "text-emerald-100" : textRamp
-          }`}
-        >
-          {tier.label}
-        </div>
-        {/* Intensity meter — 4 segments, taller as intensity grows. Hidden
-            during picked-pulse so it doesn't fight the emerald flash. */}
-        {!picked && (
-          <div className="flex shrink-0 items-end gap-[2px]" aria-hidden="true">
-            {[0, 1, 2, 3].map((i) => (
-              <span
-                key={i}
-                className={`w-[3px] rounded-sm transition ${
-                  i < filled
-                    ? filledBarColor
-                    : team === "A"
-                      ? "bg-rose-500/15"
-                      : "bg-sky-500/15"
-                }`}
-                style={{ height: `${6 + i * 3}px` }}
-              />
-            ))}
-          </div>
-        )}
+      <div
+        className={`text-sm font-semibold ${
+          picked ? "text-emerald-100" : labelColor
+        }`}
+      >
+        {tier.label}
       </div>
       <div
         className={`mt-0.5 text-[11px] ${
-          picked ? "text-emerald-200/80" : "text-zinc-400 group-hover/btn:text-zinc-300"
+          picked
+            ? "text-emerald-200/80"
+            : "text-zinc-400 group-hover/btn:text-zinc-300"
         }`}
       >
         {tier.description}
@@ -825,52 +777,3 @@ function JudgeTradeHeadlineSide({
   );
 }
 
-function SideBody({ side }: { side: Side }) {
-  const items: { key: string; node: React.ReactNode }[] = [];
-  side.players.slice(0, 4).forEach((p, idx) =>
-    items.push({
-      key: `p-${idx}`,
-      node: (
-        <div className="flex items-center gap-2 text-sm">
-          <span
-            className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
-              POSITION_STYLES[p.position] ??
-              "bg-zinc-500/10 text-zinc-300 ring-zinc-500/30"
-            }`}
-          >
-            {p.position}
-          </span>
-          <span className="truncate text-zinc-100">{p.name}</span>
-          <span className="ml-auto font-mono text-xs text-zinc-500">{p.team}</span>
-        </div>
-      ),
-    }),
-  );
-  side.picks.slice(0, 3).forEach((p, idx) =>
-    items.push({
-      key: `pk-${idx}`,
-      node: (
-        <div className="flex items-center gap-2 text-xs text-zinc-400">
-          <span className="inline-flex shrink-0 rounded bg-zinc-800/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-300">
-            pick
-          </span>
-          <span className="font-mono">{pickLabel(p)}</span>
-        </div>
-      ),
-    }),
-  );
-  const overflow =
-    side.players.length + side.picks.length - items.length;
-  return (
-    <div className="space-y-1.5">
-      {items.length === 0 ? (
-        <span className="text-xs text-zinc-600">—</span>
-      ) : (
-        items.map(({ key, node }) => <div key={key}>{node}</div>)
-      )}
-      {overflow > 0 && (
-        <p className="text-[10px] text-zinc-500">+ {overflow} more</p>
-      )}
-    </div>
-  );
-}
