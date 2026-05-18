@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { Loader2, X } from "lucide-react";
+import { Loader2, Scale, X } from "lucide-react";
 import { castVote } from "./[id]/actions";
 
 type SidePlayer = {
@@ -364,48 +364,49 @@ function TradeModal({
 
             {/* 3-column one-click grid:
                   [ Team A receives + 4 magnitudes ] [ Even ] [ Team B receives + 4 magnitudes ]
-                Each magnitude submits (winner, tier) directly. Stacks on mobile. */}
+                Each magnitude submits (winner, tier) directly. Stacks on mobile.
+                Columns get a faint team-color wash at rest so identity reads
+                before tap; the wash + intensity ramp on the buttons forms a
+                tower-of-escalation visual rhythm. */}
             <div className="mb-3 grid grid-cols-1 items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
               {/* Team A column */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 rounded-xl bg-rose-500/[0.03] p-2 ring-1 ring-inset ring-rose-500/10">
                 <ModalSidePreview
                   label="Team A receives"
                   side={trade.side_a}
                   accent="text-rose-300"
                 />
-                {MAGNITUDE_TIERS.map((t) => (
-                  <button
+                {MAGNITUDE_TIERS.map((t, idx) => (
+                  <MagnitudeButton
                     key={`A-${t.value}`}
-                    type="button"
+                    tier={t}
+                    intensityIndex={idx}
+                    team="A"
                     disabled={pending}
                     onClick={() => submitVote("A", t.value)}
-                    className="min-h-[52px] rounded-lg border border-zinc-800 bg-zinc-950/60 p-2.5 text-left transition hover:border-rose-500/60 hover:bg-rose-500/10 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <div className="text-sm font-semibold text-rose-200">
-                      {t.label}
-                    </div>
-                    <div className="mt-0.5 text-[11px] text-zinc-500">
-                      {t.description}
-                    </div>
-                  </button>
+                  />
                 ))}
               </div>
 
-              {/* Even column — single tall button */}
-              <div className="flex sm:min-w-[120px]">
+              {/* Even column — quiet fulcrum between the towers */}
+              <div className="flex items-center sm:min-w-[112px]">
                 <button
                   type="button"
                   disabled={pending}
                   onClick={() => submitVote("EVEN", "balanced")}
-                  className="flex w-full min-h-[80px] sm:min-h-0 sm:w-32 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-3 text-sm font-semibold text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-800/40 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="group flex w-full min-h-[68px] sm:min-h-0 sm:w-28 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-4 text-sm font-semibold text-zinc-200 transition hover:scale-[1.02] hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {pending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <span className="flex flex-col items-center gap-0.5">
+                    <span className="flex flex-col items-center gap-1">
+                      <Scale
+                        className="h-4 w-4 text-zinc-500 transition group-hover:text-emerald-300"
+                        strokeWidth={2}
+                      />
                       <span>Even</span>
-                      <span className="text-[11px] font-normal text-zinc-500">
-                        Balanced trade
+                      <span className="text-[10px] font-normal text-zinc-500">
+                        Balanced
                       </span>
                     </span>
                   )}
@@ -413,27 +414,21 @@ function TradeModal({
               </div>
 
               {/* Team B column */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 rounded-xl bg-sky-500/[0.03] p-2 ring-1 ring-inset ring-sky-500/10">
                 <ModalSidePreview
                   label="Team B receives"
                   side={trade.side_b}
                   accent="text-sky-300"
                 />
-                {MAGNITUDE_TIERS.map((t) => (
-                  <button
+                {MAGNITUDE_TIERS.map((t, idx) => (
+                  <MagnitudeButton
                     key={`B-${t.value}`}
-                    type="button"
+                    tier={t}
+                    intensityIndex={idx}
+                    team="B"
                     disabled={pending}
                     onClick={() => submitVote("B", t.value)}
-                    className="min-h-[52px] rounded-lg border border-zinc-800 bg-zinc-950/60 p-2.5 text-left transition hover:border-sky-500/60 hover:bg-sky-500/10 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <div className="text-sm font-semibold text-sky-200">
-                      {t.label}
-                    </div>
-                    <div className="mt-0.5 text-[11px] text-zinc-500">
-                      {t.description}
-                    </div>
-                  </button>
+                  />
                 ))}
               </div>
             </div>
@@ -483,7 +478,9 @@ const MAGNITUDE_TIERS: Array<{
 ];
 
 // Read-only preview of one side's players + picks. Sits at the top of each
-// team column in the modal; the clickable magnitude buttons live below it.
+// team column in the modal as a "quiet header" — borderless, just a divider
+// under the label — so the tactile magnitude buttons below feel like the
+// primary affordance.
 function ModalSidePreview({
   label,
   side,
@@ -494,9 +491,9 @@ function ModalSidePreview({
   accent: string;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+    <div className="px-2 pb-2 pt-1">
       <div
-        className={`mb-2 text-xs font-semibold uppercase tracking-wider ${accent}`}
+        className={`mb-2 border-b border-zinc-800/70 pb-1.5 text-xs font-semibold uppercase tracking-wider ${accent}`}
       >
         {label}
       </div>
@@ -533,5 +530,88 @@ function ModalSidePreview({
         )}
       </div>
     </div>
+  );
+}
+
+// One magnitude button (slight / clear / major / extreme). The intensityIndex
+// 0..3 drives the visible escalation ramp:
+//   • bg + border + text saturation step up
+//   • a row of 4 small bar segments fills in (1, 2, 3, 4) as a tactile
+//     "intensity meter" on the right edge
+// Both A (rose) and B (sky) share the ramp; the color comes from `team`.
+function MagnitudeButton({
+  tier,
+  intensityIndex,
+  team,
+  disabled,
+  onClick,
+}: {
+  tier: { value: string; label: string; description: string };
+  intensityIndex: 0 | 1 | 2 | 3 | number;
+  team: "A" | "B";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const rose = [
+    "border-rose-500/15 bg-rose-500/[0.04] hover:border-rose-400/60 hover:bg-rose-500/15",
+    "border-rose-500/25 bg-rose-500/[0.07] hover:border-rose-400/70 hover:bg-rose-500/20",
+    "border-rose-500/40 bg-rose-500/[0.11] hover:border-rose-400/80 hover:bg-rose-500/25",
+    "border-rose-500/60 bg-rose-500/[0.16] hover:border-rose-400 hover:bg-rose-500/30",
+  ];
+  const sky = [
+    "border-sky-500/15 bg-sky-500/[0.04] hover:border-sky-400/60 hover:bg-sky-500/15",
+    "border-sky-500/25 bg-sky-500/[0.07] hover:border-sky-400/70 hover:bg-sky-500/20",
+    "border-sky-500/40 bg-sky-500/[0.11] hover:border-sky-400/80 hover:bg-sky-500/25",
+    "border-sky-500/60 bg-sky-500/[0.16] hover:border-sky-400 hover:bg-sky-500/30",
+  ];
+  const textRose = [
+    "text-rose-200/80",
+    "text-rose-200/90",
+    "text-rose-100",
+    "text-rose-50",
+  ];
+  const textSky = [
+    "text-sky-200/80",
+    "text-sky-200/90",
+    "text-sky-100",
+    "text-sky-50",
+  ];
+  const ramp = team === "A" ? rose[intensityIndex] : sky[intensityIndex];
+  const textRamp =
+    team === "A" ? textRose[intensityIndex] : textSky[intensityIndex];
+  const filledBarColor =
+    team === "A" ? "bg-rose-400" : "bg-sky-400";
+  const filled = intensityIndex + 1;
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`group/btn relative min-h-[56px] rounded-lg border p-2.5 pr-3 text-left shadow-sm transition-all duration-150 hover:scale-[1.015] hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${ramp}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className={`text-sm font-semibold ${textRamp}`}>{tier.label}</div>
+        {/* Intensity meter — 4 segments, taller as intensity grows */}
+        <div className="flex shrink-0 items-end gap-[2px]" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <span
+              key={i}
+              className={`w-[3px] rounded-sm transition ${
+                i < filled
+                  ? filledBarColor
+                  : team === "A"
+                    ? "bg-rose-500/15"
+                    : "bg-sky-500/15"
+              }`}
+              style={{ height: `${6 + i * 3}px` }}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="mt-0.5 text-[11px] text-zinc-400 group-hover/btn:text-zinc-300">
+        {tier.description}
+      </div>
+    </button>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Check, Flame, Loader2, SkipForward, Sparkles } from "lucide-react";
+import { Check, Flame, Loader2, Scale, SkipForward, Sparkles } from "lucide-react";
 import { castVote } from "@/app/trades/[id]/actions";
 import { castVerdictVote } from "@/app/verdict/actions";
 
@@ -451,55 +451,57 @@ function TradeCard({
         <span className="text-zinc-500">One tap — the council records your verdict.</span>
       </p>
 
-      {/* 3-column grid on desktop, stacked on mobile. Each side column has
-          a header + the trade preview + 4 magnitude buttons. The middle
-          column is a tall single Even button. */}
+      {/* 3-column grid on desktop, stacked on mobile. Each side column wears
+          a faint team-color wash + ring at rest so column identity reads
+          before tap. The trade preview at the top is a "quiet header"
+          (borderless, label-divider only) so the tactile magnitude buttons
+          below feel like the primary affordance. Magnitudes ramp in
+          saturation + show a 1-4 bar intensity meter. */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr]">
         {/* Team A column */}
-        <div className="flex flex-col gap-2">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-rose-300">
+        <div className="flex flex-col gap-2 rounded-xl bg-rose-500/[0.03] p-2 ring-1 ring-inset ring-rose-500/10">
+          <div className="px-2 pb-2 pt-1">
+            <div className="mb-2 border-b border-zinc-800/70 pb-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300">
               Team A receives
             </div>
             <SideBody side={item.side_a} />
           </div>
-          {MAGNITUDE_TIERS.map((t) => (
-            <button
+          {MAGNITUDE_TIERS.map((t, idx) => (
+            <JudgeMagnitudeButton
               key={`A-${t.value}`}
-              type="button"
+              tier={t}
+              intensityIndex={idx}
+              team="A"
+              picked={justPicked === pickedKey("A", t.value)}
               disabled={pending}
               onClick={() => onVote("A", t.value)}
-              className={`min-h-[52px] rounded-lg border p-2.5 text-left transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
-                justPicked === pickedKey("A", t.value)
-                  ? "animate-ring-pulse border-emerald-400/70 bg-emerald-500/10"
-                  : "border-zinc-800 bg-zinc-950/60 hover:border-rose-500/60 hover:bg-rose-500/5"
-              }`}
-            >
-              <div className="text-sm font-semibold text-rose-200">{t.label}</div>
-              <div className="mt-0.5 text-[11px] text-zinc-500">{t.description}</div>
-            </button>
+            />
           ))}
         </div>
 
-        {/* Even column (just one button, stretches full height) */}
-        <div className="flex sm:min-w-[120px]">
+        {/* Even column — quiet fulcrum between the towers */}
+        <div className="flex items-center sm:min-w-[112px]">
           <button
             type="button"
             disabled={pending}
             onClick={() => onVote("EVEN", "balanced")}
-            className={`flex w-full min-h-[80px] sm:min-h-0 sm:w-32 items-center justify-center rounded-lg border px-3 py-3 text-sm font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`group flex w-full min-h-[68px] sm:min-h-0 sm:w-28 items-center justify-center rounded-xl border px-3 py-4 text-sm font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
               justPicked === pickedKey("EVEN", "balanced")
                 ? "animate-ring-pulse border-emerald-400/70 bg-emerald-500/10 text-emerald-100"
-                : "border-zinc-800 bg-zinc-950/60 text-zinc-200 hover:border-zinc-600 hover:bg-zinc-800/40"
+                : "border-zinc-800 bg-zinc-950/60 text-zinc-200 hover:scale-[1.02] hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-100"
             }`}
           >
             {pending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <span className="flex flex-col items-center gap-0.5">
+              <span className="flex flex-col items-center gap-1">
+                <Scale
+                  className="h-4 w-4 text-zinc-500 transition group-hover:text-emerald-300"
+                  strokeWidth={2}
+                />
                 <span>Even</span>
-                <span className="text-[11px] font-normal text-zinc-500">
-                  Balanced trade
+                <span className="text-[10px] font-normal text-zinc-500">
+                  Balanced
                 </span>
               </span>
             )}
@@ -507,28 +509,23 @@ function TradeCard({
         </div>
 
         {/* Team B column */}
-        <div className="flex flex-col gap-2">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-sky-300">
+        <div className="flex flex-col gap-2 rounded-xl bg-sky-500/[0.03] p-2 ring-1 ring-inset ring-sky-500/10">
+          <div className="px-2 pb-2 pt-1">
+            <div className="mb-2 border-b border-zinc-800/70 pb-1.5 text-xs font-semibold uppercase tracking-wider text-sky-300">
               Team B receives
             </div>
             <SideBody side={item.side_b} />
           </div>
-          {MAGNITUDE_TIERS.map((t) => (
-            <button
+          {MAGNITUDE_TIERS.map((t, idx) => (
+            <JudgeMagnitudeButton
               key={`B-${t.value}`}
-              type="button"
+              tier={t}
+              intensityIndex={idx}
+              team="B"
+              picked={justPicked === pickedKey("B", t.value)}
               disabled={pending}
               onClick={() => onVote("B", t.value)}
-              className={`min-h-[52px] rounded-lg border p-2.5 text-left transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
-                justPicked === pickedKey("B", t.value)
-                  ? "animate-ring-pulse border-emerald-400/70 bg-emerald-500/10"
-                  : "border-zinc-800 bg-zinc-950/60 hover:border-sky-500/60 hover:bg-sky-500/5"
-              }`}
-            >
-              <div className="text-sm font-semibold text-sky-200">{t.label}</div>
-              <div className="mt-0.5 text-[11px] text-zinc-500">{t.description}</div>
-            </button>
+            />
           ))}
         </div>
       </div>
@@ -656,6 +653,107 @@ function VerdictCard({
         })}
       </div>
     </div>
+  );
+}
+
+// One magnitude button (slight / clear / major / extreme) on the /judge
+// feed. Mirrors the modal version in TradeListClient.tsx — intensityIndex
+// 0..3 drives the saturation ramp + a 1..4 bar intensity meter. When
+// `picked` is true we swap to the emerald pulse used elsewhere on the
+// feed for "just voted" feedback before the card advances.
+function JudgeMagnitudeButton({
+  tier,
+  intensityIndex,
+  team,
+  picked,
+  disabled,
+  onClick,
+}: {
+  tier: { value: string; label: string; description: string };
+  intensityIndex: 0 | 1 | 2 | 3 | number;
+  team: "A" | "B";
+  picked: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const rose = [
+    "border-rose-500/15 bg-rose-500/[0.04] hover:border-rose-400/60 hover:bg-rose-500/15",
+    "border-rose-500/25 bg-rose-500/[0.07] hover:border-rose-400/70 hover:bg-rose-500/20",
+    "border-rose-500/40 bg-rose-500/[0.11] hover:border-rose-400/80 hover:bg-rose-500/25",
+    "border-rose-500/60 bg-rose-500/[0.16] hover:border-rose-400 hover:bg-rose-500/30",
+  ];
+  const sky = [
+    "border-sky-500/15 bg-sky-500/[0.04] hover:border-sky-400/60 hover:bg-sky-500/15",
+    "border-sky-500/25 bg-sky-500/[0.07] hover:border-sky-400/70 hover:bg-sky-500/20",
+    "border-sky-500/40 bg-sky-500/[0.11] hover:border-sky-400/80 hover:bg-sky-500/25",
+    "border-sky-500/60 bg-sky-500/[0.16] hover:border-sky-400 hover:bg-sky-500/30",
+  ];
+  const textRose = [
+    "text-rose-200/80",
+    "text-rose-200/90",
+    "text-rose-100",
+    "text-rose-50",
+  ];
+  const textSky = [
+    "text-sky-200/80",
+    "text-sky-200/90",
+    "text-sky-100",
+    "text-sky-50",
+  ];
+  const ramp = team === "A" ? rose[intensityIndex] : sky[intensityIndex];
+  const textRamp =
+    team === "A" ? textRose[intensityIndex] : textSky[intensityIndex];
+  const filledBarColor =
+    team === "A" ? "bg-rose-400" : "bg-sky-400";
+  const filled = intensityIndex + 1;
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`group/btn relative min-h-[56px] rounded-lg border p-2.5 pr-3 text-left shadow-sm transition-all duration-150 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
+        picked
+          ? "animate-ring-pulse border-emerald-400/70 bg-emerald-500/10"
+          : `${ramp} hover:scale-[1.015] hover:shadow-md`
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div
+          className={`text-sm font-semibold ${
+            picked ? "text-emerald-100" : textRamp
+          }`}
+        >
+          {tier.label}
+        </div>
+        {/* Intensity meter — 4 segments, taller as intensity grows. Hidden
+            during picked-pulse so it doesn't fight the emerald flash. */}
+        {!picked && (
+          <div className="flex shrink-0 items-end gap-[2px]" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className={`w-[3px] rounded-sm transition ${
+                  i < filled
+                    ? filledBarColor
+                    : team === "A"
+                      ? "bg-rose-500/15"
+                      : "bg-sky-500/15"
+                }`}
+                style={{ height: `${6 + i * 3}px` }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      <div
+        className={`mt-0.5 text-[11px] ${
+          picked ? "text-emerald-200/80" : "text-zinc-400 group-hover/btn:text-zinc-300"
+        }`}
+      >
+        {tier.description}
+      </div>
+    </button>
   );
 }
 
