@@ -166,42 +166,76 @@ export default function RankingsTable({
       extraRanks: Array<number | null>;
       avgRank: number | null;
     };
-    const rows: RowData[] = filtered.map((p) => {
+    // Look up each player's raw stored rank per source (no re-ranking yet).
+    type StoredRanks = {
+      council: number | null;
+      councilRankerCount: number;
+      espn: number | null;
+      fp: number | null;
+      extras: Array<number | null>;
+    };
+    const storedByPid = new Map<number, StoredRanks>();
+    for (const p of filtered) {
       const councilEntry = hasCouncil
         ? councilConsensus[p.playerId]?.[scoring]
         : undefined;
-      const espnRank = hasEspn
-        ? lookupPlatformRank(
-            platformRankings,
-            p.playerId,
-            "espn",
-            "editorial",
-            scoring,
-          )
-        : null;
-      const fpRank = hasFp
-        ? lookupPlatformRank(
-            platformRankings,
-            p.playerId,
-            "fantasypros",
-            "adp",
-            scoring,
-          )
-        : null;
-      const extraRanks = EXTRA_PLATFORMS.map((pf) =>
-        lookupPlatformRank(
-          platformRankings,
-          p.playerId,
-          pf.key,
-          pf.type,
-          scoring,
+      storedByPid.set(p.playerId, {
+        council: councilEntry?.avgRank ?? null,
+        councilRankerCount: councilEntry?.rankerCount ?? 0,
+        espn: hasEspn
+          ? lookupPlatformRank(platformRankings, p.playerId, "espn", "editorial", scoring)
+          : null,
+        fp: hasFp
+          ? lookupPlatformRank(platformRankings, p.playerId, "fantasypros", "adp", scoring)
+          : null,
+        extras: EXTRA_PLATFORMS.map((pf) =>
+          lookupPlatformRank(platformRankings, p.playerId, pf.key, pf.type, scoring),
         ),
-      );
+      });
+    }
+
+    // When a position filter is active, re-rank every source within the
+    // filtered set so each column shows positional rank (WR1, WR2, ...) the
+    // way Vegas already does. When showing ALL positions, keep the stored
+    // overall ranks.
+    const withinFilter = position !== "ALL";
+    const rerank = (
+      getter: (s: StoredRanks) => number | null,
+    ): Map<number, number> => {
+      const m = new Map<number, number>();
+      const entries = filtered
+        .map((p) => ({ pid: p.playerId, r: getter(storedByPid.get(p.playerId)!) }))
+        .filter((x): x is { pid: number; r: number } => x.r != null);
+      entries.sort((a, b) => a.r - b.r);
+      entries.forEach((x, idx) => m.set(x.pid, idx + 1));
+      return m;
+    };
+    const councilRerank = withinFilter ? rerank((s) => s.council) : null;
+    const espnRerank = withinFilter ? rerank((s) => s.espn) : null;
+    const fpRerank = withinFilter ? rerank((s) => s.fp) : null;
+    const extraReranks = withinFilter
+      ? EXTRA_PLATFORMS.map((_, idx) => rerank((s) => s.extras[idx]))
+      : null;
+
+    const rows: RowData[] = filtered.map((p) => {
+      const stored = storedByPid.get(p.playerId)!;
+      const displayCouncil = withinFilter
+        ? councilRerank!.get(p.playerId) ?? null
+        : stored.council;
+      const displayEspn = withinFilter
+        ? espnRerank!.get(p.playerId) ?? null
+        : stored.espn;
+      const displayFp = withinFilter
+        ? fpRerank!.get(p.playerId) ?? null
+        : stored.fp;
+      const displayExtras = withinFilter
+        ? stored.extras.map((_, idx) => extraReranks![idx].get(p.playerId) ?? null)
+        : stored.extras;
       const ranksForAvg = [
-        councilEntry?.avgRank ?? null,
-        espnRank,
-        fpRank,
-        ...extraRanks,
+        displayCouncil,
+        displayEspn,
+        displayFp,
+        ...displayExtras,
       ].filter((r): r is number => r != null);
       const avgRank =
         ranksForAvg.length > 0
@@ -210,11 +244,11 @@ export default function RankingsTable({
       return {
         player: p,
         vegasRank: vegasRankById.get(p.playerId) ?? null,
-        councilAvgRank: councilEntry?.avgRank ?? null,
-        councilRankerCount: councilEntry?.rankerCount ?? 0,
-        espnRank,
-        fpRank,
-        extraRanks,
+        councilAvgRank: displayCouncil,
+        councilRankerCount: stored.councilRankerCount,
+        espnRank: displayEspn,
+        fpRank: displayFp,
+        extraRanks: displayExtras,
         avgRank,
       };
     });
