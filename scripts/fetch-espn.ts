@@ -64,7 +64,59 @@ type EspnPlayer = {
     averageDraftPosition?: number;
     percentOwned?: number;
   };
+  stats?: Array<{
+    statSourceId?: number;
+    statSplitTypeId?: number;
+    scoringPeriodId?: number;
+    seasonId?: number;
+    stats?: Record<string, number>;
+  }>;
 };
+
+/**
+ * ESPN's public response no longer surfaces `appliedTotal` — only the raw
+ * projected counting stats in `stats[*].stats[statId]`. So compute season
+ * fantasy points ourselves from the season projection row (statSourceId=1,
+ * statSplitTypeId=0, scoringPeriodId=0) using the standard fantasy scoring
+ * weights. PPR/Half/Standard differ only in receptions weight.
+ *
+ * ESPN stat ID reference (confirmed empirically against top players):
+ *   3 pass yds, 4 pass TDs, 19 2pt pass conv, 20 ints,
+ *   24 rush yds, 25 rush TDs, 26 2pt rush conv,
+ *   42 rec yds, 43 rec TDs, 44 2pt rec conv, 53 receptions,
+ *   72 fumbles lost.
+ */
+function computeEspnFantasyPoints(
+  player: EspnPlayer,
+  scoring: "PPR" | "Half" | "Standard",
+): number | null {
+  if (!player.stats) return null;
+  const seasonProj = player.stats.find(
+    (s) =>
+      s.statSourceId === 1 &&
+      s.statSplitTypeId === 0 &&
+      s.scoringPeriodId === 0 &&
+      s.stats != null,
+  );
+  if (!seasonProj?.stats) return null;
+  const s = seasonProj.stats;
+  const g = (k: string) => s[k] ?? 0;
+  const recWeight = scoring === "PPR" ? 1 : scoring === "Half" ? 0.5 : 0;
+  const pts =
+    g("3") * 0.04 +
+    g("4") * 4 +
+    g("19") * 2 +
+    g("20") * -2 +
+    g("24") * 0.1 +
+    g("25") * 6 +
+    g("26") * 2 +
+    g("42") * 0.1 +
+    g("43") * 6 +
+    g("44") * 2 +
+    g("53") * recWeight +
+    g("72") * -2;
+  return Number.isFinite(pts) && pts !== 0 ? Math.round(pts * 10) / 10 : null;
+}
 
 async function fetchSeason(season: number): Promise<EspnPlayer[]> {
   // kona_player_info view is what the ESPN Draft Kit uses — gives draft ranks
@@ -104,6 +156,8 @@ type ParsedRow = {
   rankingType: "editorial" | "adp";
   scoringSystem: "Standard" | "PPR" | "Half";
   rankValue: number;
+  /** Season projected fantasy points for this scoring system, when known. */
+  projectedPoints: number | null;
   playerName: string;
   playerTeam: string;
 };
@@ -220,14 +274,18 @@ function parseEspn(
     }
   }
 
-  // Third pass: emit matched rows from the winners
+  // Third pass: emit matched rows from the winners. Compute the season
+  // projection in each scoring system from the raw stats once per player.
   for (const [playerId, { candidate: c }] of Array.from(winnerByPlayerId.entries())) {
+    const pprPoints = computeEspnFantasyPoints(c.player, "PPR");
+    const stdPoints = computeEspnFantasyPoints(c.player, "Standard");
     if (c.pprRank != null) {
       matched.push({
         playerId,
         rankingType: "editorial",
         scoringSystem: "PPR",
         rankValue: c.pprRank,
+        projectedPoints: pprPoints,
         playerName: c.fullName,
         playerTeam: c.team ?? "",
       });
@@ -238,16 +296,19 @@ function parseEspn(
         rankingType: "editorial",
         scoringSystem: "Standard",
         rankValue: c.stdRank,
+        projectedPoints: stdPoints,
         playerName: c.fullName,
         playerTeam: c.team ?? "",
       });
     }
     if (c.adp != null) {
+      // ADP is not a projection — no points belong on this row.
       matched.push({
         playerId,
         rankingType: "adp",
         scoringSystem: "PPR",
         rankValue: c.adp,
+        projectedPoints: null,
         playerName: c.fullName,
         playerTeam: c.team ?? "",
       });
@@ -259,24 +320,42 @@ function parseEspn(
 
 async function upsertRows(rows: ParsedRow[]) {
   if (rows.length === 0) return;
-  // Chunk to avoid Supabase row limits
+  // Chunk to avoid Supabase row limits.
+  // First chunk: try with projected_points. If the column doesn't exist yet
+  // (migration 016 not run), fall back to the legacy shape for the whole run.
+  let withPoints = true;
   const chunkSize = 500;
   for (let i = 0; i < rows.length; i += chunkSize) {
-    const chunk = rows.slice(i, i + chunkSize).map((r) => ({
-      player_id: r.playerId,
-      source: "espn",
-      ranking_type: r.rankingType,
-      scoring_system: r.scoringSystem,
-      rank_value: r.rankValue,
-      player_name: r.playerName,
-      player_team: r.playerTeam,
-    }));
+    const slice = rows.slice(i, i + chunkSize);
+    const chunk = slice.map((r) => {
+      const row: Record<string, unknown> = {
+        player_id: r.playerId,
+        source: "espn",
+        ranking_type: r.rankingType,
+        scoring_system: r.scoringSystem,
+        rank_value: r.rankValue,
+        player_name: r.playerName,
+        player_team: r.playerTeam,
+      };
+      if (withPoints) row.projected_points = r.projectedPoints;
+      return row;
+    });
     const { error } = await supabase
       .from("platform_rankings")
       .upsert(chunk, {
         onConflict: "player_id,source,ranking_type,scoring_system",
       });
-    if (error) throw new Error(`upsert failed: ${error.message}`);
+    if (error) {
+      if (withPoints && /projected_points/.test(error.message)) {
+        console.log(
+          `  ⚠ projected_points column missing — run migration 016. Retrying without.`,
+        );
+        withPoints = false;
+        i -= chunkSize; // retry this chunk
+        continue;
+      }
+      throw new Error(`upsert failed: ${error.message}`);
+    }
   }
 }
 
@@ -351,6 +430,19 @@ async function main() {
     `  Matched rows ready to upsert: ${matched.length} (across editorial + adp × PPR + Standard)`,
   );
   console.log(`  Unmapped distinct rows: ${unmapped.length}`);
+  // Points coverage breakdown so the operator can see how many editorial
+  // rows actually have a projected_points value attached.
+  const pointsByScoring: Record<string, { withPts: number; total: number }> = {};
+  for (const r of matched) {
+    if (r.rankingType !== "editorial") continue;
+    const k = r.scoringSystem;
+    pointsByScoring[k] = pointsByScoring[k] ?? { withPts: 0, total: 0 };
+    pointsByScoring[k].total++;
+    if (r.projectedPoints != null) pointsByScoring[k].withPts++;
+  }
+  console.log(
+    `  Points coverage (editorial rows w/ projected_points / total): ${JSON.stringify(pointsByScoring)}`,
+  );
 
   console.log(`\n→ Upserting matched rows to platform_rankings…`);
   await upsertRows(matched);
