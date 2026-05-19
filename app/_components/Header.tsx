@@ -17,15 +17,14 @@ import type {
   SearchVerdict,
 } from "./SearchIndex";
 
-// Single-row nav: 4 priority tabs always visible (Rankings, Judge, Trade Court,
-// Verdict — fixed by the standing order rule) + a "More" overflow dropdown for
-// every other surface. Mirrors the Sleeper/KTC pattern so users instinctively
-// know where to look.
+// Single-row nav: 3 priority tabs always visible (Rankings, Judge, Court) +
+// a "More" overflow dropdown for every other surface. Court is the unified
+// docket — trades AND tough calls live under one case-style surface. Mirrors
+// the Sleeper/KTC pattern so users instinctively know where to look.
 const PRIORITY_NAV: NavItem[] = [
   { href: "/rankings", label: "Rankings" },
   { href: "/judge", label: "Judge" },
-  { href: "/trades", label: "Trade Court" },
-  { href: "/verdict", label: "Verdict" },
+  { href: "/trades", label: "Court" },
 ];
 
 const UTILITY_NAV: NavItem[] = [
