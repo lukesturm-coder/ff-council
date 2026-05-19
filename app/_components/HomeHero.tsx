@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 //
 // Purpose: give first-time visitors a one-screen pitch for the product
 // before they hit the dense rankings grid. Two columns on desktop:
-//   - Left:  the message + primary CTAs ("Start judging", "Post a tough
-//            call", "Submit a trade")
+//   - Left:  the message + two primary CTAs ("Open a case", "Start
+//            judging").
 //   - Right: live proof — four small stat cards seeded from the DB so
 //            the hero feels alive instead of static marketing copy.
 //
