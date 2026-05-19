@@ -5,7 +5,6 @@ import {
   ClipboardList,
   Gavel,
   Layers,
-  MessageSquareQuote,
   Network,
   Scale,
   Trophy,
@@ -23,9 +22,9 @@ export const metadata: Metadata = {
 };
 
 // Landing tiles. Order matches the primary nav, which keeps Rankings → Judge
-// → Trade Court → Verdict as the priority surfaces. Icons are picked from
-// lucide-react with one-line semantic fits (gavel for verdicts, scale for
-// court, etc.) rather than literal player or sport icons.
+// → Court as the priority surfaces. Icons are picked from lucide-react with
+// one-line semantic fits (gavel for judge, scale for court, etc.) rather
+// than literal player or sport icons.
 type Tile = {
   href: string;
   title: string;
@@ -45,21 +44,15 @@ const TILES: Tile[] = [
     href: "/judge",
     title: "Judge",
     description:
-      "Speed-vote on unvoted trades + verdicts. One tap, advance, repeat.",
+      "Speed-vote on open cases. One tap, advance, repeat.",
     icon: Gavel,
   },
   {
     href: "/trades",
-    title: "Trade Court",
-    description: "Submit a trade. The council decides who won.",
-    icon: Scale,
-  },
-  {
-    href: "/verdict",
-    title: "Verdict",
+    title: "Court",
     description:
-      "Post a tough call. Draft pick or start/sit. Get the verdict.",
-    icon: MessageSquareQuote,
+      "Open a case — trade, start-sit, or draft pick. The council weighs in.",
+    icon: Scale,
   },
   {
     href: "/draft",
