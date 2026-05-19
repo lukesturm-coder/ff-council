@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ShareButton from "./ShareButton";
+import SourceVerdictsPanel from "./SourceVerdictsPanel";
 import VotingPanel from "./VotingPanel";
+import type { ScoringSystem } from "@/lib/types";
 
 const SITE_URL = "https://www.ffcouncil.com";
 
@@ -313,6 +315,39 @@ export default async function TradeDetailPage({
                 </>
               )}
             </div>
+          );
+        })()}
+
+        {/* Source Verdicts — what every ranking source thinks about the trade,
+            rendered above the council vote so a reader sees the model output
+            before they cast their own vote. */}
+        {(() => {
+          const allowed: ScoringSystem[] = ["PPR", "Half", "Standard"];
+          const scoring: ScoringSystem = (allowed as string[]).includes(t.scoring)
+            ? (t.scoring as ScoringSystem)
+            : "PPR";
+          const hasPicks =
+            (t.side_a.picks?.length ?? 0) > 0 ||
+            (t.side_b.picks?.length ?? 0) > 0;
+          return (
+            <SourceVerdictsPanel
+              sideA={{
+                players: t.side_a.players.map((p) => ({
+                  player_id: p.player_id,
+                  name: p.name,
+                })),
+                picks: t.side_a.picks,
+              }}
+              sideB={{
+                players: t.side_b.players.map((p) => ({
+                  player_id: p.player_id,
+                  name: p.name,
+                })),
+                picks: t.side_b.picks,
+              }}
+              scoring={scoring}
+              hasPicks={hasPicks}
+            />
           );
         })()}
 
