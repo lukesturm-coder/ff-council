@@ -26,9 +26,9 @@ import type {
 // live in the home page footer and /me page instead of header chrome.
 const PRIORITY_NAV: NavItem[] = [
   { href: "/rankings", label: "Rankings" },
-  { href: "/trades", label: "Trades" },
-  { href: "/judge", label: "Vote" },
-  { href: "/draft", label: "Mock Draft" },
+  { href: "/judge", label: "Judge" },
+  { href: "/trades", label: "Trade Court" },
+  { href: "/verdict", label: "Verdict" },
 ];
 
 // Tools dropdown. Restored after the empty-menu experiment buried too many
@@ -36,8 +36,8 @@ const PRIORITY_NAV: NavItem[] = [
 // elsewhere (e.g., the Beli flow will eventually live on /rankings; tier
 // dividers will live on /rankings — those entries fall out at that point).
 const UTILITY_NAV: NavItem[] = [
+  { href: "/draft", label: "Mock Draft" },
   { href: "/trades", label: "Trade Calculator" },
-  { href: "/trades/new", label: "Start/Sit & Draft Help" },
   { href: "/council/rank", label: "Rank Players" },
   { href: "/council", label: "Council Rankings" },
   { href: "/tiers", label: "Tiers" },

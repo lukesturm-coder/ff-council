@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   BarChart3,
-  Calculator,
   ClipboardList,
   Gavel,
   Layers,
   MessageSquareQuote,
   Network,
+  Scale,
   Trophy,
   Users,
   type LucideIcon,
@@ -23,9 +23,9 @@ export const metadata: Metadata = {
 };
 
 // Landing tiles. Order matches the primary nav, which keeps Rankings → Judge
-// → Court as the priority surfaces. Icons are picked from lucide-react with
-// one-line semantic fits (gavel for judge, scale for court, etc.) rather
-// than literal player or sport icons.
+// → Trade Court → Verdict as the priority surfaces. Icons are picked from
+// lucide-react with one-line semantic fits (gavel for verdicts, scale for
+// court, etc.) rather than literal player or sport icons.
 type Tile = {
   href: string;
   title: string;
@@ -42,25 +42,24 @@ const TILES: Tile[] = [
     icon: BarChart3,
   },
   {
-    href: "/trades",
-    title: "Trade Calculator",
-    description:
-      "Side-by-side trade math across Vegas, ESPN, FantasyPros, Sleeper, and the council.",
-    icon: Calculator,
-  },
-  {
-    href: "/trades/new",
-    title: "Start/Sit & Draft Help",
-    description:
-      "Post a tough call. Start/sit or draft pick. The community votes.",
-    icon: MessageSquareQuote,
-  },
-  {
     href: "/judge",
-    title: "Vote",
+    title: "Judge",
     description:
-      "Speed-vote on open trades and questions. One tap, advance, repeat.",
+      "Speed-vote on unvoted trades + verdicts. One tap, advance, repeat.",
     icon: Gavel,
+  },
+  {
+    href: "/trades",
+    title: "Trade Court",
+    description: "Submit a trade. The council decides who won.",
+    icon: Scale,
+  },
+  {
+    href: "/verdict",
+    title: "Verdict",
+    description:
+      "Post a tough call. Draft pick or start/sit. Get the verdict.",
+    icon: MessageSquareQuote,
   },
   {
     href: "/draft",
@@ -124,14 +123,7 @@ export default async function Page() {
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
         <HomeHero stats={heroStats} />
 
-        {/* One-line explainer strip — sits between the hero (the headline)
-            and the features grid (the doors). Plain language, no jargon. */}
-        <p className="mt-2 border-t border-zinc-800/60 pt-4 text-sm text-zinc-400 sm:text-base">
-          We turn Vegas odds into fantasy rankings, and the community votes on
-          every trade and tough call.
-        </p>
-
-        <section aria-label="Features" className="mt-4 sm:mt-5">
+        <section aria-label="Features" className="mt-2">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {TILES.map((tile) => (
               <FeatureTile key={tile.href} tile={tile} />
@@ -149,20 +141,6 @@ export default async function Page() {
             sources, and the trades the council is judging this minute.
           </p>
           <p>
-            <a
-              href="/leaderboard"
-              className="underline-offset-4 hover:text-zinc-300 hover:underline"
-            >
-              Leaderboard
-            </a>
-            {" · "}
-            <a
-              href="/league"
-              className="underline-offset-4 hover:text-zinc-300 hover:underline"
-            >
-              League Analyzer
-            </a>
-            {" · "}
             <a
               href="/terms"
               className="underline-offset-4 hover:text-zinc-300 hover:underline"

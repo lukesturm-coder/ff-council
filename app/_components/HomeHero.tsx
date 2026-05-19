@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 //
 // Purpose: give first-time visitors a one-screen pitch for the product
 // before they hit the dense rankings grid. Two columns on desktop:
-//   - Left:  the message + two primary CTAs ("Open a case", "Start
-//            judging").
+//   - Left:  the message + primary CTAs ("Start judging", "Post a tough
+//            call", "Submit a trade")
 //   - Right: live proof — four small stat cards seeded from the DB so
 //            the hero feels alive instead of static marketing copy.
 //
@@ -136,27 +136,33 @@ export default function HomeHero({ stats }: { stats: HeroStats }) {
         {/* Left: message + CTAs */}
         <div className="flex flex-col justify-center">
           <h1 className="text-3xl font-bold tracking-tight text-zinc-100 sm:text-4xl lg:text-5xl">
-            Fantasy answers, decided by the{" "}
-            <span className="text-emerald-400">council.</span>
+            Crowdsourced fantasy{" "}
+            <span className="text-emerald-400">verdicts.</span>
           </h1>
           <p className="mt-4 max-w-xl text-base text-zinc-300 sm:text-lg">
-            Vegas-grounded rankings. Community votes on every trade,
-            start/sit, and draft pick.
+            The Council judges. You weigh in. Real consensus, not buried in
+            Reddit comments.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
-              href="/trades"
+              href="/judge"
               className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-6 py-3 text-base font-semibold text-zinc-950 transition hover:bg-emerald-400"
             >
-              Calculate a trade
+              Start judging
               <span aria-hidden>→</span>
             </Link>
             <Link
-              href="/judge"
+              href="/verdict/new"
               className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900/50 px-6 py-3 text-base font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800/60"
             >
-              Vote on open questions
+              Post a tough call
+            </Link>
+            <Link
+              href="/trades/new"
+              className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900/50 px-6 py-3 text-base font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800/60"
+            >
+              Submit a trade
             </Link>
           </div>
         </div>
