@@ -450,26 +450,85 @@ function TradeSide({
   const sideFpts = sumOrZero(players.map((p) => p.fantasyPoints[scoring]));
   const sideVbd = sumOrZero(players.map((p) => p.vbd[scoring]));
 
+  // Empty sides hoist the Add input directly under the header so the
+  // empty state IS the action — no separate "no players yet" copy.
+  const isEmpty = players.length === 0 && picks.length === 0;
+
+  // The Add input + dropdown — extracted so we can render it either
+  // under the header (empty) or at the bottom (after items exist).
+  const addInput = (
+    <div className="relative">
+      <div className="relative">
+        <Plus className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Add player or pick (e.g. 2027 1.05)"
+          className="block w-full rounded-md border border-zinc-800 bg-zinc-950 py-3 pl-8 pr-3 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+        />
+      </div>
+      {showDropdown && (
+        <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-900 shadow-lg">
+          {parsedPick && (
+            <button
+              key="pick-suggestion"
+              onClick={() => onAddPick(parsedPick)}
+              className="flex w-full items-center gap-2 border-b border-zinc-800/60 bg-zinc-900 px-2.5 py-2 text-left text-sm transition hover:bg-zinc-800 sm:px-3"
+            >
+              <span className="flex-1 font-mono text-zinc-100">
+                Add {formatPick(parsedPick)}
+              </span>
+              <span className="inline-flex items-center rounded bg-zinc-800 px-1.5 py-0.5 text-xs font-semibold text-zinc-300 ring-1 ring-inset ring-zinc-700">
+                PICK
+              </span>
+            </button>
+          )}
+          {filtered.map((p) => (
+            <button
+              key={p.playerId}
+              onClick={() => onAdd(p.playerId)}
+              className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-sm transition hover:bg-zinc-800 sm:px-3"
+            >
+              <span className="flex-1 truncate">{p.name}</span>
+              <span
+                className={`inline-flex rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[p.position]}`}
+              >
+                {p.position}
+              </span>
+              <span className="hidden w-10 font-mono text-xs text-zinc-500 sm:inline">
+                {p.team}
+              </span>
+              <span className="w-14 text-right font-mono text-xs text-zinc-400">
+                {p.fantasyPoints[scoring].toFixed(1)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-4">
       <div className="flex items-baseline justify-between">
         <p className="text-xs uppercase tracking-wider text-zinc-500">
           {label}
         </p>
-        <p className="font-mono text-xs text-zinc-400">
-          {players.length + picks.length} item
-          {players.length + picks.length === 1 ? "" : "s"}
-        </p>
+        {!isEmpty && (
+          <p className="font-mono text-xs text-zinc-400">
+            {players.length + picks.length} item
+            {players.length + picks.length === 1 ? "" : "s"}
+          </p>
+        )}
       </div>
+
+      {/* When the side is empty, the Add input IS the empty state — no
+          separate "no players yet" paragraph. */}
+      {isEmpty && addInput}
 
       {/* Selected players + picks */}
       <div className="space-y-1.5">
-        {players.length === 0 && picks.length === 0 && (
-          <p className="text-xs text-zinc-600">
-            No players yet — search a name, or type a pick (e.g. &ldquo;2027
-            mid 2nd&rdquo;)
-          </p>
-        )}
         {players.map((p) => (
           <div
             key={p.playerId}
@@ -537,57 +596,9 @@ function TradeSide({
         </div>
       )}
 
-      {/* Search input + dropdown */}
-      <div className="relative">
-        <div className="relative">
-          <Plus className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Add player or pick (e.g. 2027 1.05)"
-            className="block w-full rounded-md border border-zinc-800 bg-zinc-950 py-2 pl-8 pr-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
-          />
-        </div>
-        {showDropdown && (
-          <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-900 shadow-lg">
-            {parsedPick && (
-              <button
-                key="pick-suggestion"
-                onClick={() => onAddPick(parsedPick)}
-                className="flex w-full items-center gap-2 border-b border-zinc-800/60 bg-zinc-900 px-2.5 py-2 text-left text-sm transition hover:bg-zinc-800 sm:px-3"
-              >
-                <span className="flex-1 font-mono text-zinc-100">
-                  Add {formatPick(parsedPick)}
-                </span>
-                <span className="inline-flex items-center rounded bg-zinc-800 px-1.5 py-0.5 text-xs font-semibold text-zinc-300 ring-1 ring-inset ring-zinc-700">
-                  PICK
-                </span>
-              </button>
-            )}
-            {filtered.map((p) => (
-              <button
-                key={p.playerId}
-                onClick={() => onAdd(p.playerId)}
-                className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-sm transition hover:bg-zinc-800 sm:px-3"
-              >
-                <span className="flex-1 truncate">{p.name}</span>
-                <span
-                  className={`inline-flex rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_STYLES[p.position]}`}
-                >
-                  {p.position}
-                </span>
-                <span className="hidden w-10 font-mono text-xs text-zinc-500 sm:inline">
-                  {p.team}
-                </span>
-                <span className="w-14 text-right font-mono text-xs text-zinc-400">
-                  {p.fantasyPoints[scoring].toFixed(1)}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Add input lives at the bottom once at least one item exists.
+          When the side is empty it's already hoisted under the header. */}
+      {!isEmpty && addInput}
     </div>
   );
 }
