@@ -136,27 +136,27 @@ export default function HomeHero({ stats }: { stats: HeroStats }) {
         {/* Left: message + CTAs */}
         <div className="flex flex-col justify-center">
           <h1 className="text-3xl font-bold tracking-tight text-zinc-100 sm:text-4xl lg:text-5xl">
-            Crowdsourced fantasy{" "}
-            <span className="text-emerald-400">verdicts.</span>
+            Fantasy answers, decided by the{" "}
+            <span className="text-emerald-400">council.</span>
           </h1>
           <p className="mt-4 max-w-xl text-base text-zinc-300 sm:text-lg">
-            The Council judges. You weigh in. Real consensus, not buried in
-            Reddit comments.
+            Vegas-grounded rankings. Community votes on every trade,
+            start/sit, and draft pick.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
-              href="/trades/new"
+              href="/trades"
               className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-6 py-3 text-base font-semibold text-zinc-950 transition hover:bg-emerald-400"
             >
-              Open a case
+              Calculate a trade
               <span aria-hidden>→</span>
             </Link>
             <Link
               href="/judge"
               className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900/50 px-6 py-3 text-base font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800/60"
             >
-              Start judging
+              Vote on open questions
             </Link>
           </div>
         </div>

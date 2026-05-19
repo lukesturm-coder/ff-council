@@ -26,8 +26,8 @@ import type {
 // live in the home page footer and /me page instead of header chrome.
 const PRIORITY_NAV: NavItem[] = [
   { href: "/rankings", label: "Rankings" },
-  { href: "/judge", label: "Judge" },
-  { href: "/trades", label: "Court" },
+  { href: "/trades", label: "Trades" },
+  { href: "/judge", label: "Vote" },
   { href: "/draft", label: "Mock Draft" },
 ];
 

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   BarChart3,
+  Calculator,
   ClipboardList,
   Gavel,
   Layers,
+  MessageSquareQuote,
   Network,
-  Scale,
   Trophy,
   Users,
   type LucideIcon,
@@ -41,18 +42,25 @@ const TILES: Tile[] = [
     icon: BarChart3,
   },
   {
-    href: "/judge",
-    title: "Judge",
+    href: "/trades",
+    title: "Trade Calculator",
     description:
-      "Speed-vote on open cases. One tap, advance, repeat.",
-    icon: Gavel,
+      "Side-by-side trade math across Vegas, ESPN, FantasyPros, Sleeper, and the council.",
+    icon: Calculator,
   },
   {
-    href: "/trades",
-    title: "Court",
+    href: "/trades/new",
+    title: "Start/Sit & Draft Help",
     description:
-      "Open a case — trade, start-sit, or draft pick. The council weighs in.",
-    icon: Scale,
+      "Post a tough call. Start/sit or draft pick. The community votes.",
+    icon: MessageSquareQuote,
+  },
+  {
+    href: "/judge",
+    title: "Vote",
+    description:
+      "Speed-vote on open trades and questions. One tap, advance, repeat.",
+    icon: Gavel,
   },
   {
     href: "/draft",
