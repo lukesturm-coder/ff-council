@@ -245,7 +245,7 @@ export default function TradeListClient({ trades }: { trades: TradeCardData[] })
   );
 }
 
-function TradeModal({
+export function TradeModal({
   trade,
   position,
   total,

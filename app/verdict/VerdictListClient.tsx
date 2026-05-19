@@ -136,7 +136,7 @@ export default function VerdictListClient({
   );
 }
 
-function VerdictCardButton({
+export function VerdictCardButton({
   scenario,
   voted,
   onOpen,
@@ -288,7 +288,7 @@ function VerdictCardButton({
   );
 }
 
-function VerdictModal({
+export function VerdictModal({
   scenario,
   alreadyVoted,
   position,
