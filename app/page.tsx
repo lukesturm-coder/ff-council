@@ -135,6 +135,20 @@ export default async function Page() {
           </p>
           <p>
             <a
+              href="/leaderboard"
+              className="underline-offset-4 hover:text-zinc-300 hover:underline"
+            >
+              Leaderboard
+            </a>
+            {" · "}
+            <a
+              href="/league"
+              className="underline-offset-4 hover:text-zinc-300 hover:underline"
+            >
+              League Analyzer
+            </a>
+            {" · "}
+            <a
               href="/terms"
               className="underline-offset-4 hover:text-zinc-300 hover:underline"
             >

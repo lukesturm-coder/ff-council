@@ -17,26 +17,24 @@ import type {
   SearchVerdict,
 } from "./SearchIndex";
 
-// Single-row nav: 3 priority tabs always visible (Rankings, Judge, Court) +
-// a "More" overflow dropdown for every other surface. Court is the unified
-// docket — trades AND tough calls live under one case-style surface. Mirrors
-// the Sleeper/KTC pattern so users instinctively know where to look.
+// Single-row nav: four primary product surfaces (Rankings, Judge, Court, Mock
+// Draft) always visible — the "things you do" on FF Council. The old "Tools"
+// dropdown was killed since the surfaces it contained were either disconnected
+// (Leaderboard) or required auth context (League Analyzer). Auth-gated entries
+// (My Rankings, Admin) still flow through the overflow menu when present; the
+// trigger is hidden when there are no items. League Analyzer + Leaderboard
+// live in the home page footer and /me page instead of header chrome.
 const PRIORITY_NAV: NavItem[] = [
   { href: "/rankings", label: "Rankings" },
   { href: "/judge", label: "Judge" },
   { href: "/trades", label: "Court" },
+  { href: "/draft", label: "Mock Draft" },
 ];
 
 const UTILITY_NAV: NavItem[] = [
-  // Trade Calc removed — it now lives on /trades (Trade Court) at the top
-  // of the page. /trade still resolves but redirects to /trades.
-  { href: "/draft", label: "Mock Draft" },
-  { href: "/league", label: "League Analyzer" },
-  { href: "/leaderboard", label: "Leaderboard" },
-  // Council Rankings, Tiers, and Rank intentionally removed from the Tools
-  // menu — Council Rankings is shown inline on /rankings; tiers will become
-  // visual dividers on /rankings based on clean breaks in projected points;
-  // the Beli-style ranking flow at /council/rank lives off /rankings, not nav.
+  // Empty. Anything that needs auth context (My Rankings, Admin) gets pushed
+  // into the overflow at render time; the trigger is hidden when this list
+  // is empty for the visitor.
 ];
 
 // =====================================================================
@@ -189,7 +187,7 @@ export default async function Header() {
             className="flex min-w-0 flex-1 items-center gap-x-4 overflow-x-auto text-sm sm:gap-x-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           />
 
-          <MoreMenu items={moreNav} />
+          {moreNav.length > 0 && <MoreMenu items={moreNav} />}
 
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm">
             <SearchBar index={searchIndex} />
