@@ -31,10 +31,18 @@ const PRIORITY_NAV: NavItem[] = [
   { href: "/draft", label: "Mock Draft" },
 ];
 
+// Tools dropdown. Restored after the empty-menu experiment buried too many
+// features. Items live here until their functionality is integrated inline
+// elsewhere (e.g., the Beli flow will eventually live on /rankings; tier
+// dividers will live on /rankings — those entries fall out at that point).
 const UTILITY_NAV: NavItem[] = [
-  // Empty. Anything that needs auth context (My Rankings, Admin) gets pushed
-  // into the overflow at render time; the trigger is hidden when this list
-  // is empty for the visitor.
+  { href: "/trades", label: "Trade Calculator" },
+  { href: "/trades/new", label: "Start/Sit & Draft Help" },
+  { href: "/council/rank", label: "Rank Players" },
+  { href: "/council", label: "Council Rankings" },
+  { href: "/tiers", label: "Tiers" },
+  { href: "/league", label: "League Analyzer" },
+  { href: "/leaderboard", label: "Leaderboard" },
 ];
 
 // =====================================================================
