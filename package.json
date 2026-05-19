@@ -10,6 +10,9 @@
     "explore": "tsx scripts/explore-api.ts",
     "fetch:espn": "tsx scripts/fetch-espn.ts",
     "fetch:fp": "tsx scripts/fetch-fantasypros.ts",
+    "fetch:nfl": "tsx scripts/fetch-nfl.ts",
+    "fetch:sleeper-adp": "tsx scripts/fetch-sleeper-adp.ts",
+    "fetch:yahoo": "tsx scripts/fetch-yahoo.ts",
     "scrape:vegas": "tsx scripts/scrape-vegas.ts",
     "fetch:vegas": "tsx scripts/fetch-vegas.ts"
   },

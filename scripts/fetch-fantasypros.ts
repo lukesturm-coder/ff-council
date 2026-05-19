@@ -1,10 +1,26 @@
 /**
- * Scrape FantasyPros' public ADP pages for PPR / Half / Standard consensus.
- * Their free tier only exposes the consensus AVG (aggregated across
- * ESPN/Yahoo/Sleeper/NFL/RTSports under the hood); per-platform breakdowns
- * are paywalled.
+ * Fetch FantasyPros consensus rankings (ECR) for PPR / Half / Standard scoring,
+ * match players to our SportsDataIO IDs, and upsert into platform_rankings.
  *
  *   npx tsx scripts/fetch-fantasypros.ts
+ *
+ * FantasyPros has an undocumented public JSON API at
+ *   https://api.fantasypros.com/public/v2/json/nfl/{year}/consensus-rankings
+ * but it requires an x-api-key header (returns 403 MissingAuthenticationToken
+ * with just Referer/Origin). The cheatsheets pages embed the same JSON payload
+ * server-side as a `var ecrData = {...}` literal, so we extract that. Each
+ * scoring system has its own page; swap the URL slug.
+ *
+ * ecrData shape (relevant fields):
+ *   - year, scoring ("PPR" | "HALF" | "STD"), count, total_experts
+ *   - players[]:
+ *       player_id, player_name, player_team_id, player_position_id,
+ *       rank_ecr, rank_min, rank_max, rank_ave, rank_std
+ *
+ * We use rank_ecr (expert consensus rank) as the editorial rank value.
+ * No ADP endpoint is wired here — FP's free ADP table is a separate scrape
+ * already covered by the previous version of this script; ECR is the more
+ * useful signal for our consensus view.
  */
 import { config } from "dotenv";
 import { promises as fs } from "node:fs";
@@ -17,84 +33,122 @@ config({ path: ".env.local" });
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!SUPABASE_URL || !SERVICE_KEY) {
-  console.error("❌ Missing Supabase env vars");
+  console.error("❌ Missing Supabase env vars in .env.local");
   process.exit(1);
 }
+
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const PAGES: { url: string; scoring: "PPR" | "Half" | "Standard" }[] = [
-  { url: "https://www.fantasypros.com/nfl/adp/ppr-overall.php", scoring: "PPR" },
+type ScoringSystem = "PPR" | "Half" | "Standard";
+
+const PAGES: { url: string; scoring: ScoringSystem }[] = [
   {
-    url: "https://www.fantasypros.com/nfl/adp/half-point-ppr-overall.php",
+    url: "https://www.fantasypros.com/nfl/rankings/ppr-cheatsheets.php",
+    scoring: "PPR",
+  },
+  {
+    url: "https://www.fantasypros.com/nfl/rankings/half-point-ppr-cheatsheets.php",
     scoring: "Half",
   },
-  { url: "https://www.fantasypros.com/nfl/adp/standard-overall.php", scoring: "Standard" },
+  {
+    url: "https://www.fantasypros.com/nfl/rankings/consensus-cheatsheets.php",
+    scoring: "Standard",
+  },
 ];
 
-type ParsedRow = {
-  name: string;
-  team: string | null;
-  position: string;
-  adp: number;
+// FP uses JAC; our roster uses JAX. All other 31 teams match.
+const TEAM_ALIAS: Record<string, string> = {
+  JAC: "JAX",
 };
 
-function parseFpTable(html: string): ParsedRow[] {
-  const tableMatch = html.match(
-    /<table[^>]*id=["']data["'][^>]*>([\s\S]*?)<\/table>/,
-  );
-  if (!tableMatch) return [];
+type FpPlayer = {
+  player_id: number;
+  player_name: string;
+  player_team_id: string;
+  player_position_id: string;
+  rank_ecr: number;
+  rank_ave?: string | number;
+  rank_std?: string | number;
+};
 
-  const rows: ParsedRow[] = [];
-  const rowMatches = Array.from(
-    tableMatch[1].matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g),
-  );
+type EcrData = {
+  sport: string;
+  year: string;
+  scoring: string;
+  count: number;
+  total_experts?: number;
+  players: FpPlayer[];
+};
 
-  for (const m of rowMatches) {
-    const cells = Array.from(m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)).map(
-      (c) =>
-        c[1]
-          .replace(/<[^>]+>/g, " ")
-          .replace(/&nbsp;/g, " ")
-          .replace(/\s+/g, " ")
-          .trim(),
-    );
-    if (cells.length < 4) continue;
+type ParsedRow = {
+  playerId: number;
+  rankingType: "editorial";
+  scoringSystem: ScoringSystem;
+  rankValue: number;
+  playerName: string;
+  playerTeam: string;
+};
 
-    // cells[1] is "Player Team" — split on the last token (team abbr)
-    const playerTeam = cells[1];
-    const parts = playerTeam.split(" ");
-    const lastWord = parts[parts.length - 1];
-    let name = playerTeam;
-    let team: string | null = null;
-    if (/^[A-Z]{2,3}$/.test(lastWord)) {
-      team = lastWord;
-      name = parts.slice(0, -1).join(" ");
-    }
+type UnmappedRow = {
+  rankingType: "editorial";
+  scoringSystem: ScoringSystem;
+  rankValue: number;
+  rawName: string;
+  rawTeam: string | null;
+};
 
-    const adp = Number(cells[3]);
-    if (!Number.isFinite(adp) || adp <= 0) continue;
-
-    rows.push({
-      name,
-      team,
-      position: cells[2],
-      adp,
-    });
-  }
-  return rows;
-}
-
-async function fetchPage(url: string): Promise<string> {
+async function fetchEcrData(url: string): Promise<EcrData> {
   const res = await fetch(url, {
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+      Accept: "text/html,application/xhtml+xml",
     },
   });
   if (!res.ok) throw new Error(`${url} → ${res.status}`);
-  return res.text();
+  const html = await res.text();
+  // The embedded literal looks like: `var ecrData = {...};` followed by a newline.
+  // We need the outermost balanced braces — `.*?` is too greedy/non-greedy depending
+  // on what follows, so we walk braces explicitly.
+  const start = html.indexOf("var ecrData = {");
+  if (start === -1) throw new Error(`ecrData not found in ${url}`);
+  const objStart = html.indexOf("{", start);
+  let depth = 0;
+  let inStr = false;
+  let strCh = "";
+  let escape = false;
+  let end = -1;
+  for (let i = objStart; i < html.length; i++) {
+    const ch = html[i];
+    if (inStr) {
+      if (escape) {
+        escape = false;
+      } else if (ch === "\\") {
+        escape = true;
+      } else if (ch === strCh) {
+        inStr = false;
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      inStr = true;
+      strCh = ch;
+      continue;
+    }
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end === -1) throw new Error(`ecrData braces unbalanced in ${url}`);
+  const json = html.slice(objStart, end + 1);
+  return JSON.parse(json) as EcrData;
 }
 
 async function loadRoster(): Promise<RosterPlayer[]> {
@@ -103,87 +157,110 @@ async function loadRoster(): Promise<RosterPlayer[]> {
   return JSON.parse(raw) as RosterPlayer[];
 }
 
-async function main() {
-  const roster = await loadRoster();
-  const matcher = new PlayerMatcher(roster);
-  console.log(`→ Loaded roster: ${roster.length} players`);
+function parseEcr(
+  ecr: EcrData,
+  scoring: ScoringSystem,
+  matcher: PlayerMatcher,
+): {
+  matched: ParsedRow[];
+  unmapped: UnmappedRow[];
+  matchStats: Record<string, number>;
+} {
+  const matched: ParsedRow[] = [];
+  const unmapped: UnmappedRow[] = [];
+  const matchStats: Record<string, number> = {
+    exact: 0,
+    name_only: 0,
+    lastname_team: 0,
+    unmapped: 0,
+    skipped_no_rank: 0,
+    dropped_dup: 0,
+  };
 
-  const matchedRows: Array<{
-    player_id: number;
-    source: "fantasypros";
-    ranking_type: "adp";
-    scoring_system: "PPR" | "Half" | "Standard";
-    rank_value: number;
-    player_name: string;
-    player_team: string;
-  }> = [];
-  const unmappedRows: Array<{
-    source: "fantasypros";
-    ranking_type: "adp";
-    scoring_system: "PPR" | "Half" | "Standard";
-    rank_value: number;
-    raw_name: string;
-    raw_team: string | null;
-  }> = [];
-  const winnersByScoring: Record<string, Map<number, { row: ParsedRow; confidence: string }>> = {};
   const CONFIDENCE_RANK: Record<string, number> = {
     exact: 3,
     name_only: 2,
     lastname_team: 1,
   };
 
-  for (const { url, scoring } of PAGES) {
-    console.log(`\n→ Fetching FP ${scoring}: ${url}`);
-    const html = await fetchPage(url);
-    const parsed = parseFpTable(html);
-    console.log(`  parsed ${parsed.length} rows`);
-    if (parsed.length === 0) continue;
+  type Candidate = {
+    fp: FpPlayer;
+    name: string;
+    team: string | null;
+    rank: number;
+  };
 
-    const winners = new Map<number, { row: ParsedRow; confidence: string }>();
-    for (const row of parsed) {
-      const m = matcher.match({ name: row.name, team: row.team });
-      if (!m.matched) {
-        unmappedRows.push({
-          source: "fantasypros",
-          ranking_type: "adp",
-          scoring_system: scoring,
-          rank_value: row.adp,
-          raw_name: row.name,
-          raw_team: row.team,
-        });
-        continue;
-      }
-      const existing = winners.get(m.playerId);
-      if (
-        !existing ||
-        (CONFIDENCE_RANK[m.confidence] ?? 0) >
-          (CONFIDENCE_RANK[existing.confidence] ?? 0)
-      ) {
-        winners.set(m.playerId, { row, confidence: m.confidence });
-      }
+  const candidates: Candidate[] = [];
+  for (const p of ecr.players) {
+    if (!p.player_name) continue;
+    if (!Number.isFinite(p.rank_ecr) || p.rank_ecr <= 0) {
+      matchStats.skipped_no_rank++;
+      continue;
     }
-    winnersByScoring[scoring] = winners;
-    console.log(`  matched ${winners.size} unique players`);
-
-    for (const [playerId, { row }] of Array.from(winners.entries())) {
-      matchedRows.push({
-        player_id: playerId,
-        source: "fantasypros",
-        ranking_type: "adp",
-        scoring_system: scoring,
-        rank_value: row.adp,
-        player_name: row.name,
-        player_team: row.team ?? "",
-      });
-    }
-
-    await new Promise((r) => setTimeout(r, 1000)); // be polite
+    const rawTeam = p.player_team_id?.toUpperCase() ?? "";
+    const team = rawTeam && rawTeam !== "FA" ? (TEAM_ALIAS[rawTeam] ?? rawTeam) : null;
+    candidates.push({ fp: p, name: p.player_name, team, rank: p.rank_ecr });
   }
 
-  console.log(`\n→ Upserting ${matchedRows.length} matched rows…`);
+  const winnerByPlayerId = new Map<
+    number,
+    { candidate: Candidate; confidence: string }
+  >();
+
+  for (const c of candidates) {
+    const m = matcher.match({ name: c.name, team: c.team });
+    if (!m.matched) {
+      unmapped.push({
+        rankingType: "editorial",
+        scoringSystem: scoring,
+        rankValue: c.rank,
+        rawName: c.name,
+        rawTeam: c.team,
+      });
+      matchStats.unmapped++;
+      continue;
+    }
+    matchStats[m.confidence]++;
+    const existing = winnerByPlayerId.get(m.playerId);
+    if (
+      !existing ||
+      (CONFIDENCE_RANK[m.confidence] ?? 0) >
+        (CONFIDENCE_RANK[existing.confidence] ?? 0)
+    ) {
+      if (existing) matchStats.dropped_dup++;
+      winnerByPlayerId.set(m.playerId, { candidate: c, confidence: m.confidence });
+    } else {
+      matchStats.dropped_dup++;
+    }
+  }
+
+  for (const [playerId, { candidate: c }] of Array.from(winnerByPlayerId.entries())) {
+    matched.push({
+      playerId,
+      rankingType: "editorial",
+      scoringSystem: scoring,
+      rankValue: c.rank,
+      playerName: c.name,
+      playerTeam: c.team ?? "",
+    });
+  }
+
+  return { matched, unmapped, matchStats };
+}
+
+async function upsertRows(rows: ParsedRow[]) {
+  if (rows.length === 0) return;
   const chunkSize = 500;
-  for (let i = 0; i < matchedRows.length; i += chunkSize) {
-    const chunk = matchedRows.slice(i, i + chunkSize);
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize).map((r) => ({
+      player_id: r.playerId,
+      source: "fantasypros",
+      ranking_type: r.rankingType,
+      scoring_system: r.scoringSystem,
+      rank_value: r.rankValue,
+      player_name: r.playerName,
+      player_team: r.playerTeam,
+    }));
     const { error } = await supabase
       .from("platform_rankings")
       .upsert(chunk, {
@@ -191,17 +268,70 @@ async function main() {
       });
     if (error) throw new Error(`upsert failed: ${error.message}`);
   }
+}
 
-  console.log(`→ Refreshing unmapped log (${unmappedRows.length} rows)…`);
+async function logUnmapped(rows: UnmappedRow[]) {
+  // Wipe FP's previous unmapped batch so the table doesn't grow unbounded.
   await supabase
     .from("platform_rankings_unmapped")
     .delete()
     .eq("source", "fantasypros");
-  for (let i = 0; i < unmappedRows.length; i += chunkSize) {
-    await supabase
-      .from("platform_rankings_unmapped")
-      .insert(unmappedRows.slice(i, i + chunkSize));
+  if (rows.length === 0) return;
+  const chunkSize = 500;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize).map((r) => ({
+      source: "fantasypros",
+      ranking_type: r.rankingType,
+      scoring_system: r.scoringSystem,
+      rank_value: r.rankValue,
+      raw_name: r.rawName,
+      raw_team: r.rawTeam,
+    }));
+    await supabase.from("platform_rankings_unmapped").insert(chunk);
   }
+}
+
+async function main() {
+  const roster = await loadRoster();
+  console.log(`→ Loaded local roster: ${roster.length} players`);
+  const matcher = new PlayerMatcher(roster);
+
+  const allMatched: ParsedRow[] = [];
+  const allUnmapped: UnmappedRow[] = [];
+
+  for (const { url, scoring } of PAGES) {
+    console.log(`\n→ Fetching FP ${scoring}: ${url}`);
+    let ecr: EcrData;
+    try {
+      ecr = await fetchEcrData(url);
+    } catch (err) {
+      console.log(
+        `  failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      continue;
+    }
+    console.log(
+      `  ecrData: year=${ecr.year} scoring=${ecr.scoring} count=${ecr.count} experts=${ecr.total_experts ?? "?"}`,
+    );
+
+    const { matched, unmapped, matchStats } = parseEcr(ecr, scoring, matcher);
+    console.log(`  Match stats: ${JSON.stringify(matchStats)}`);
+    console.log(`  matched ${matched.length} unique players`);
+    console.log(`  unmapped ${unmapped.length} rows`);
+    allMatched.push(...matched);
+    allUnmapped.push(...unmapped);
+
+    // Be polite — FP isn't paying us to scrape.
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+
+  console.log(`\n→ Upserting ${allMatched.length} rows to platform_rankings…`);
+  await upsertRows(allMatched);
+  console.log(`  ✓ Upserted`);
+
+  console.log(`→ Logging ${allUnmapped.length} unmapped rows…`);
+  await logUnmapped(allUnmapped);
+  console.log(`  ✓ Logged`);
 
   console.log("\n✅ FantasyPros sync complete.");
 }
