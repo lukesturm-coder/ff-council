@@ -381,6 +381,7 @@ export default async function PlayerDetailPage({
             FantasyPros: "#2dd4bf", // teal-400
             Sleeper: "#22d3ee", // cyan-400
             NFL: "#60a5fa", // blue-400
+            CBS: "#818cf8", // indigo-400
             Yahoo: "#c084fc", // purple-400
           };
 
@@ -410,6 +411,7 @@ export default async function PlayerDetailPage({
               : null;
           const sleeperPpr = pickFromPlatformRowsPPR("sleeper");
           const nflPpr = pickFromPlatformRowsPPR("nfl");
+          const cbsPpr = pickFromPlatformRowsPPR("cbs");
           const yahooPpr = pickFromPlatformRowsPPR("yahoo");
 
           // Order chosen for cognitive consistency: house brands first
@@ -421,6 +423,7 @@ export default async function PlayerDetailPage({
             { source: "FantasyPros", rank: fpPpr ?? Number.NaN },
             { source: "Sleeper", rank: sleeperPpr ?? Number.NaN },
             { source: "NFL", rank: nflPpr ?? Number.NaN },
+            { source: "CBS", rank: cbsPpr ?? Number.NaN },
             { source: "Yahoo", rank: yahooPpr ?? Number.NaN },
           ].filter((s) => Number.isFinite(s.rank)) as Array<{
             source: string;
@@ -1005,6 +1008,7 @@ export default async function PlayerDetailPage({
                 : null,
             sleeper: pickFromPlatformRows("sleeper"),
             nfl: pickFromPlatformRows("nfl"),
+            cbs: pickFromPlatformRows("cbs"),
             yahoo: pickFromPlatformRows("yahoo"),
           };
 

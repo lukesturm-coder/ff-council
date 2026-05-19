@@ -13,6 +13,7 @@ export type SyntheticAdpSource =
   | "fantasypros"
   | "sleeper"
   | "nfl"
+  | "cbs"
   | "yahoo";
 
 export type AdpSourceMeta = {
@@ -33,5 +34,6 @@ export const ADP_SOURCES: AdpSourceMeta[] = [
   { key: "fantasypros", label: "FantasyPros", color: "#2dd4bf", defaultVisible: false },
   { key: "sleeper", label: "Sleeper", color: "#22d3ee", defaultVisible: false },
   { key: "nfl", label: "NFL", color: "#60a5fa", defaultVisible: false },
+  { key: "cbs", label: "CBS", color: "#818cf8", defaultVisible: false },
   { key: "yahoo", label: "Yahoo", color: "#c084fc", defaultVisible: false },
 ];
