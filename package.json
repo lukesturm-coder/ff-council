@@ -13,6 +13,7 @@
     "fetch:nfl": "tsx scripts/fetch-nfl.ts",
     "fetch:sleeper-adp": "tsx scripts/fetch-sleeper-adp.ts",
     "fetch:yahoo": "tsx scripts/fetch-yahoo.ts",
+    "expand:roster": "tsx scripts/expand-roster.ts",
     "scrape:vegas": "tsx scripts/scrape-vegas.ts",
     "fetch:vegas": "tsx scripts/fetch-vegas.ts"
   },
