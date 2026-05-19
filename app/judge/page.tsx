@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import JudgeFeed, { type JudgeItem } from "./JudgeFeed";
+import FilterSheet from "./FilterSheet";
 
 export const metadata: Metadata = {
   title: "Judge mode · FF Council",
@@ -333,6 +334,15 @@ export default async function JudgePage({
   const anyFilterActive =
     typeFilter !== "all" || leagueFilter !== "all" || scoringFilter !== "all";
 
+  // Count of non-default filters currently in effect — drives the
+  // "Filter (N)" label on the floating trigger. Sort is excluded; it
+  // defaults to "recent" which feels like an empty state.
+  const activeFilterCount =
+    (typeFilter !== "all" ? 1 : 0) +
+    (leagueFilter !== "all" ? 1 : 0) +
+    (scoringFilter !== "all" ? 1 : 0) +
+    (sortMode !== "recent" ? 1 : 0);
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
@@ -351,8 +361,10 @@ export default async function JudgePage({
           </Link>
         </div>
 
-        {/* Filters — pill rows. Each pill is a Link so URL params drive state. */}
-        <div className="mb-4 space-y-2">
+        {/* Filter chips collapsed into a floating bottom-sheet so the trade
+            card lands above the fold on mobile. Each pill is still a Link
+            keyed by URL search params — no client state for filter values. */}
+        <FilterSheet activeCount={activeFilterCount}>
           <FilterRow
             label="Sort"
             options={SORT_OPTIONS}
@@ -399,7 +411,7 @@ export default async function JudgePage({
               sort: sortMode,
             }}
           />
-        </div>
+        </FilterSheet>
 
         {feed.length === 0 ? (
           <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900 p-10 text-center">
