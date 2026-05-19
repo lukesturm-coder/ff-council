@@ -91,7 +91,7 @@ export function formatVerdict(
   diff: number | null,
   dataUnavailable: boolean,
 ): string {
-  if (dataUnavailable || diff == null) return "data unavailable";
+  if (dataUnavailable || diff == null) return "—";
   const abs = Math.abs(diff);
   if (abs < EVEN_THRESHOLD) return "Even";
   const winner = diff > 0 ? "Team A" : "Team B";
