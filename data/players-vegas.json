@@ -54,6 +54,12 @@
     "FantasyPosition": "QB"
   },
   {
+    "PlayerID": 23132,
+    "Name": "Bryce Young",
+    "Team": "CAR",
+    "FantasyPosition": "QB"
+  },
+  {
     "PlayerID": 23239,
     "Name": "C.J. Stroud",
     "Team": "HOU",
@@ -63,6 +69,12 @@
     "PlayerID": 24927,
     "Name": "Caleb Williams",
     "Team": "CHI",
+    "FantasyPosition": "QB"
+  },
+  {
+    "PlayerID": 25323,
+    "Name": "Cam Ward",
+    "Team": "TEN",
     "FantasyPosition": "QB"
   },
   {
@@ -76,6 +88,12 @@
     "Name": "CeeDee Lamb",
     "Team": "DAL",
     "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 24374,
+    "Name": "Chase Brown",
+    "Team": "CIN",
+    "FantasyPosition": "RB"
   },
   {
     "PlayerID": 22565,
@@ -108,6 +126,12 @@
     "FantasyPosition": "WR"
   },
   {
+    "PlayerID": 21684,
+    "Name": "D'Andre Swift",
+    "Team": "CHI",
+    "FantasyPosition": "RB"
+  },
+  {
     "PlayerID": 18055,
     "Name": "Dak Prescott",
     "Team": "DAL",
@@ -129,6 +153,12 @@
     "PlayerID": 20882,
     "Name": "David Montgomery",
     "Team": "HOU",
+    "FantasyPosition": "RB"
+  },
+  {
+    "PlayerID": 24179,
+    "Name": "De'Von Achane",
+    "Team": "MIA",
     "FantasyPosition": "RB"
   },
   {
@@ -246,6 +276,12 @@
     "FantasyPosition": "WR"
   },
   {
+    "PlayerID": 26082,
+    "Name": "Jaxson Dart",
+    "Team": "NYG",
+    "FantasyPosition": "QB"
+  },
+  {
     "PlayerID": 23235,
     "Name": "Jayden Daniels",
     "Team": "WAS",
@@ -330,6 +366,12 @@
     "FantasyPosition": "WR"
   },
   {
+    "PlayerID": 22508,
+    "Name": "Kyle Pitts Sr.",
+    "Team": "ATL",
+    "FantasyPosition": "TE"
+  },
+  {
     "PlayerID": 23212,
     "Name": "Kyren Williams",
     "Team": "LAR",
@@ -360,10 +402,22 @@
     "FantasyPosition": "WR"
   },
   {
+    "PlayerID": 24953,
+    "Name": "Malik Nabers",
+    "Team": "NYG",
+    "FantasyPosition": "WR"
+  },
+  {
     "PlayerID": 19803,
     "Name": "Mark Andrews",
     "Team": "BAL",
     "FantasyPosition": "TE"
+  },
+  {
+    "PlayerID": 24974,
+    "Name": "Marvin Harrison Jr.",
+    "Team": "ARI",
+    "FantasyPosition": "WR"
   },
   {
     "PlayerID": 9038,
@@ -436,6 +490,12 @@
     "Name": "Tetairoa McMillan",
     "Team": "CAR",
     "FantasyPosition": "WR"
+  },
+  {
+    "PlayerID": 20912,
+    "Name": "Tony Pollard",
+    "Team": "TEN",
+    "FantasyPosition": "RB"
   },
   {
     "PlayerID": 15048,

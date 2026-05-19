@@ -18,7 +18,6 @@ import path from "node:path";
 import {
   fetchFutures,
   pairOverUnderByPlayer,
-  type ObFuture,
   type PlayerLine,
 } from "../lib/odds-blaze";
 import type {
@@ -62,81 +61,77 @@ function toSdioPlayerId(player: PlayerLine["player"]): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function toBettingMarket(
-  future: ObFuture,
-  betType: string,
-  playerLine: PlayerLine,
-): BettingMarket | null {
-  const playerId = toSdioPlayerId(playerLine.player);
-  if (playerId == null) return null;
+// Books to pull from. OddsBlaze covers DraftKings + FanDuel for the
+// season-long player stat markets; other books are not yet listing them.
+// FanDuel carries Pass Yds / Pass TDs / Rec Yds but NOT Rush Yds — so for
+// rush-yard markets the average effectively equals the DK line.
+const BOOKS: Array<{ id: string; name: string; sportsbookId: number }> = [
+  { id: "draftkings", name: "DraftKings", sportsbookId: 19 },
+  { id: "fanduel", name: "FanDuel", sportsbookId: 18 },
+];
 
-  const marketId = hashId(`${future.id}#${playerLine.player.id}`);
-  const over: BettingOutcome = {
-    BettingOutcomeID: hashId(`${marketId}#over`),
-    BettingMarketID: marketId,
-    BettingOutcomeType: "Over",
-    PayoutAmerican: Number(playerLine.overPrice),
-    Value: playerLine.line,
-    Participant: "Over",
-    IsAvailable: true,
-    IsAlternate: false,
-    PlayerID: playerId,
-    SportsBook: { SportsbookID: 19, Name: "DraftKings" },
-  };
-  const under: BettingOutcome = {
-    BettingOutcomeID: hashId(`${marketId}#under`),
-    BettingMarketID: marketId,
-    BettingOutcomeType: "Under",
-    PayoutAmerican: Number(playerLine.underPrice),
-    Value: playerLine.line,
-    Participant: "Under",
-    IsAvailable: true,
-    IsAlternate: false,
-    PlayerID: playerId,
-    SportsBook: { SportsbookID: 19, Name: "DraftKings" },
-  };
-  return {
-    BettingMarketID: marketId,
-    BettingMarketType: "Player Prop",
-    BettingBetType: betType,
-    Name: `${playerLine.player.name} ${betType}`,
-    PlayerID: playerId,
-    PlayerName: playerLine.player.name,
-    TeamKey: playerLine.player.team.abbreviation,
-    BettingOutcomes: [over, under],
-    AvailableSportsbooks: [{ SportsbookID: 19, Name: "DraftKings" }],
-  };
-}
+type BookLine = {
+  bookName: string;
+  bookId: number;
+  line: number;
+  overPrice: string;
+  underPrice: string;
+};
 
 async function main() {
-  const res = await fetchFutures({ sportsbook: "draftkings", league: "nfl" });
-  console.log(
-    `OddsBlaze returned ${res.futures.length} futures markets for NFL @ DraftKings (updated ${res.updated})`,
+  // Pull every book in parallel and bucket lines by (sdioPlayerId, betType).
+  const responses = await Promise.all(
+    BOOKS.map(async (b) => ({
+      book: b,
+      res: await fetchFutures({ sportsbook: b.id, league: "nfl" }),
+    })),
   );
+  for (const { book, res } of responses) {
+    console.log(
+      `OddsBlaze ${book.name}: ${res.futures.length} futures markets (updated ${res.updated})`,
+    );
+  }
 
-  const markets: BettingMarket[] = [];
-  let skippedPlayers = 0;
-  const breakdown: Record<string, number> = {};
-  // Build a player roster as we go — every player that shows up in a
-  // futures market gets a roster entry with their real SportsDataIO id +
-  // position + team. Output goes to data/players-vegas.json.
+  // Collect every book's line for each (player, betType) combo.
+  type Bucket = {
+    player: PlayerLine["player"];
+    betType: string;
+    lines: BookLine[];
+  };
+  const buckets = new Map<string, Bucket>(); // key = sdioId#betType
   const rosterById = new Map<number, PlayerRosterEntry>();
+  const breakdown: Record<string, number> = {};
+  let skippedPlayers = 0;
 
-  for (const future of res.futures) {
-    const betType = MARKET_MAP[future.market];
-    if (!betType) continue; // not a player-stat market we model
+  for (const { book, res } of responses) {
+    for (const future of res.futures) {
+      const betType = MARKET_MAP[future.market];
+      if (!betType) continue;
 
-    const lines = pairOverUnderByPlayer(future);
-    breakdown[future.market] = lines.length;
+      const lines = pairOverUnderByPlayer(future);
+      breakdown[future.market] = (breakdown[future.market] ?? 0) + lines.length;
 
-    for (const line of lines) {
-      const m = toBettingMarket(future, betType, line);
-      if (m) {
-        markets.push(m);
+      for (const line of lines) {
         const sdio = toSdioPlayerId(line.player);
+        if (sdio == null) {
+          skippedPlayers += 1;
+          continue;
+        }
+        const key = `${sdio}#${betType}`;
+        const bucket =
+          buckets.get(key) ??
+          ({ player: line.player, betType, lines: [] } as Bucket);
+        bucket.lines.push({
+          bookName: book.name,
+          bookId: book.sportsbookId,
+          line: line.line,
+          overPrice: line.overPrice,
+          underPrice: line.underPrice,
+        });
+        buckets.set(key, bucket);
+
         const pos = line.player.position as FantasyPosition;
         if (
-          sdio != null &&
           !rosterById.has(sdio) &&
           (pos === "QB" || pos === "RB" || pos === "WR" || pos === "TE")
         ) {
@@ -147,10 +142,68 @@ async function main() {
             FantasyPosition: pos,
           });
         }
-      } else {
-        skippedPlayers += 1;
       }
     }
+  }
+
+  // For each bucket, average the line + prices across the books that have
+  // it. One BettingMarket per (player, betType); AvailableSportsbooks lists
+  // every contributing book.
+  const markets: BettingMarket[] = [];
+  const coverageCounts = { both: 0, dkOnly: 0, fdOnly: 0 };
+
+  for (const [, bucket] of Array.from(buckets.entries())) {
+    const avg = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
+    const avgLine = avg(bucket.lines.map((l) => l.line));
+    const avgOverPrice = Math.round(avg(bucket.lines.map((l) => Number(l.overPrice))));
+    const avgUnderPrice = Math.round(avg(bucket.lines.map((l) => Number(l.underPrice))));
+
+    const playerId = toSdioPlayerId(bucket.player)!;
+    const marketId = hashId(`${playerId}#${bucket.betType}`);
+    const contributingBooks = bucket.lines.map((l) => ({
+      SportsbookID: l.bookId,
+      Name: l.bookName,
+    }));
+
+    if (bucket.lines.length === 2) coverageCounts.both += 1;
+    else if (bucket.lines[0].bookName === "DraftKings") coverageCounts.dkOnly += 1;
+    else coverageCounts.fdOnly += 1;
+
+    const over: BettingOutcome = {
+      BettingOutcomeID: hashId(`${marketId}#over`),
+      BettingMarketID: marketId,
+      BettingOutcomeType: "Over",
+      PayoutAmerican: avgOverPrice,
+      Value: avgLine,
+      Participant: "Over",
+      IsAvailable: true,
+      IsAlternate: false,
+      PlayerID: playerId,
+      SportsBook: contributingBooks[0],
+    };
+    const under: BettingOutcome = {
+      BettingOutcomeID: hashId(`${marketId}#under`),
+      BettingMarketID: marketId,
+      BettingOutcomeType: "Under",
+      PayoutAmerican: avgUnderPrice,
+      Value: avgLine,
+      Participant: "Under",
+      IsAvailable: true,
+      IsAlternate: false,
+      PlayerID: playerId,
+      SportsBook: contributingBooks[0],
+    };
+    markets.push({
+      BettingMarketID: marketId,
+      BettingMarketType: "Player Prop",
+      BettingBetType: bucket.betType,
+      Name: `${bucket.player.name} ${bucket.betType}`,
+      PlayerID: playerId,
+      PlayerName: bucket.player.name,
+      TeamKey: bucket.player.team.abbreviation,
+      BettingOutcomes: [over, under],
+      AvailableSportsbooks: contributingBooks,
+    });
   }
 
   const event: BettingEvent = {
@@ -172,15 +225,18 @@ async function main() {
   await fs.writeFile(playersPath, JSON.stringify(roster, null, 2));
 
   console.log("");
-  console.log("Markets per stat type:");
+  console.log("Markets per stat type (summed across books):");
   for (const [k, v] of Object.entries(breakdown)) {
     console.log(`  ${v.toString().padStart(4)}  ${k}`);
   }
   console.log("");
-  console.log(`Total markets written: ${markets.length}`);
+  console.log(`Unique (player, market) combos: ${markets.length}`);
+  console.log(`  Both books:    ${coverageCounts.both}`);
+  console.log(`  DraftKings only: ${coverageCounts.dkOnly}`);
+  console.log(`  FanDuel only:    ${coverageCounts.fdOnly}`);
   console.log(`Unique players in roster: ${roster.length}`);
   if (skippedPlayers > 0) {
-    console.log(`Skipped ${skippedPlayers} players (no SportsDataIO mapping)`);
+    console.log(`Skipped ${skippedPlayers} odds rows (no SportsDataIO mapping)`);
   }
   console.log(`→ ${futuresPath}`);
   console.log(`→ ${playersPath}`);
