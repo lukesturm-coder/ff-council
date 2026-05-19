@@ -87,6 +87,8 @@ type ParsedRow = {
   rankingType: "editorial";
   scoringSystem: ScoringSystem;
   rankValue: number;
+  /** Season projected fantasy points from FP's draft projections table. */
+  projectedPoints: number | null;
   playerName: string;
   playerTeam: string;
 };
@@ -98,6 +100,71 @@ type UnmappedRow = {
   rawName: string;
   rawTeam: string | null;
 };
+
+/**
+ * FantasyPros publishes a season-projection table per position at
+ *   /nfl/projections/{position}.php?week=draft&scoring={PPR|HALF|STD}
+ * The last cell of each player row carries a `data-sort-value` with the
+ * un-rounded season FPTS. Rows are scoped by `<tr class="mpb-player-{fpId} …">`
+ * where {fpId} is the same FP player_id used in the ecrData blob — so we can
+ * key projection points by FP id and join against ECR rows after matching.
+ *
+ * Position slugs map to the ones in FP's projections URL paths.
+ */
+const FP_PROJ_POSITIONS = ["qb", "rb", "wr", "te", "k", "dst"] as const;
+
+async function fetchProjectionPoints(
+  scoring: ScoringSystem,
+): Promise<Map<number, number>> {
+  const scoringParam =
+    scoring === "PPR" ? "PPR" : scoring === "Half" ? "HALF" : "STD";
+  const byFpId = new Map<number, number>();
+  for (const pos of FP_PROJ_POSITIONS) {
+    const url = `https://www.fantasypros.com/nfl/projections/${pos}.php?week=draft&scoring=${scoringParam}`;
+    let html: string;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          Accept: "text/html,application/xhtml+xml",
+        },
+      });
+      if (!res.ok) {
+        console.log(`    ${pos} (${scoringParam}) → ${res.status}, skipping`);
+        continue;
+      }
+      html = await res.text();
+    } catch (err) {
+      console.log(
+        `    ${pos} (${scoringParam}) → ${err instanceof Error ? err.message : String(err)}`,
+      );
+      continue;
+    }
+    // Each player row: <tr class="mpb-player-{ID} ..."> ... <td ... data-sort-value="{pts}">{rounded}</td></tr>
+    const rowRe = /<tr\s+class="mpb-player-(\d+)[^"]*"[^>]*>([\s\S]*?)<\/tr>/g;
+    const sortRe = /data-sort-value="([\d.]+)"/g;
+    let m: RegExpExecArray | null;
+    let count = 0;
+    while ((m = rowRe.exec(html)) !== null) {
+      const fpId = Number(m[1]);
+      if (!Number.isFinite(fpId)) continue;
+      // Take the LAST data-sort-value in the row — that's the FPTS column.
+      const matches = Array.from(m[2].matchAll(sortRe));
+      if (matches.length === 0) continue;
+      const ptsRaw = matches[matches.length - 1][1];
+      const pts = Number(ptsRaw);
+      if (Number.isFinite(pts) && pts > 0) {
+        byFpId.set(fpId, Math.round(pts * 10) / 10);
+        count++;
+      }
+    }
+    console.log(`    ${pos} (${scoringParam}): parsed ${count} projection rows`);
+    // Polite delay
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return byFpId;
+}
 
 async function fetchEcrData(url: string): Promise<EcrData> {
   const res = await fetch(url, {
@@ -161,6 +228,7 @@ function parseEcr(
   ecr: EcrData,
   scoring: ScoringSystem,
   matcher: PlayerMatcher,
+  pointsByFpId: Map<number, number>,
 ): {
   matched: ParsedRow[];
   unmapped: UnmappedRow[];
@@ -240,6 +308,7 @@ function parseEcr(
       rankingType: "editorial",
       scoringSystem: scoring,
       rankValue: c.rank,
+      projectedPoints: pointsByFpId.get(c.fp.player_id) ?? null,
       playerName: c.name,
       playerTeam: c.team ?? "",
     });
@@ -250,23 +319,41 @@ function parseEcr(
 
 async function upsertRows(rows: ParsedRow[]) {
   if (rows.length === 0) return;
+  // Attempt with projected_points; fall back to the legacy shape if migration
+  // 016 hasn't been applied yet.
+  let withPoints = true;
   const chunkSize = 500;
   for (let i = 0; i < rows.length; i += chunkSize) {
-    const chunk = rows.slice(i, i + chunkSize).map((r) => ({
-      player_id: r.playerId,
-      source: "fantasypros",
-      ranking_type: r.rankingType,
-      scoring_system: r.scoringSystem,
-      rank_value: r.rankValue,
-      player_name: r.playerName,
-      player_team: r.playerTeam,
-    }));
+    const slice = rows.slice(i, i + chunkSize);
+    const chunk = slice.map((r) => {
+      const row: Record<string, unknown> = {
+        player_id: r.playerId,
+        source: "fantasypros",
+        ranking_type: r.rankingType,
+        scoring_system: r.scoringSystem,
+        rank_value: r.rankValue,
+        player_name: r.playerName,
+        player_team: r.playerTeam,
+      };
+      if (withPoints) row.projected_points = r.projectedPoints;
+      return row;
+    });
     const { error } = await supabase
       .from("platform_rankings")
       .upsert(chunk, {
         onConflict: "player_id,source,ranking_type,scoring_system",
       });
-    if (error) throw new Error(`upsert failed: ${error.message}`);
+    if (error) {
+      if (withPoints && /projected_points/.test(error.message)) {
+        console.log(
+          `  ⚠ projected_points column missing — run migration 016. Retrying without.`,
+        );
+        withPoints = false;
+        i -= chunkSize;
+        continue;
+      }
+      throw new Error(`upsert failed: ${error.message}`);
+    }
   }
 }
 
@@ -314,9 +401,30 @@ async function main() {
       `  ecrData: year=${ecr.year} scoring=${ecr.scoring} count=${ecr.count} experts=${ecr.total_experts ?? "?"}`,
     );
 
-    const { matched, unmapped, matchStats } = parseEcr(ecr, scoring, matcher);
+    // Pull season projection points for this scoring system (one URL per
+    // position × scoring). Keyed by FP player_id so we can attach to ECR rows.
+    console.log(`  → fetching season projection points for ${scoring}…`);
+    let pointsByFpId = new Map<number, number>();
+    try {
+      pointsByFpId = await fetchProjectionPoints(scoring);
+      console.log(`    points coverage: ${pointsByFpId.size} FP players`);
+    } catch (err) {
+      console.log(
+        `    points fetch failed: ${err instanceof Error ? err.message : String(err)} — emitting null points`,
+      );
+    }
+
+    const { matched, unmapped, matchStats } = parseEcr(
+      ecr,
+      scoring,
+      matcher,
+      pointsByFpId,
+    );
+    const withPts = matched.filter((m) => m.projectedPoints != null).length;
     console.log(`  Match stats: ${JSON.stringify(matchStats)}`);
-    console.log(`  matched ${matched.length} unique players`);
+    console.log(
+      `  matched ${matched.length} unique players (${withPts} with projected_points)`,
+    );
     console.log(`  unmapped ${unmapped.length} rows`);
     allMatched.push(...matched);
     allUnmapped.push(...unmapped);
