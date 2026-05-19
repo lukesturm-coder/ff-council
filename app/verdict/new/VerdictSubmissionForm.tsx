@@ -469,7 +469,7 @@ export default function VerdictSubmissionForm({
           className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Send className="h-3.5 w-3.5" />
-          Get the council&apos;s verdict
+          Submit for community vote
         </button>
       </div>
     </form>

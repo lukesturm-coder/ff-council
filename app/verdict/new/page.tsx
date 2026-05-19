@@ -50,10 +50,10 @@ export default async function NewVerdictPage({
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="mb-4 space-y-1">
-          <h2 className="text-2xl font-semibold">Ask the Council</h2>
+          <h2 className="text-2xl font-semibold">Post a tough call</h2>
           <p className="text-sm text-zinc-400">
             Stuck on a draft pick or a start/sit? Drop 2-5 candidates and the
-            crowd will vote one-tap on who they&apos;d take. No sign-in needed
+            community votes one-tap on who they&apos;d take. No sign-in needed
             to ask or to vote.
           </p>
         </div>

@@ -1072,7 +1072,7 @@ export default async function PlayerDetailPage({
         <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
           <div className="mb-3 flex items-baseline justify-between gap-2">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              In the news — Trade Court
+              In the news — Trades
             </h3>
             <Link
               href="/trades"

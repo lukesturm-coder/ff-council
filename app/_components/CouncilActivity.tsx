@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 // =====================================================================
-// CouncilActivity — home-page doorway into Trade Court + Verdict.
+// CouncilActivity — home-page doorway into Trades + Tough Calls.
 // Renders the 3 most-voted trade scenarios and the 3 most-voted
 // verdict scenarios as small cards. Goal: give people landing on
 // the rankings home a low-friction next step into the voting loop.
@@ -206,7 +206,7 @@ export default async function CouncilActivity() {
     <section className="mt-10 border-t border-zinc-800 pt-8">
       <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
         <h2 className="text-lg font-semibold text-zinc-100 sm:text-xl">
-          What the council is judging
+          What the community is voting on
         </h2>
         <p className="text-xs text-zinc-500">
           Tap a card to cast your vote.
@@ -217,7 +217,7 @@ export default async function CouncilActivity() {
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              Trade Court
+              Trades
             </h3>
             <Link
               href="/trades"
@@ -244,18 +244,18 @@ export default async function CouncilActivity() {
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              Verdict
+              Tough calls
             </h3>
             <Link
               href="/verdict"
               className="text-xs text-emerald-400 underline-offset-4 hover:underline"
             >
-              All verdicts →
+              All tough calls →
             </Link>
           </div>
           {topVerdicts.length === 0 ? (
             <EmptyState
-              copy="No verdicts with votes yet."
+              copy="No tough calls with votes yet."
               ctaHref="/verdict/new"
               ctaLabel="Post a tough call"
             />

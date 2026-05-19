@@ -192,16 +192,15 @@ export default function TradePromptClient({
           <div className="py-10 text-center">
             <h3 className="text-2xl font-bold text-emerald-300">Thanks!</h3>
             <p className="mt-2 text-sm text-zinc-400">
-              Your verdict has been added to the Trade Court.
+              Your vote has been recorded.
             </p>
           </div>
         ) : (
           <>
             <div className="mb-4 text-center">
-              <h3 className="text-2xl font-bold text-zinc-100">Your verdict?</h3>
+              <h3 className="text-2xl font-bold text-zinc-100">Who won?</h3>
               <p className="mt-1 text-sm text-zinc-400">
-                FF Council&apos;s trade rulings are crowdsourced from drafters
-                like you.
+                Every trade on FF Council is voted on by drafters like you.
               </p>
               <p className="mt-1 text-xs text-zinc-500">
                 {leagueType} · {scoring}

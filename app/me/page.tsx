@@ -526,7 +526,7 @@ export default async function MePage() {
                       href="/trades"
                       className="text-emerald-300 underline-offset-4 hover:underline"
                     >
-                      head to Trade Court
+                      head to Trades
                     </Link>
                     .
                   </p>

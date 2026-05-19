@@ -399,19 +399,19 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
         <VerdictPanel a={aMetrics} b={bMetrics} scoring={scoring} />
       )}
 
-      {/* Send to Trade Court */}
+      {/* Submit for community vote */}
       {(aPlayers.length > 0 || picksA.length > 0) &&
         (bPlayers.length > 0 || picksB.length > 0) && (
           <div className="flex flex-col items-stretch gap-3 border-t border-zinc-800 pt-4 sm:flex-row sm:items-center sm:justify-end">
             <p className="text-xs text-zinc-500">
-              Want the council&apos;s take instead of just the math?
+              Want the community&apos;s take instead of just the math?
             </p>
             <Link
               href={submitHref}
               className="inline-flex items-center justify-center gap-1.5 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 sm:py-1.5"
             >
               <Send className="h-3.5 w-3.5" />
-              Submit to Trade Court
+              Submit for community vote
             </Link>
           </div>
         )}
