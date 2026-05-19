@@ -58,10 +58,16 @@ const NOTES_MAX = 500;
 
 export default function VerdictSubmissionForm({
   players,
+  initialScenarioType = "draft",
 }: {
   players: PickablePlayer[];
+  // Optional starting tab — set by /verdict/new when entering via the
+  // unified case-type picker (?type=draft|start_sit). User can still
+  // toggle to the other mode inside the form.
+  initialScenarioType?: VerdictScenarioType;
 }) {
-  const [scenarioType, setScenarioType] = useState<VerdictScenarioType>("draft");
+  const [scenarioType, setScenarioType] =
+    useState<VerdictScenarioType>(initialScenarioType);
 
   // Context (mode-dependent)
   const [scoring, setScoring] = useState<string>("PPR");

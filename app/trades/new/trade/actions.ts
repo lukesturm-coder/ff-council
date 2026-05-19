@@ -38,14 +38,14 @@ export async function submitTrade(formData: FormData) {
     side_a = JSON.parse(side_a_raw);
     side_b = JSON.parse(side_b_raw);
   } catch {
-    redirect("/trades/new?error=Invalid+trade+payload");
+    redirect("/trades/new/trade?error=Invalid+trade+payload");
   }
 
   if (
     side_a!.players.length + side_a!.picks.length === 0 ||
     side_b!.players.length + side_b!.picks.length === 0
   ) {
-    redirect("/trades/new?error=Both+sides+need+at+least+one+player+or+pick");
+    redirect("/trades/new/trade?error=Both+sides+need+at+least+one+player+or+pick");
   }
 
   const { data, error } = await supabase
@@ -65,7 +65,7 @@ export async function submitTrade(formData: FormData) {
 
   if (error || !data) {
     redirect(
-      `/trades/new?error=${encodeURIComponent(error?.message ?? "Submission failed")}`,
+      `/trades/new/trade?error=${encodeURIComponent(error?.message ?? "Submission failed")}`,
     );
   }
 

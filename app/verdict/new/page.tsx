@@ -5,11 +5,12 @@ import {
   type PlayerRosterEntry,
 } from "@/lib/projections";
 import type { FantasyPosition, FuturesResponse } from "@/lib/types";
+import type { VerdictScenarioType } from "../types";
 import VerdictSubmissionForm, {
   type PickablePlayer,
 } from "./VerdictSubmissionForm";
 
-// Same loader as app/trades/new/page.tsx — denormalises the futures-based
+// Same loader as app/trades/new/trade/page.tsx — denormalises the futures-based
 // projections into the lightweight PickablePlayer shape used by the form's
 // search dropdown.
 async function loadPlayers(): Promise<PickablePlayer[]> {
@@ -30,8 +31,20 @@ async function loadPlayers(): Promise<PickablePlayer[]> {
   }));
 }
 
-export default async function NewVerdictPage() {
+export default async function NewVerdictPage({
+  searchParams,
+}: {
+  // Accepts ?type=draft|start_sit from the case-type picker at
+  // /trades/new. Direct visits without the param land on "draft" (the
+  // historical default).
+  searchParams: Promise<{ type?: string }>;
+}) {
+  const params = await searchParams;
   const players = await loadPlayers();
+  const initialScenarioType: VerdictScenarioType =
+    params.type === "start_sit" || params.type === "draft"
+      ? params.type
+      : "draft";
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -45,7 +58,10 @@ export default async function NewVerdictPage() {
           </p>
         </div>
 
-        <VerdictSubmissionForm players={players} />
+        <VerdictSubmissionForm
+          players={players}
+          initialScenarioType={initialScenarioType}
+        />
       </div>
     </main>
   );

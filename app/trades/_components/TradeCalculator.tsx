@@ -293,8 +293,10 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
     picksB.length > 0;
 
   // Submit-to-court link: picks aren't carried over (court form re-parses
-  // them on its own) but selected players prefill cleanly.
-  const submitHref = `/trades/new?a=${sideA.join(",")}&b=${sideB.join(",")}`;
+  // them on its own) but selected players prefill cleanly. We jump
+  // straight to /trades/new/trade and skip the case-type picker — the
+  // user already has a trade built, the intent is obvious.
+  const submitHref = `/trades/new/trade?a=${sideA.join(",")}&b=${sideB.join(",")}`;
 
   return (
     <div className="space-y-6">
