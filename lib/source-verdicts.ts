@@ -74,8 +74,10 @@ export function rankToValue(rank: number): number {
   return Math.max(0, TOP_VALUE - (rank - 1) * SLOPE);
 }
 
-/** "Even" threshold in fantasy points. Below this we call it a wash. */
-export const EVEN_THRESHOLD = 3;
+/** "Even" threshold in fantasy points. Below this we call it a wash.
+ * Calibrated to roughly one RB1-flex weekly swap — matches the casual
+ * "this trade feels fair" eyeball test. */
+export const EVEN_THRESHOLD = 10;
 
 export function formatVerdict(
   diff: number | null,
