@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   BarChart3,
-  Calculator,
   ClipboardList,
   Gavel,
   Layers,
@@ -61,12 +60,6 @@ const TILES: Tile[] = [
     description:
       "Post a tough call. Draft pick or start/sit. Get the verdict.",
     icon: MessageSquareQuote,
-  },
-  {
-    href: "/trade",
-    title: "Trade Calc",
-    description: "Side-by-side value comparison. Shareable links.",
-    icon: Calculator,
   },
   {
     href: "/draft",

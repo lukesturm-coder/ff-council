@@ -29,7 +29,8 @@ const PRIORITY_NAV: NavItem[] = [
 ];
 
 const UTILITY_NAV: NavItem[] = [
-  { href: "/trade", label: "Trade Calc" },
+  // Trade Calc removed — it now lives on /trades (Trade Court) at the top
+  // of the page. /trade still resolves but redirects to /trades.
   { href: "/draft", label: "Mock Draft" },
   { href: "/league", label: "League Analyzer" },
   { href: "/leaderboard", label: "Leaderboard" },

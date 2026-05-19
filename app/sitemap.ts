@@ -20,13 +20,14 @@ const STATIC_PATHS = [
   "/verdict",
   "/verdict/new",
   "/draft",
-  "/trade",
   "/league",
   "/council",
   "/council/rankings",
   "/privacy",
   "/terms",
 ] as const;
+// /trade intentionally omitted — it now redirects to /trades. Including
+// a redirect URL in the sitemap confuses crawlers.
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
