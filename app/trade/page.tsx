@@ -12,6 +12,8 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
+import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
+import type { PlatformRankingsMap } from "@/app/_components/RankingsTable";
 import TradeCalculator, {
   type TradePlayer,
 } from "./TradeCalculator";
@@ -55,27 +57,32 @@ async function loadAllPlayers(): Promise<TradePlayer[]> {
   ]);
 
   type PerScoring = Partial<Record<ScoringSystem, number>>;
-  const espnAdp = new Map<number, PerScoring>();
-  const fpAdp = new Map<number, PerScoring>();
   const council = new Map<number, PerScoring>();
 
+  // Build a nested PlatformRankingsMap, then layer mock fill-in so deep
+  // players have plausible numbers in every source column.
+  const rawMap: PlatformRankingsMap = {};
   for (const r of (platformResult.data ?? []) as PlatformRow[]) {
-    const target =
-      r.source === "espn" && r.ranking_type === "adp"
-        ? espnAdp
-        : r.source === "fantasypros" && r.ranking_type === "adp"
-          ? fpAdp
-          : null;
-    if (!target) continue;
-    const existing = target.get(r.player_id) ?? {};
-    existing[r.scoring_system] = Number(r.rank_value);
-    target.set(r.player_id, existing);
+    const player = rawMap[r.player_id] ?? (rawMap[r.player_id] = {});
+    const source = player[r.source] ?? (player[r.source] = {});
+    const byType = source[r.ranking_type] ?? (source[r.ranking_type] = {});
+    byType[r.scoring_system] = Number(r.rank_value);
   }
+  const platformMap = withMockPlatformRankings(rawMap, projections);
+
   for (const row of councilResult.data ?? []) {
     const existing = council.get(row.player_id as number) ?? {};
     existing[row.scoring_system as ScoringSystem] = Number(row.avg_rank);
     council.set(row.player_id as number, existing);
   }
+
+  const pickRanks = (
+    playerId: number,
+    source: string,
+    type: "editorial" | "adp",
+  ): PerScoring => {
+    return (platformMap[playerId]?.[source]?.[type] ?? {}) as PerScoring;
+  };
 
   return projections.map((p) => ({
     playerId: p.playerId,
@@ -84,8 +91,11 @@ async function loadAllPlayers(): Promise<TradePlayer[]> {
     team: p.team,
     fantasyPoints: p.fantasyPoints,
     vbd: p.vbd,
-    espnAdp: espnAdp.get(p.playerId) ?? {},
-    fpAdp: fpAdp.get(p.playerId) ?? {},
+    espnAdp: pickRanks(p.playerId, "espn", "adp"),
+    fpAdp: pickRanks(p.playerId, "fantasypros", "adp"),
+    sleeperAdp: pickRanks(p.playerId, "sleeper", "adp"),
+    nflRank: pickRanks(p.playerId, "nfl", "editorial"),
+    yahooRank: pickRanks(p.playerId, "yahoo", "editorial"),
     councilRank: council.get(p.playerId) ?? {},
   }));
 }
@@ -98,9 +108,9 @@ export default async function TradePage() {
         <div className="mb-4 space-y-1">
           <h2 className="text-xl font-semibold sm:text-2xl">Trade Calculator</h2>
           <p className="text-xs text-zinc-400 sm:text-sm">
-            Add players to each side. See whether the trade is fair through
-            four lenses: Vegas season points, ESPN ADP, FantasyPros ADP, and
-            the Council Consensus.
+            Add players to each side. See whether the trade is fair across
+            every source we track — Vegas season points, ESPN, FantasyPros,
+            Sleeper, NFL, Yahoo, and the Council Consensus.
           </p>
         </div>
         <Suspense fallback={null}>

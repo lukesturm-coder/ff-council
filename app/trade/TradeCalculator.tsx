@@ -25,6 +25,9 @@ export type TradePlayer = {
   vbd: Record<ScoringSystem, number>;
   espnAdp: Partial<Record<ScoringSystem, number>>;
   fpAdp: Partial<Record<ScoringSystem, number>>;
+  sleeperAdp: Partial<Record<ScoringSystem, number>>;
+  nflRank: Partial<Record<ScoringSystem, number>>;
+  yahooRank: Partial<Record<ScoringSystem, number>>;
   councilRank: Partial<Record<ScoringSystem, number>>;
 };
 
@@ -594,6 +597,9 @@ type SideMetrics = {
   vegasVbd: number;
   espnAdpAvg: number | null;
   fpAdpAvg: number | null;
+  sleeperAdpAvg: number | null;
+  nflRankAvg: number | null;
+  yahooRankAvg: number | null;
   councilAvg: number | null;
   espnValue: number | null;
   fpValue: number | null;
@@ -621,6 +627,18 @@ function computeMetrics(
     ...players.map((p) => p.fpAdp[scoring]),
     ...pickAdps,
   ]);
+  const sleeperAdpAvg = averageOrNull([
+    ...players.map((p) => p.sleeperAdp[scoring] ?? p.sleeperAdp.PPR),
+    ...pickAdps,
+  ]);
+  const nflRankAvg = averageOrNull([
+    ...players.map((p) => p.nflRank[scoring] ?? p.nflRank.PPR),
+    ...pickAdps,
+  ]);
+  const yahooRankAvg = averageOrNull([
+    ...players.map((p) => p.yahooRank[scoring] ?? p.yahooRank.PPR),
+    ...pickAdps,
+  ]);
   const councilAvg = averageOrNull([
     ...players.map((p) => p.councilRank[scoring]),
     ...pickAdps,
@@ -631,6 +649,9 @@ function computeMetrics(
     vegasVbd,
     espnAdpAvg,
     fpAdpAvg,
+    sleeperAdpAvg,
+    nflRankAvg,
+    yahooRankAvg,
     councilAvg,
     espnValue: averageOrNull([
       ...players.map((p) => adpValue(p.espnAdp[scoring] ?? p.espnAdp.PPR)),
@@ -703,6 +724,33 @@ function VerdictPanel({
       bDisplay: b.fpAdpAvg != null ? b.fpAdpAvg.toFixed(1) : "—",
       direction: "lower",
       color: "text-sky-300",
+    },
+    {
+      label: "Sleeper ADP (avg, lower = better)",
+      aValue: a.sleeperAdpAvg,
+      bValue: b.sleeperAdpAvg,
+      aDisplay: a.sleeperAdpAvg != null ? a.sleeperAdpAvg.toFixed(1) : "—",
+      bDisplay: b.sleeperAdpAvg != null ? b.sleeperAdpAvg.toFixed(1) : "—",
+      direction: "lower",
+      color: "text-cyan-300",
+    },
+    {
+      label: "NFL (avg, lower = better)",
+      aValue: a.nflRankAvg,
+      bValue: b.nflRankAvg,
+      aDisplay: a.nflRankAvg != null ? a.nflRankAvg.toFixed(1) : "—",
+      bDisplay: b.nflRankAvg != null ? b.nflRankAvg.toFixed(1) : "—",
+      direction: "lower",
+      color: "text-blue-300",
+    },
+    {
+      label: "Yahoo (avg, lower = better)",
+      aValue: a.yahooRankAvg,
+      bValue: b.yahooRankAvg,
+      aDisplay: a.yahooRankAvg != null ? a.yahooRankAvg.toFixed(1) : "—",
+      bDisplay: b.yahooRankAvg != null ? b.yahooRankAvg.toFixed(1) : "—",
+      direction: "lower",
+      color: "text-purple-300",
     },
     {
       label: "Council (avg, lower = better)",
