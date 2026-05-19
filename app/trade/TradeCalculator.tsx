@@ -310,28 +310,32 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
             </button>
           ))}
         </div>
+        {/* On mobile (390px) the four controls below need to fit on one
+            row, so Swap/Share/Clear collapse to icon-only — labels reappear
+            at sm: and up. Icons keep an aria-label for screen readers. */}
         <button
           onClick={swapSides}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+          aria-label="Swap sides"
         >
           <ArrowLeftRight className="h-3.5 w-3.5" />
-          Swap sides
+          <span className="hidden sm:inline">Swap sides</span>
         </button>
         {hasAnything && (
           <button
             onClick={copyShareLink}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
             aria-label="Copy shareable link"
           >
             {copied ? (
               <>
                 <Check className="h-3.5 w-3.5 text-emerald-400" />
-                Copied
+                <span className="hidden sm:inline">Copied</span>
               </>
             ) : (
               <>
                 <Link2 className="h-3.5 w-3.5" />
-                Share
+                <span className="hidden sm:inline">Share</span>
               </>
             )}
           </button>
@@ -339,9 +343,11 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
         {hasAnything && (
           <button
             onClick={clearAll}
-            className="shrink-0 text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
+            aria-label="Clear all"
           >
-            Clear all
+            <X className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Clear all</span>
           </button>
         )}
       </div>
