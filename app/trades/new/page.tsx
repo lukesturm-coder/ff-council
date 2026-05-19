@@ -8,9 +8,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Open a case · FF Council",
+  title: "Submit a question · FF Council",
   description:
-    "Submit a trade, start/sit, or draft pick. The council weighs in. Consensus emerges.",
+    "Submit a trade, start/sit, or draft pick. The community votes. Consensus emerges.",
 };
 
 // =====================================================================
@@ -36,12 +36,12 @@ const CASE_CHOICES: CaseChoice[] = [
   {
     href: "/trades/new/trade",
     title: "Trade",
-    description: "Get the council's verdict on who won the deal.",
+    description: "Get the community's take on who won the deal.",
     icon: ArrowLeftRight,
   },
   {
     href: "/verdict/new?type=start_sit",
-    title: "Start-Sit",
+    title: "Start or Sit",
     description: "Two players, one lineup spot. The crowd picks.",
     icon: Gavel,
   },
@@ -59,11 +59,10 @@ export default function NewCasePickerPage() {
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="mb-8 space-y-1.5">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Open a case
+            What do you need help with?
           </h1>
           <p className="text-sm text-zinc-400 sm:text-base">
-            What do you want the council to weigh in on? Pick a case type to
-            get started.
+            Pick what you want the community to vote on.
           </p>
         </div>
 
@@ -103,7 +102,7 @@ export default function NewCasePickerPage() {
             href="/trades"
             className="underline-offset-4 hover:text-zinc-300 hover:underline"
           >
-            See what the council is judging
+            See what the community is voting on
           </Link>
           .
         </p>

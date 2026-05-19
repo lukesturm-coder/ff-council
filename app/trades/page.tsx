@@ -29,9 +29,9 @@ import type {
 import CourtListClient, { type CourtCase } from "./CourtListClient";
 
 export const metadata: Metadata = {
-  title: "Court · FF Council",
+  title: "Trades · FF Council",
   description:
-    "Open a case — trade, start-sit, or draft pick. The council weighs in. Consensus emerges from the crowd.",
+    "Submit a trade, start/sit, or draft pick. The community votes. Consensus emerges from the crowd.",
 };
 
 type SidePlayer = {
@@ -58,7 +58,7 @@ const SORT_OPTIONS: { value: SortMode; label: string; description: string }[] = 
   {
     value: "popular",
     label: "Most voted",
-    description: "Cases with the most council weigh-in",
+    description: "Trades with the most community weigh-in",
   },
   {
     value: "controversial",
@@ -68,7 +68,7 @@ const SORT_OPTIONS: { value: SortMode; label: string; description: string }[] = 
   {
     value: "lopsided",
     label: "Most lopsided",
-    description: "Cases the council overwhelmingly favors one side on",
+    description: "Trades the community overwhelmingly favors one side on",
   },
 ];
 
@@ -444,17 +444,18 @@ export default async function TradesIndexPage({
           </Suspense>
         </section>
 
-        {/* Court — unified docket. Trades + tough calls in one
-            chronologically-sorted feed. Same surface, same URL. */}
+        {/* Open questions — unified feed. Trades + tough calls in one
+            chronologically-sorted list. Same surface, same URL. */}
         <section className="border-t border-zinc-800 pt-6">
           <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-            What the council is judging
+            What the community is voting on
           </div>
           <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Court</h2>
+              <h2 className="text-xl font-semibold">Open questions</h2>
               <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
-                Open cases. The council weighs in. Consensus emerges.
+                Submit a trade or tough call. The community votes. Consensus
+                emerges.
               </p>
             </div>
             <Link
@@ -462,7 +463,7 @@ export default async function TradesIndexPage({
               className="inline-flex items-center justify-center gap-1.5 self-start rounded-md bg-emerald-500/20 px-3 py-1.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 sm:self-auto"
             >
               <Send className="h-3.5 w-3.5" />
-              Open a case
+              Submit a question
             </Link>
           </div>
 
@@ -544,24 +545,24 @@ export default async function TradesIndexPage({
               }}
             />
             <span className="ml-auto shrink-0 text-zinc-500">
-              {allCases.length} case{allCases.length === 1 ? "" : "s"}
+              {allCases.length} open
             </span>
           </div>
 
           {allCases.length === 0 ? (
             <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900 p-10 text-center">
               <p className="text-lg font-bold text-emerald-300">
-                No open cases.
+                Nothing open yet.
               </p>
               <p className="mt-2 text-sm text-zinc-300">
-                Open a case — the council will render its verdict.
+                Submit a trade or tough call — the community will weigh in.
               </p>
               <Link
                 href="/trades/new"
                 className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/30"
               >
                 <Send className="h-3.5 w-3.5" />
-                Open a case
+                Submit a question
               </Link>
             </div>
           ) : (
