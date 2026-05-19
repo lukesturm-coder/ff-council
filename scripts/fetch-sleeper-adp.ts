@@ -183,6 +183,33 @@ async function fetchAdpCsv(season: number): Promise<AdpCsvRow[]> {
   return rows;
 }
 
+type SleeperProjection = {
+  pts_ppr?: number;
+  pts_half_ppr?: number;
+  pts_std?: number;
+};
+
+/**
+ * Undocumented but unauthenticated season-projection endpoint. Each entry is
+ * keyed by Sleeper player_id and (for skill players) carries pts_ppr,
+ * pts_half_ppr, pts_std as season totals. Empty entries `{}` are common for
+ * players Sleeper has no projection for (rookies w/o offseason update, etc.).
+ *
+ * Found by inspecting the Sleeper web app's draft UI network traffic.
+ */
+async function fetchProjections(
+  season: number,
+): Promise<Record<string, SleeperProjection>> {
+  const url = `${SLEEPER_BASE}/v1/projections/nfl/regular/${season}`;
+  const res = await fetch(url, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(`Sleeper projections ${season} → ${res.status}`);
+  }
+  return (await res.json()) as Record<string, SleeperProjection>;
+}
+
 async function fetchPlayerDirectory(): Promise<Record<string, SleeperPlayer>> {
   const res = await fetch(`${SLEEPER_BASE}/v1/players/nfl`, {
     headers: { Accept: "application/json" },
@@ -204,6 +231,11 @@ type ParsedRow = {
   rankingType: "adp";
   scoringSystem: ScoringKey;
   rankValue: number;
+  /**
+   * Season projected fantasy points for this scoring system, pulled from
+   * Sleeper's /v1/projections endpoint (pts_ppr / pts_half_ppr / pts_std).
+   */
+  projectedPoints: number | null;
   playerName: string;
   playerTeam: string;
 };
@@ -219,6 +251,7 @@ type UnmappedRow = {
 function parseSleeper(
   csvRows: AdpCsvRow[],
   playerDir: Record<string, SleeperPlayer>,
+  projections: Record<string, SleeperProjection>,
   matcher: PlayerMatcher,
 ): {
   matched: ParsedRow[];
@@ -342,14 +375,22 @@ function parseSleeper(
     }
   }
 
-  // Third pass: emit rows
+  // Third pass: emit rows. Look up the per-scoring season projection from
+  // the projections payload (keyed by Sleeper player_id) — null when Sleeper
+  // hasn't published a projection for that player yet.
   for (const [playerId, { candidate: c }] of Array.from(winnerByPlayerId.entries())) {
+    const proj = projections[c.sleeperId] ?? {};
+    const stdPts = typeof proj.pts_std === "number" && proj.pts_std > 0 ? proj.pts_std : null;
+    const pprPts = typeof proj.pts_ppr === "number" && proj.pts_ppr > 0 ? proj.pts_ppr : null;
+    const halfPts =
+      typeof proj.pts_half_ppr === "number" && proj.pts_half_ppr > 0 ? proj.pts_half_ppr : null;
     if (c.std != null) {
       matched.push({
         playerId,
         rankingType: "adp",
         scoringSystem: "Standard",
         rankValue: c.std,
+        projectedPoints: stdPts,
         playerName: c.fullName,
         playerTeam: c.team ?? "",
       });
@@ -361,6 +402,7 @@ function parseSleeper(
         rankingType: "adp",
         scoringSystem: "PPR",
         rankValue: c.ppr,
+        projectedPoints: pprPts,
         playerName: c.fullName,
         playerTeam: c.team ?? "",
       });
@@ -372,6 +414,7 @@ function parseSleeper(
         rankingType: "adp",
         scoringSystem: "Half",
         rankValue: c.half_ppr,
+        projectedPoints: halfPts,
         playerName: c.fullName,
         playerTeam: c.team ?? "",
       });
@@ -384,23 +427,40 @@ function parseSleeper(
 
 async function upsertRows(rows: ParsedRow[]) {
   if (rows.length === 0) return;
+  // Attempt with projected_points; fall back if migration 016 hasn't run yet.
+  let withPoints = true;
   const chunkSize = 500;
   for (let i = 0; i < rows.length; i += chunkSize) {
-    const chunk = rows.slice(i, i + chunkSize).map((r) => ({
-      player_id: r.playerId,
-      source: "sleeper",
-      ranking_type: r.rankingType,
-      scoring_system: r.scoringSystem,
-      rank_value: r.rankValue,
-      player_name: r.playerName,
-      player_team: r.playerTeam,
-    }));
+    const slice = rows.slice(i, i + chunkSize);
+    const chunk = slice.map((r) => {
+      const row: Record<string, unknown> = {
+        player_id: r.playerId,
+        source: "sleeper",
+        ranking_type: r.rankingType,
+        scoring_system: r.scoringSystem,
+        rank_value: r.rankValue,
+        player_name: r.playerName,
+        player_team: r.playerTeam,
+      };
+      if (withPoints) row.projected_points = r.projectedPoints;
+      return row;
+    });
     const { error } = await supabase
       .from("platform_rankings")
       .upsert(chunk, {
         onConflict: "player_id,source,ranking_type,scoring_system",
       });
-    if (error) throw new Error(`upsert failed: ${error.message}`);
+    if (error) {
+      if (withPoints && /projected_points/.test(error.message)) {
+        console.log(
+          `  ⚠ projected_points column missing — run migration 016. Retrying without.`,
+        );
+        withPoints = false;
+        i -= chunkSize;
+        continue;
+      }
+      throw new Error(`upsert failed: ${error.message}`);
+    }
   }
 }
 
@@ -466,6 +526,38 @@ async function main() {
   const playerDir = await fetchPlayerDirectory();
   console.log(`  Loaded ${Object.keys(playerDir).length} player metadata records`);
 
+  // Try projections for the same season we got ADP from first; some seasons
+  // (early preseason) may have ADP without projections. Fall back one year
+  // so we always have something to show in the Points view.
+  console.log(`→ Fetching Sleeper season projections for ${successfulSeason}…`);
+  let projections: Record<string, SleeperProjection> = {};
+  let projSeasonUsed = 0;
+  for (const trySeason of [successfulSeason, successfulSeason - 1]) {
+    try {
+      const data = await fetchProjections(trySeason);
+      const nonEmpty = Object.values(data).filter(
+        (p) => (p.pts_ppr ?? 0) > 0 || (p.pts_std ?? 0) > 0,
+      ).length;
+      console.log(
+        `  ${trySeason}: ${Object.keys(data).length} entries, ${nonEmpty} with non-zero points`,
+      );
+      if (nonEmpty > 0) {
+        projections = data;
+        projSeasonUsed = trySeason;
+        break;
+      }
+    } catch (err) {
+      console.log(
+        `  ${trySeason} failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+  if (projSeasonUsed !== 0 && projSeasonUsed !== successfulSeason) {
+    console.log(
+      `  ⚠ Using ${projSeasonUsed} projections for ${successfulSeason} ADP (Sleeper hadn't published ${successfulSeason} yet).`,
+    );
+  }
+
   const roster = await loadRoster();
   console.log(`→ Loaded local roster: ${roster.length} players`);
   const matcher = new PlayerMatcher(roster);
@@ -473,6 +565,7 @@ async function main() {
   const { matched, unmapped, matchStats, coverage } = parseSleeper(
     csvRows,
     playerDir,
+    projections,
     matcher,
   );
   console.log(`\n  Match stats: ${JSON.stringify(matchStats)}`);
@@ -480,6 +573,12 @@ async function main() {
   for (const [scoring, c] of Object.entries(coverage)) {
     console.log(`    ${scoring}: ${c.matched} / ${c.total}`);
   }
+  const withPointsByScoring: Record<string, number> = {};
+  for (const r of matched) {
+    withPointsByScoring[r.scoringSystem] =
+      (withPointsByScoring[r.scoringSystem] ?? 0) + (r.projectedPoints != null ? 1 : 0);
+  }
+  console.log(`  Points coverage (projected_points populated): ${JSON.stringify(withPointsByScoring)}`);
   console.log(`\n  Matched rows ready to upsert: ${matched.length}`);
   console.log(`  Unmapped rows: ${unmapped.length}`);
 
