@@ -17,7 +17,6 @@ type SortKey =
   | "FP"
   | "SLEEPER"
   | "NFL"
-  | "CBS"
   | "YAHOO"
   | "AVG";
 
@@ -55,7 +54,7 @@ const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
 const POSITION_OPTIONS: PositionFilter[] = ["ALL", "QB", "RB", "WR", "TE"];
 
 /**
- * Platforms displayed as a single rank column (Sleeper / NFL / CBS / Yahoo).
+ * Platforms displayed as a single rank column (Sleeper / NFL / Yahoo).
  * ESPN and FantasyPros are rendered explicitly above because ESPN has two
  * sub-columns (editorial + ADP) and FP has the "consensus" framing.
  */
@@ -69,7 +68,6 @@ const EXTRA_PLATFORMS: Array<{
   // All blues are distinct shades so columns don't visually merge.
   { key: "sleeper", type: "adp", label: "Sleeper", accent: "text-cyan-400" },
   { key: "nfl", type: "editorial", label: "NFL", accent: "text-blue-400" },
-  { key: "cbs", type: "editorial", label: "CBS", accent: "text-indigo-400" },
   { key: "yahoo", type: "editorial", label: "Yahoo", accent: "text-purple-400" },
 ];
 
@@ -318,7 +316,7 @@ export default function RankingsTable({
                 label="AVG"
                 sortKey="AVG"
                 color="text-zinc-100"
-                title="Average rank across every available source — the consensus across Council, Vegas, ESPN, FP, Sleeper, NFL, CBS, Yahoo. Default sort."
+                title="Average rank across every available source — the consensus across Council, Vegas, ESPN, FP, Sleeper, NFL, Yahoo. Default sort."
                 active={sortKey}
                 onClick={toggleSort}
               />
@@ -408,8 +406,7 @@ export default function RankingsTable({
         <span className="text-zinc-300">#</span> is the player&apos;s rank in
         the current sort — average across all sources by default. Other columns show
         each source&apos;s rank for comparison; sort by any column to find
-        disagreements. Sleeper / NFL / CBS / Yahoo are mock numbers until
-        those platforms publish 2026 preseason rankings.
+        disagreements. Dashes mean that source doesn&apos;t cover this player.
       </p>
     </div>
   );

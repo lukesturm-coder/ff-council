@@ -184,7 +184,6 @@ const SOURCE_ORDER: Array<{ key: string; label: string }> = [
   { key: "fantasypros", label: "FantasyPros" },
   { key: "sleeper", label: "Sleeper" },
   { key: "nfl", label: "NFL" },
-  { key: "cbs", label: "CBS" },
   { key: "yahoo", label: "Yahoo" },
 ];
 
@@ -259,13 +258,6 @@ export function computeSourceVerdicts(
             const r = platformRank(platformRankings, p.player_id, "nfl", scoring);
             return r == null ? null : rankToValue(r);
           })(),
-    cbs: (p) =>
-      p.player_id == null
-        ? null
-        : (() => {
-            const r = platformRank(platformRankings, p.player_id, "cbs", scoring);
-            return r == null ? null : rankToValue(r);
-          })(),
     yahoo: (p) =>
       p.player_id == null
         ? null
@@ -287,7 +279,6 @@ export function computeSourceVerdicts(
     fantasypros: "sourced from platform_rankings",
     sleeper: "sourced from platform_rankings",
     nfl: "sourced from platform_rankings",
-    cbs: "sourced from platform_rankings",
     yahoo: "sourced from platform_rankings",
   };
 
