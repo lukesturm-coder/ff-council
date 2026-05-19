@@ -124,7 +124,14 @@ export default async function Page() {
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
         <HomeHero stats={heroStats} />
 
-        <section aria-label="Features" className="mt-2">
+        {/* One-line explainer strip — sits between the hero (the headline)
+            and the features grid (the doors). Plain language, no jargon. */}
+        <p className="mt-2 border-t border-zinc-800/60 pt-4 text-sm text-zinc-400 sm:text-base">
+          We turn Vegas odds into fantasy rankings, and the community votes on
+          every trade and tough call.
+        </p>
+
+        <section aria-label="Features" className="mt-4 sm:mt-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {TILES.map((tile) => (
               <FeatureTile key={tile.href} tile={tile} />
