@@ -63,6 +63,81 @@ function buildUrl(season: number, position: NflPosition, offset: number): string
   return `https://fantasy.nfl.com/research/rankings?${params.toString()}`;
 }
 
+/**
+ * Distinct from /research/rankings (which only shows rank columns), the
+ * /research/projections page exposes season projected fantasy points in the
+ * last `<td class="stat projected …">` cell. Position codes here are numeric
+ * (QB=1, RB=2, …) instead of the string codes /rankings uses. We key the
+ * points by NFL's internal player_id and join against the rank scrape later.
+ */
+const PROJECTION_POSITION_CODES: Record<NflPosition, number> = {
+  QB: 1,
+  RB: 2,
+  WR: 3,
+  TE: 4,
+  K: 7,
+  DEF: 8,
+};
+
+function buildProjectionUrl(
+  season: number,
+  position: NflPosition,
+  offset: number,
+): string {
+  const params = new URLSearchParams({
+    statCategory: "projectedStats",
+    statSeason: String(season),
+    statType: "seasonProjectedStats",
+    position: String(PROJECTION_POSITION_CODES[position]),
+    offset: String(offset),
+    count: String(PAGE_SIZE),
+  });
+  return `https://fantasy.nfl.com/research/projections?${params.toString()}`;
+}
+
+async function fetchProjectionPoints(
+  season: number,
+  position: NflPosition,
+): Promise<Map<string, number>> {
+  const byNflId = new Map<string, number>();
+  for (let offset = 1; offset <= MAX_OFFSET; offset += PAGE_SIZE) {
+    const url = buildProjectionUrl(season, position, offset);
+    console.log(`    proj ${position} offset=${offset}`);
+    let html: string;
+    try {
+      html = await fetchPage(url);
+    } catch (err) {
+      console.log(
+        `    proj ${position} offset=${offset} failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      break;
+    }
+    // The last <td class="stat projected …"> in each <tr class="player-{id}">
+    // row is the season FPTS. Some rows have "-" (no projection) — skip those.
+    const rowRe = /<tr\s+class="player-(\d+)[^"]*">([\s\S]*?)<\/tr>/g;
+    let m: RegExpExecArray | null;
+    let parsed = 0;
+    while ((m = rowRe.exec(html)) !== null) {
+      const nflId = m[1];
+      const rowHtml = m[2];
+      const fptsMatch = rowHtml.match(
+        /<td[^>]*class="[^"]*\bstat\s+projected\b[^"]*"[^>]*>\s*([\d.,-]+)\s*<\/td>/,
+      );
+      if (!fptsMatch) continue;
+      const raw = fptsMatch[1].replace(/,/g, "");
+      const pts = Number(raw);
+      if (Number.isFinite(pts) && pts > 0) {
+        byNflId.set(nflId, Math.round(pts * 100) / 100);
+        parsed++;
+      }
+    }
+    if (parsed === 0) break;
+    if (parsed < PAGE_SIZE) break;
+    await delay(REQUEST_DELAY_MS);
+  }
+  return byNflId;
+}
+
 async function fetchPage(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {
@@ -172,6 +247,8 @@ type MatchedRow = {
   ranking_type: "editorial";
   scoring_system: "Standard";
   rank_value: number;
+  /** Season FPTS scraped from /research/projections, joined by NFL player id. */
+  projected_points: number | null;
   player_name: string;
   player_team: string;
 };
@@ -224,6 +301,47 @@ async function main() {
       break;
     }
     console.log(`  No usable data for ${season}, trying next…`);
+  }
+
+  // Pull projection points for whichever season the rankings came from.
+  // Keyed by NFL player id (string) — joined into matched rows below.
+  // NFL.com sometimes publishes preseason rankings before projections (in
+  // which case every FPTS cell reads "0.00" and our filter drops them all).
+  // Fall back one season if we get nothing.
+  const pointsByNflId = new Map<string, number>();
+  if (allRows.length > 0) {
+    const projectionSeasons = [successfulSeason, successfulSeason - 1];
+    let projSeason = 0;
+    for (const trySeason of projectionSeasons) {
+      console.log(
+        `\n→ Fetching NFL.com projected points for season ${trySeason}…`,
+      );
+      const trial = new Map<string, number>();
+      for (const position of POSITIONS) {
+        try {
+          const map = await fetchProjectionPoints(trySeason, position);
+          for (const [k, v] of Array.from(map.entries())) trial.set(k, v);
+          console.log(`    ${position}: ${map.size} projection rows`);
+        } catch (err) {
+          console.log(
+            `    ${position} projections failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+        await delay(REQUEST_DELAY_MS);
+      }
+      if (trial.size > 0) {
+        for (const [k, v] of Array.from(trial.entries())) pointsByNflId.set(k, v);
+        projSeason = trySeason;
+        break;
+      }
+      console.log(`  No projection points for ${trySeason}, trying previous…`);
+    }
+    if (projSeason !== 0 && projSeason !== successfulSeason) {
+      console.log(
+        `  ⚠ Using ${projSeason} projections for ${successfulSeason} ranks (NFL.com hadn't published ${successfulSeason} projections yet).`,
+      );
+    }
+    console.log(`  Total players with projected_points: ${pointsByNflId.size}`);
   }
 
   if (allRows.length === 0) {
@@ -293,21 +411,50 @@ async function main() {
       ranking_type: "editorial",
       scoring_system: "Standard",
       rank_value: row.rank,
+      projected_points: pointsByNflId.get(row.nflPlayerId) ?? null,
       player_name: row.name,
       player_team: row.team ?? "",
     }),
   );
+  const withPoints = matched.filter((m) => m.projected_points != null).length;
+  console.log(
+    `  Matched rows with projected_points: ${withPoints} / ${matched.length}`,
+  );
 
   console.log(`\n→ Upserting ${matched.length} matched rows…`);
   const chunkSize = 500;
+  let upsertWithPoints = true;
   for (let i = 0; i < matched.length; i += chunkSize) {
-    const chunk = matched.slice(i, i + chunkSize);
+    const slice = matched.slice(i, i + chunkSize);
+    const chunk: Array<Record<string, unknown>> = slice.map((r) => {
+      const row: Record<string, unknown> = {
+        player_id: r.player_id,
+        source: r.source,
+        ranking_type: r.ranking_type,
+        scoring_system: r.scoring_system,
+        rank_value: r.rank_value,
+        player_name: r.player_name,
+        player_team: r.player_team,
+      };
+      if (upsertWithPoints) row.projected_points = r.projected_points;
+      return row;
+    });
     const { error } = await supabase
       .from("platform_rankings")
       .upsert(chunk, {
         onConflict: "player_id,source,ranking_type,scoring_system",
       });
-    if (error) throw new Error(`upsert failed: ${error.message}`);
+    if (error) {
+      if (upsertWithPoints && /projected_points/.test(error.message)) {
+        console.log(
+          `  ⚠ projected_points column missing — run migration 016. Retrying without.`,
+        );
+        upsertWithPoints = false;
+        i -= chunkSize;
+        continue;
+      }
+      throw new Error(`upsert failed: ${error.message}`);
+    }
   }
   console.log(`  ✓ Upserted`);
 
