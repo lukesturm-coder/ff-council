@@ -3,25 +3,19 @@ import type { PlayerProjection, ScoringSystem } from "@/lib/types";
 
 /**
  * Layer plausible mock rankings on top of any source that doesn't have a
- * real fetch script wired up yet, so the multi-source table doesn't look
- * empty during development. Numbers are deterministic from Vegas baseline +
- * per-platform noise — same player + same platform = same rank.
+ * real fetch script wired up yet. **Currently empty** — every source we
+ * surface in the table has a real fetch (Sleeper, NFL, Yahoo, ESPN, FP),
+ * and CBS is dropped entirely. Gaps within any source's coverage now show
+ * as `—` per the dashes-not-hiding rule.
  *
- * Coverage matrix (kept honest as sources go live):
- *   - sleeper / nfl / yahoo: REAL fetches shipped, mock only fills gaps
- *     where the source doesn't list a player.
- *   - cbs: NO real fetch — Akamai-protected, dropped from scope. We do
- *     NOT mock it so the column shows `—` and reads as "no data yet"
- *     rather than fake numbers (per the dashes-not-hiding rule).
+ * Re-add sources here only if you want to fake data while a real fetch
+ * is being built. Numbers are deterministic from Vegas baseline + per-
+ * platform noise — same player + same platform = same rank.
  */
 
 const SCORINGS: ScoringSystem[] = ["PPR", "Half", "Standard"];
 
-const MOCK_PLATFORMS: { source: string; type: "editorial" | "adp" }[] = [
-  { source: "sleeper", type: "adp" },
-  { source: "nfl", type: "editorial" },
-  { source: "yahoo", type: "editorial" },
-];
+const MOCK_PLATFORMS: { source: string; type: "editorial" | "adp" }[] = [];
 
 function hash(s: string): number {
   let h = 2166136261;
