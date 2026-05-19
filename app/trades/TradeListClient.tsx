@@ -73,69 +73,76 @@ export function TradeListCardButton({
   const winnerPct =
     winner === "A" ? aPct : winner === "B" ? bPct : winner === "EVEN" ? evenPct : 0;
 
+  // Verdict banner — the loudest signal on the card. Sits at the top so
+  // scanning a long list reads as a sequence of outcomes, not a wall of
+  // player names. Color tracks the winning side (rose/sky/zinc), or
+  // emerald when nobody's voted yet.
+  const bannerClass =
+    total === 0
+      ? "bg-emerald-500/10 text-emerald-200 ring-emerald-500/30"
+      : winner === "A"
+        ? "bg-rose-500/15 text-rose-100 ring-rose-500/40"
+        : winner === "B"
+          ? "bg-sky-500/15 text-sky-100 ring-sky-500/40"
+          : "bg-zinc-700/30 text-zinc-100 ring-zinc-500/40";
+  const bannerLabel =
+    total === 0
+      ? "Cast the first vote →"
+      : winner === "A"
+        ? "Team A wins"
+        : winner === "B"
+          ? "Team B wins"
+          : "Council called it even";
+
   return (
     <button
       type="button"
       onClick={() => onOpen(trade)}
-      className="block w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-left transition hover:border-zinc-700 hover:bg-zinc-900/60 sm:p-4"
+      className="block w-full overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 text-left transition hover:border-zinc-700 hover:bg-zinc-900/60"
     >
-      <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
-        <CardSidePreview
-          side={trade.side_a}
-          accent="rose"
-          isWinner={winner === "A"}
-        />
-        <div className="flex items-center justify-center text-xs text-zinc-500">
-          ↔
-        </div>
-        <CardSidePreview
-          side={trade.side_b}
-          accent="sky"
-          isWinner={winner === "B"}
-        />
-        <div className="col-span-3 flex flex-row items-center justify-between gap-2 border-t border-zinc-800 pt-2 text-xs md:col-span-1 md:min-w-[140px] md:flex-col md:items-end md:justify-center md:border-t-0 md:pt-0">
-          {total === 0 ? (
-            <>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
-                Cast first vote
-              </span>
-              <span className="text-zinc-500">0 votes</span>
-            </>
-          ) : (
-            <>
-              <span
-                className={`font-mono text-lg font-bold leading-none tabular-nums ${
-                  winner === "A"
-                    ? "text-rose-300"
-                    : winner === "B"
-                      ? "text-sky-300"
-                      : "text-zinc-200"
-                }`}
-              >
-                {winnerPct}%
-              </span>
-              <span className="font-medium text-zinc-200 md:text-right">
-                {winner === "A"
-                  ? "favor Team A"
-                  : winner === "B"
-                    ? "favor Team B"
-                    : "called it even"}
-              </span>
-              <span className="text-zinc-500">
-                {total} vote{total === 1 ? "" : "s"}
-              </span>
-            </>
-          )}
-        </div>
+      {/* Verdict banner */}
+      <div
+        className={`flex items-baseline justify-between gap-3 px-3 py-2 ring-1 ring-inset ${bannerClass} sm:px-4`}
+      >
+        <span className="text-sm font-semibold sm:text-base">{bannerLabel}</span>
+        {total > 0 && (
+          <span className="flex items-baseline gap-2 font-mono tabular-nums">
+            <span className="text-xl font-bold leading-none sm:text-2xl">
+              {winnerPct}%
+            </span>
+            <span className="text-xs text-zinc-400">
+              {total} vote{total === 1 ? "" : "s"}
+            </span>
+          </span>
+        )}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
-        <span>{trade.league_type}</span>
-        <span>·</span>
-        <span>{trade.scoring}</span>
-        <span>·</span>
-        <span>{trade.team_count} teams</span>
-        <span>·</span>
-        <span>{new Date(trade.created_at).toLocaleDateString()}</span>
+
+      {/* Trade body */}
+      <div className="p-3 sm:p-4">
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3">
+          <CardSidePreview
+            side={trade.side_a}
+            accent="rose"
+            isWinner={winner === "A"}
+          />
+          <div className="flex items-center justify-center text-xs text-zinc-500">
+            ↔
+          </div>
+          <CardSidePreview
+            side={trade.side_b}
+            accent="sky"
+            isWinner={winner === "B"}
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+          <span>{trade.league_type}</span>
+          <span>·</span>
+          <span>{trade.scoring}</span>
+          <span>·</span>
+          <span>{trade.team_count} teams</span>
+          <span>·</span>
+          <span>{new Date(trade.created_at).toLocaleDateString()}</span>
+        </div>
       </div>
     </button>
   );

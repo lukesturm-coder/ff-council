@@ -180,110 +180,109 @@ function VerdictCardButton({
     return winner ? [winner, ...rest].slice(0, 4) : scenario.candidates.slice(0, 4);
   })();
 
+  // Verdict banner — loud council pick at the top of every card so
+  // scanning a list reads as a sequence of verdicts, not raw scenarios.
+  // Always emerald (single-winner outcome, unlike trades which can lean
+  // rose/sky). Pre-vote shows the CTA.
+  const bannerLabel =
+    total === 0
+      ? "Cast the first vote →"
+      : `Pick: ${topPick?.player.name ?? "—"}`;
+
   return (
     <button
       type="button"
       onClick={() => onOpen(scenario)}
-      className="block w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-left transition hover:border-zinc-700 hover:bg-zinc-900/60 sm:p-4"
+      className="block w-full overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 text-left transition hover:border-zinc-700 hover:bg-zinc-900/60"
     >
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:gap-3">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
-              {scenarioLabel(scenario.scenario_type)}
+      {/* Verdict banner */}
+      <div className="flex items-baseline justify-between gap-3 bg-emerald-500/10 px-3 py-2 text-emerald-100 ring-1 ring-inset ring-emerald-500/30 sm:px-4">
+        <span className="truncate text-sm font-semibold sm:text-base">
+          {bannerLabel}
+        </span>
+        {total > 0 && (
+          <span className="flex items-baseline gap-2 font-mono tabular-nums">
+            <span className="text-xl font-bold leading-none sm:text-2xl">
+              {topPct}%
             </span>
-            <span className="text-xs text-zinc-500">
-              {scenario.candidates.length} options
+            <span className="text-xs text-zinc-400">
+              {total} vote{total === 1 ? "" : "s"}
             </span>
-            {voted && (
-              <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
-                <Check className="h-3 w-3" />
-                Voted
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            {orderedCandidates.map((c) => {
-              const isWinner =
-                total > 0 &&
-                topPick != null &&
-                c.player_id === topPick.player.player_id;
-              return (
-                <div
-                  key={c.player_id}
-                  className={`flex items-center gap-1.5 ${
-                    isWinner
-                      ? "rounded-md bg-emerald-500/10 px-1.5 py-0.5 ring-1 ring-inset ring-emerald-500/30"
-                      : ""
-                  }`}
-                >
-                  <span
-                    className={`inline-flex shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${POSITION_STYLES[c.position]}`}
-                  >
-                    {c.position}
-                  </span>
-                  <span
-                    className={`text-sm ${
-                      isWinner
-                        ? "font-semibold text-emerald-100"
-                        : "font-medium text-zinc-100"
-                    }`}
-                  >
-                    {c.name}
-                  </span>
-                  <span className="font-mono text-[10px] text-zinc-500">
-                    {c.team}
-                  </span>
-                </div>
-              );
-            })}
-            {scenario.candidates.length > 4 && (
-              <span className="text-xs text-zinc-600">
-                +{scenario.candidates.length - 4}
-              </span>
-            )}
-          </div>
-          {scenario.notes && (
-            <p className="mt-2 line-clamp-1 text-xs text-zinc-500">
-              {scenario.notes}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-row items-center justify-between gap-2 border-t border-zinc-800 pt-2 text-xs sm:min-w-[160px] sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:pt-0">
-          {total === 0 ? (
-            <>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
-                Cast first vote
-              </span>
-              <span className="text-zinc-500">0 votes</span>
-            </>
-          ) : (
-            <>
-              <span className="font-mono text-lg font-bold leading-none tabular-nums text-emerald-300">
-                {topPct}%
-              </span>
-              <span className="truncate font-medium text-zinc-200 sm:max-w-[160px] sm:text-right">
-                favor {topPick?.player.name}
-              </span>
-              <span className="text-zinc-500 sm:hidden">
-                {total} vote{total === 1 ? "" : "s"}
-              </span>
-              <span className="hidden text-zinc-500 sm:inline">
-                of {total} vote{total === 1 ? "" : "s"}
-              </span>
-            </>
-          )}
-        </div>
+          </span>
+        )}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
-        {meta.map((m, i) => (
-          <span key={i} className="flex items-center gap-x-2">
-            {i > 0 && <span>·</span>}
-            <span>{m}</span>
+      {/* Body */}
+      <div className="p-3 sm:p-4">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+            {scenarioLabel(scenario.scenario_type)}
           </span>
-        ))}
+          <span className="text-xs text-zinc-500">
+            {scenario.candidates.length} options
+          </span>
+          {voted && (
+            <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
+              <Check className="h-3 w-3" />
+              Voted
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {orderedCandidates.map((c) => {
+            const isWinner =
+              total > 0 &&
+              topPick != null &&
+              c.player_id === topPick.player.player_id;
+            return (
+              <div
+                key={c.player_id}
+                className={`flex items-center gap-1.5 ${
+                  isWinner
+                    ? "rounded-md bg-emerald-500/10 px-1.5 py-0.5 ring-1 ring-inset ring-emerald-500/30"
+                    : ""
+                }`}
+              >
+                <span
+                  className={`inline-flex shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${POSITION_STYLES[c.position]}`}
+                >
+                  {c.position}
+                </span>
+                <span
+                  className={`text-sm ${
+                    isWinner
+                      ? "font-semibold text-emerald-100"
+                      : "font-medium text-zinc-100"
+                  }`}
+                >
+                  {c.name}
+                </span>
+                <span className="font-mono text-[10px] text-zinc-500">
+                  {c.team}
+                </span>
+              </div>
+            );
+          })}
+          {scenario.candidates.length > 4 && (
+            <span className="text-xs text-zinc-600">
+              +{scenario.candidates.length - 4}
+            </span>
+          )}
+        </div>
+        {scenario.notes && (
+          <p className="mt-2 line-clamp-1 text-xs text-zinc-500">
+            {scenario.notes}
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+          {meta.map((m, i) => (
+            <span key={i} className="flex items-center gap-x-2">
+              {i > 0 && <span>·</span>}
+              <span>{m}</span>
+            </span>
+          ))}
+        </div>
       </div>
     </button>
   );
