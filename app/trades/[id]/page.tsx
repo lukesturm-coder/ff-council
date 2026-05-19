@@ -335,6 +335,7 @@ export default async function TradeDetailPage({
                 players: t.side_a.players.map((p) => ({
                   player_id: p.player_id,
                   name: p.name,
+                  team: p.team,
                 })),
                 picks: t.side_a.picks,
               }}
@@ -342,6 +343,7 @@ export default async function TradeDetailPage({
                 players: t.side_b.players.map((p) => ({
                   player_id: p.player_id,
                   name: p.name,
+                  team: p.team,
                 })),
                 picks: t.side_b.picks,
               }}

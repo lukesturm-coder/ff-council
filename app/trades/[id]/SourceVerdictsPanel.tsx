@@ -117,6 +117,39 @@ function VerdictBar({ diff }: { diff: number | null }) {
   );
 }
 
+/**
+ * Build a name+team → SDIO id index from the Vegas projection roster so we
+ * can resolve trade-side players (which carry synthetic mock ids) to their
+ * real SportsDataIO id for the Vegas projection lookup. Keys are normalized
+ * (lowercased, alphanumeric-only) so capitalization or punctuation
+ * differences don't cause misses.
+ */
+function normalize(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function buildSdioIndex(projections: PlayerProjection[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const p of projections) {
+    m.set(`${normalize(p.name)}|${normalize(p.team)}`, p.playerId);
+    // Looser fallback keyed by name only — useful when teams change.
+    if (!m.has(normalize(p.name))) m.set(normalize(p.name), p.playerId);
+  }
+  return m;
+}
+
+function resolveSdio(
+  index: Map<string, number>,
+  name: string,
+  team: string,
+): number | null {
+  return (
+    index.get(`${normalize(name)}|${normalize(team)}`) ??
+    index.get(normalize(name)) ??
+    null
+  );
+}
+
 export default async function SourceVerdictsPanel({
   sideA,
   sideB,
@@ -135,9 +168,20 @@ export default async function SourceVerdictsPanel({
     projections,
   );
 
+  // Resolve each trade-side player's SDIO id by name+team. The Vegas
+  // computer prefers this id over the synthetic player_id the trade stores.
+  const sdioIndex = buildSdioIndex(projections);
+  const enrich = (s: TradeSide): TradeSide => ({
+    ...s,
+    players: s.players.map((p) => ({
+      ...p,
+      sdioPlayerId: resolveSdio(sdioIndex, p.name, p.team),
+    })),
+  });
+
   const verdicts = computeSourceVerdicts({
-    sideA,
-    sideB,
+    sideA: enrich(sideA),
+    sideB: enrich(sideB),
     scoring,
     projections,
     platformRankings,

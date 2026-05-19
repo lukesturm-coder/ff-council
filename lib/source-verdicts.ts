@@ -37,6 +37,14 @@ import type { PlayerProjection, ScoringSystem } from "@/lib/types";
 export type TradeSidePlayer = {
   player_id: number | null;
   name: string;
+  team: string;
+  /**
+   * Real SportsDataIO player ID resolved at the panel boundary via a
+   * name+team lookup against the Vegas roster. Optional because not every
+   * player in our synthetic-id universe has a Vegas counterpart yet.
+   * Used by the Vegas computer; other computers stick to `player_id`.
+   */
+  sdioPlayerId?: number | null;
 };
 
 export type TradeSide = {
@@ -202,8 +210,14 @@ export function computeSourceVerdicts(
       return null;
     },
     vegas: (p) => {
-      if (p.player_id == null) return null;
-      const proj = projectionById.get(p.player_id);
+      // Vegas projections key off SportsDataIO ids; trades store synthetic
+      // mock ids. The panel enriches each player with `sdioPlayerId` via a
+      // name+team lookup before calling us — falling back to player_id only
+      // when no SDIO match was resolved (e.g., backfilled trades that
+      // happen to share the id space).
+      const lookupId = p.sdioPlayerId ?? p.player_id;
+      if (lookupId == null) return null;
+      const proj = projectionById.get(lookupId);
       if (!proj) return null;
       return proj.fantasyPoints[scoring];
     },
