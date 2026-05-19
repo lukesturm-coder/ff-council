@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Check, Flame, Loader2, Scale, SkipForward, Sparkles } from "lucide-react";
+import { Check, Flame, Loader2, Scale, Sparkles } from "lucide-react";
 import { castVote } from "@/app/trades/[id]/actions";
 import { castVerdictVote } from "@/app/verdict/actions";
 
@@ -370,28 +370,17 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
           />
         )}
 
-        {/* Skip + view-full footer */}
-        <div className="mt-4 flex items-center justify-between gap-3 text-sm text-zinc-500">
-          <button
-            type="button"
-            onClick={skip}
-            disabled={pending}
-            className="inline-flex items-center gap-1.5 underline-offset-4 hover:text-zinc-300 hover:underline disabled:opacity-50"
-          >
-            <SkipForward className="h-3.5 w-3.5" />
-            Skip
-          </button>
-          <Link
-            href={
-              current.kind === "trade"
-                ? `/trades/${current.id}`
-                : `/verdict/${current.id}`
-            }
-            className="underline-offset-4 hover:text-zinc-300 hover:underline"
-          >
-            See full scenario →
-          </Link>
-        </div>
+        {/* Skip-only footer — the trade headline at the top of the card is
+            now itself a link to /trades/[id] or /verdict/[id], so the
+            "See full scenario" CTA was redundant. */}
+        <button
+          type="button"
+          onClick={skip}
+          disabled={pending}
+          className="mx-auto mt-4 block text-sm text-zinc-600 underline-offset-4 hover:text-zinc-400 hover:underline disabled:opacity-50"
+        >
+          Skip →
+        </button>
       </div>
     </div>
   );
@@ -447,14 +436,21 @@ function TradeCard({
       </div>
 
       {/* THE TRADE — the headline. Big, scannable, anchored at the top so
-          the voter sees WHAT they're judging before they see the columns. */}
-      <div className="mb-4 grid grid-cols-1 items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
-        <JudgeTradeHeadlineSide label="Team A" side={item.side_a} accent="rose" />
-        <div className="flex items-center justify-center text-2xl text-zinc-600 sm:text-3xl">
-          ↔
+          the voter sees WHAT they're judging before they see the columns.
+          Wrapped in a Link so tapping the headline jumps to the full
+          /trades/[id] page (replaces the old "See full scenario" footer). */}
+      <Link
+        href={`/trades/${item.id}`}
+        className="mb-4 block rounded-xl transition hover:ring-1 hover:ring-emerald-500/20"
+      >
+        <div className="grid grid-cols-1 items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
+          <JudgeTradeHeadlineSide label="Team A" side={item.side_a} accent="rose" />
+          <div className="flex items-center justify-center text-2xl text-zinc-600 sm:text-3xl">
+            ↔
+          </div>
+          <JudgeTradeHeadlineSide label="Team B" side={item.side_b} accent="sky" />
         </div>
-        <JudgeTradeHeadlineSide label="Team B" side={item.side_b} accent="sky" />
-      </div>
+      </Link>
 
       <p className="mb-3 text-sm text-zinc-300">
         <span className="font-semibold text-zinc-100">Who won?</span>{" "}
