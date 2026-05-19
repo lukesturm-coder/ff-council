@@ -58,7 +58,9 @@ async function loadPlatformRankings(): Promise<PlatformRankingsMap> {
     const player = map[r.player_id] ?? (map[r.player_id] = {});
     const source = player[r.source] ?? (player[r.source] = {});
     const byType = source[r.ranking_type] ?? (source[r.ranking_type] = {});
-    byType[r.scoring_system] = Number(r.rank_value);
+    // Source verdicts only need ranks — projection points aren't surfaced
+    // here, so leave them null at the leaf.
+    byType[r.scoring_system] = { rank: Number(r.rank_value), points: null };
   }
   return map;
 }

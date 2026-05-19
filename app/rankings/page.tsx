@@ -95,24 +95,53 @@ type PlatformRow = {
   ranking_type: "editorial" | "adp";
   scoring_system: ScoringSystem;
   rank_value: number;
+  /**
+   * Column added in migration 016. Selecting it conditionally would require
+   * inspecting the schema first — instead we ask for it and tolerate a missing
+   * column at the source row level (null → no points).
+   */
+  projected_points: number | null;
 };
 
 /**
  * Group platform_rankings rows into a nested map for cheap lookup in the UI:
- *   playerId → source → rankingType → scoringSystem → rank
+ *   playerId → source → rankingType → scoringSystem → { rank, points }
+ *
+ * If migration 016 hasn't been applied yet, `projected_points` won't exist
+ * on the underlying table and PostgREST will error — we fall back to a
+ * rank-only select and emit `points: null` so the Ranks view still works.
  */
 async function loadPlatformRankings(): Promise<PlatformRankingsMap> {
   const supabase = await createClient();
-  const { data } = await supabase
+  let rows: PlatformRow[] = [];
+  const withPoints = await supabase
     .from("platform_rankings")
-    .select("player_id, source, ranking_type, scoring_system, rank_value");
+    .select(
+      "player_id, source, ranking_type, scoring_system, rank_value, projected_points",
+    );
+  if (!withPoints.error) {
+    rows = (withPoints.data ?? []) as PlatformRow[];
+  } else {
+    const fallback = await supabase
+      .from("platform_rankings")
+      .select("player_id, source, ranking_type, scoring_system, rank_value");
+    rows = ((fallback.data ?? []) as Omit<PlatformRow, "projected_points">[]).map(
+      (r) => ({ ...r, projected_points: null }),
+    );
+  }
 
   const map: PlatformRankingsMap = {};
-  for (const r of (data ?? []) as PlatformRow[]) {
+  for (const r of rows) {
     const player = map[r.player_id] ?? (map[r.player_id] = {});
     const source = player[r.source] ?? (player[r.source] = {});
     const byType = source[r.ranking_type] ?? (source[r.ranking_type] = {});
-    byType[r.scoring_system] = Number(r.rank_value);
+    byType[r.scoring_system] = {
+      rank: Number(r.rank_value),
+      points:
+        r.projected_points != null && Number.isFinite(Number(r.projected_points))
+          ? Number(r.projected_points)
+          : null,
+    };
   }
   return map;
 }

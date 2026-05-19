@@ -47,7 +47,13 @@ export function withMockPlatformRankings(
         const player = out[p.playerId] ?? (out[p.playerId] = {});
         const src = player[source] ?? (player[source] = {});
         const byType = src[type] ?? (src[type] = {});
-        if (byType[scoring] == null) byType[scoring] = rank;
+        // Only fill in mock when the real fetch hasn't produced an entry for
+        // this (source, type, scoring). Mocks have no `points` value — Points
+        // view will show — for mocked sources, which is honest signal that
+        // we don't actually know their projection.
+        if (byType[scoring] == null) {
+          byType[scoring] = { rank, points: null };
+        }
       }
     });
   }

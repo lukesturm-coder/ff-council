@@ -21,8 +21,20 @@ type SortKey =
   | "AVG";
 
 /**
+ * One source's published value for a given (player, ranking type, scoring) tuple.
+ * `rank` is always present (we only store rows when we have a rank). `points`
+ * is the source's season FPTS projection — null when the source doesn't
+ * publish points (Yahoo public pre-rank), or when we haven't joined a
+ * projection for that player (e.g. ADP rows on ESPN — ADP isn't a forecast).
+ */
+export type PlatformRankingEntry = {
+  rank: number;
+  points: number | null;
+};
+
+/**
  * Nested map of external platform rankings:
- *   playerId → source → rankingType (editorial/adp) → scoringSystem → rank
+ *   playerId → source → rankingType (editorial/adp) → scoringSystem → { rank, points }
  * Built server-side from platform_rankings table and passed in as a prop.
  */
 export type PlatformRankingsMap = Record<
@@ -33,7 +45,7 @@ export type PlatformRankingsMap = Record<
       Partial<
         Record<
           "editorial" | "adp",
-          Partial<Record<ScoringSystem, number>>
+          Partial<Record<ScoringSystem, PlatformRankingEntry>>
         >
       >
     >
@@ -52,6 +64,8 @@ export type CouncilConsensusMap = Record<
 
 const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
 const POSITION_OPTIONS: PositionFilter[] = ["ALL", "QB", "RB", "WR", "TE"];
+const VIEW_OPTIONS = ["Ranks", "Points"] as const;
+type ViewMode = (typeof VIEW_OPTIONS)[number];
 
 /**
  * Platforms displayed as a single rank column (Sleeper / NFL / Yahoo).
@@ -82,13 +96,13 @@ function formatAmerican(odds: number): string {
   return odds > 0 ? `+${odds}` : String(odds);
 }
 
-function lookupPlatformRank(
+function lookupPlatformEntry(
   pr: PlatformRankingsMap,
   playerId: number,
   source: string,
   rankingType: "editorial" | "adp",
   scoring: ScoringSystem,
-): number | null {
+): PlatformRankingEntry | null {
   // Sources publish PPR consistently; Half and Standard often fall back to PPR.
   const tryScoring: ScoringSystem[] =
     scoring === "PPR" ? ["PPR"] : [scoring, "PPR"];
@@ -97,6 +111,28 @@ function lookupPlatformRank(
     if (v != null) return v;
   }
   return null;
+}
+
+function lookupPlatformRank(
+  pr: PlatformRankingsMap,
+  playerId: number,
+  source: string,
+  rankingType: "editorial" | "adp",
+  scoring: ScoringSystem,
+): number | null {
+  return lookupPlatformEntry(pr, playerId, source, rankingType, scoring)?.rank ?? null;
+}
+
+function lookupPlatformPoints(
+  pr: PlatformRankingsMap,
+  playerId: number,
+  source: string,
+  rankingType: "editorial" | "adp",
+  scoring: ScoringSystem,
+): number | null {
+  // For points we don't fall back across scoring systems — PPR points differ
+  // from Half/Standard meaningfully, unlike rank which is often shared.
+  return pr[playerId]?.[source]?.[rankingType]?.[scoring]?.points ?? null;
 }
 
 export default function RankingsTable({
@@ -110,6 +146,7 @@ export default function RankingsTable({
 }) {
   const [scoring, setScoring] = useState<ScoringSystem>("PPR");
   const [position, setPosition] = useState<PositionFilter>("ALL");
+  const [view, setView] = useState<ViewMode>("Ranks");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   // AVG (the consensus across every source) is the default sort — it's the
   // integrated verdict that this multi-source comparison page is for. Single
@@ -141,36 +178,49 @@ export default function RankingsTable({
     [councilConsensus],
   );
 
-  const view = useMemo(() => {
+  const tableData = useMemo(() => {
     const filtered =
       position === "ALL"
         ? projections
         : projections.filter((p) => p.position === position);
 
     // Vegas rank: position when sorted by VBD desc (Vegas-derived baseline).
+    // Vegas points: the Vegas-derived season FPts projection itself.
     const vegasRankById = new Map<number, number>();
     [...filtered]
       .sort((a, b) => b.vbd[scoring] - a.vbd[scoring])
       .forEach((p, idx) => vegasRankById.set(p.playerId, idx + 1));
 
-    // Build a row record per player with all rank columns precomputed.
+    // Each row carries BOTH the rank-mode and points-mode values for every
+    // source. The rendering layer picks which to display based on `view`,
+    // and sorting also dispatches on `view`. Computing both up-front keeps
+    // toggling cheap and avoids divergent re-rank logic.
     type RowData = {
       player: PlayerProjection;
       vegasRank: number | null;
+      vegasPoints: number | null;
       councilAvgRank: number | null;
       councilRankerCount: number;
+      // Council is a pure rank — no projection.
       espnRank: number | null;
+      espnPoints: number | null;
       fpRank: number | null;
+      fpPoints: number | null;
       extraRanks: Array<number | null>;
+      extraPoints: Array<number | null>;
       avgRank: number | null;
+      avgPoints: number | null;
     };
     // Look up each player's raw stored rank per source (no re-ranking yet).
     type StoredRanks = {
       council: number | null;
       councilRankerCount: number;
       espn: number | null;
+      espnPts: number | null;
       fp: number | null;
+      fpPts: number | null;
       extras: Array<number | null>;
+      extraPts: Array<number | null>;
     };
     const storedByPid = new Map<number, StoredRanks>();
     for (const p of filtered) {
@@ -183,11 +233,20 @@ export default function RankingsTable({
         espn: hasEspn
           ? lookupPlatformRank(platformRankings, p.playerId, "espn", "editorial", scoring)
           : null,
+        espnPts: hasEspn
+          ? lookupPlatformPoints(platformRankings, p.playerId, "espn", "editorial", scoring)
+          : null,
         fp: hasFp
           ? lookupPlatformRank(platformRankings, p.playerId, "fantasypros", "adp", scoring)
           : null,
+        fpPts: hasFp
+          ? lookupPlatformPoints(platformRankings, p.playerId, "fantasypros", "adp", scoring)
+          : null,
         extras: EXTRA_PLATFORMS.map((pf) =>
           lookupPlatformRank(platformRankings, p.playerId, pf.key, pf.type, scoring),
+        ),
+        extraPts: EXTRA_PLATFORMS.map((pf) =>
+          lookupPlatformPoints(platformRankings, p.playerId, pf.key, pf.type, scoring),
         ),
       });
     }
@@ -195,7 +254,9 @@ export default function RankingsTable({
     // When a position filter is active, re-rank every source within the
     // filtered set so each column shows positional rank (WR1, WR2, ...) the
     // way Vegas already does. When showing ALL positions, keep the stored
-    // overall ranks.
+    // overall ranks. Points columns don't re-rank — they're absolute values,
+    // not positions; we just filter the dataset and show each source's
+    // published projected_points.
     const withinFilter = position !== "ALL";
     const rerank = (
       getter: (s: StoredRanks) => number | null,
@@ -239,20 +300,57 @@ export default function RankingsTable({
         ranksForAvg.length > 0
           ? ranksForAvg.reduce((s, n) => s + n, 0) / ranksForAvg.length
           : null;
+      const vegasPoints = p.fantasyPoints[scoring];
+      // Points AVG includes Vegas (which always has a projection) plus any
+      // source that publishes points. Council has no projection so it
+      // doesn't enter the average — keeps Council a pure rank citizen.
+      const pointsForAvg = [
+        vegasPoints,
+        stored.espnPts,
+        stored.fpPts,
+        ...stored.extraPts,
+      ].filter((v): v is number => v != null && v > 0);
+      const avgPoints =
+        pointsForAvg.length > 0
+          ? pointsForAvg.reduce((s, n) => s + n, 0) / pointsForAvg.length
+          : null;
       return {
         player: p,
         vegasRank: vegasRankById.get(p.playerId) ?? null,
+        vegasPoints: vegasPoints > 0 ? vegasPoints : null,
         councilAvgRank: displayCouncil,
         councilRankerCount: stored.councilRankerCount,
         espnRank: displayEspn,
+        espnPoints: stored.espnPts,
         fpRank: displayFp,
+        fpPoints: stored.fpPts,
         extraRanks: displayExtras,
+        extraPoints: stored.extraPts,
         avgRank,
+        avgPoints,
       };
     });
 
     const valueOf = (row: RowData): number => {
+      // In Ranks mode, smaller is better (rank 1 = best). In Points mode,
+      // larger is better (more projected FPts = better). The sort comparator
+      // always uses ascending order, so we negate the points so "best" sorts
+      // first uniformly.
       let v: number | null;
+      if (view === "Points") {
+        if (sortKey === "VEGAS") v = row.vegasPoints;
+        else if (sortKey === "COUNCIL") v = null; // Council has no points
+        else if (sortKey === "ESPN") v = row.espnPoints;
+        else if (sortKey === "FP") v = row.fpPoints;
+        else if (sortKey === "AVG") v = row.avgPoints;
+        else {
+          const idx = EXTRA_PLATFORMS.findIndex(
+            (pf) => pf.key.toUpperCase() === sortKey,
+          );
+          v = idx >= 0 ? row.extraPoints[idx] : null;
+        }
+        return v == null ? Number.NEGATIVE_INFINITY : -v;
+      }
       if (sortKey === "VEGAS") v = row.vegasRank;
       else if (sortKey === "COUNCIL") v = row.councilAvgRank;
       else if (sortKey === "ESPN") v = row.espnRank;
@@ -274,6 +372,7 @@ export default function RankingsTable({
     projections,
     scoring,
     position,
+    view,
     sortKey,
     platformRankings,
     councilConsensus,
@@ -287,6 +386,12 @@ export default function RankingsTable({
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
         <ControlGroup
+          label="View"
+          options={VIEW_OPTIONS}
+          value={view}
+          onChange={setView}
+        />
+        <ControlGroup
           label="Scoring"
           options={SCORING_OPTIONS}
           value={scoring}
@@ -299,7 +404,7 @@ export default function RankingsTable({
           onChange={setPosition}
         />
         <div className="ml-auto text-xs text-zinc-500">
-          {view.sorted.length} player{view.sorted.length === 1 ? "" : "s"}
+          {tableData.sorted.length} player{tableData.sorted.length === 1 ? "" : "s"}
         </div>
       </div>
 
@@ -316,7 +421,11 @@ export default function RankingsTable({
                 label="AVG"
                 sortKey="AVG"
                 color="text-zinc-100"
-                title="Average rank across every available source — the consensus across Council, Vegas, ESPN, FP, Sleeper, NFL, Yahoo. Default sort."
+                title={
+                  view === "Points"
+                    ? "Average projected points across every source that publishes a projection (Vegas, ESPN, FP, Sleeper, NFL). Higher = better. Default sort."
+                    : "Average rank across every available source — the consensus across Council, Vegas, ESPN, FP, Sleeper, NFL, Yahoo. Default sort."
+                }
                 active={sortKey}
                 onClick={toggleSort}
               />
@@ -373,7 +482,7 @@ export default function RankingsTable({
             </tr>
           </thead>
           <tbody>
-            {view.sorted.map((row, idx) => {
+            {tableData.sorted.map((row, idx) => {
               const isExpanded = expandedId === row.player.playerId;
               return (
                 <RankRow
@@ -381,20 +490,26 @@ export default function RankingsTable({
                   player={row.player}
                   rank={idx + 1}
                   scoring={scoring}
+                  view={view}
                   isExpanded={isExpanded}
                   onToggle={() =>
                     setExpandedId(isExpanded ? null : row.player.playerId)
                   }
                   hasEspn={hasEspn}
                   espnRank={row.espnRank}
+                  espnPoints={row.espnPoints}
                   hasFp={hasFp}
                   fpRank={row.fpRank}
+                  fpPoints={row.fpPoints}
                   hasCouncil={hasCouncil}
                   councilAvgRank={row.councilAvgRank}
                   councilRankerCount={row.councilRankerCount}
                   extraRanks={row.extraRanks}
+                  extraPoints={row.extraPoints}
                   avgRank={row.avgRank}
+                  avgPoints={row.avgPoints}
                   vegasRank={row.vegasRank}
+                  vegasPoints={row.vegasPoints}
                 />
               );
             })}
@@ -405,9 +520,11 @@ export default function RankingsTable({
       <p className="text-xs text-zinc-500">
         <span className="text-zinc-300">#</span> is the player&apos;s rank in
         the current sort — average across all sources by default. Other columns show
-        each source&apos;s rank for comparison; sort by any column to find
-        disagreements. Sleeper / NFL / Yahoo gaps are filled with mock
-        numbers until their fetches reach full coverage.
+        each source&apos;s {view === "Points" ? "projected fantasy points" : "rank"}
+        {" "}for comparison; sort by any column to find disagreements.
+        {view === "Points"
+          ? " Council and Yahoo don't publish point projections — those cells read —."
+          : " Sleeper / NFL / Yahoo gaps are filled with mock numbers until their fetches reach full coverage."}
       </p>
     </div>
   );
@@ -486,37 +603,53 @@ function RankRow({
   player,
   rank,
   scoring,
+  view,
   isExpanded,
   onToggle,
   hasEspn,
   espnRank,
+  espnPoints,
   hasFp,
   fpRank,
+  fpPoints,
   hasCouncil,
   councilAvgRank,
   councilRankerCount,
   extraRanks,
+  extraPoints,
   avgRank,
+  avgPoints,
   vegasRank,
+  vegasPoints,
 }: {
   player: PlayerProjection;
   rank: number;
   scoring: ScoringSystem;
+  view: ViewMode;
   isExpanded: boolean;
   onToggle: () => void;
   hasEspn: boolean;
   espnRank: number | null;
+  espnPoints: number | null;
   hasFp: boolean;
   fpRank: number | null;
+  fpPoints: number | null;
   hasCouncil: boolean;
   councilAvgRank: number | null;
   councilRankerCount: number;
   extraRanks: Array<number | null>;
+  extraPoints: Array<number | null>;
   avgRank: number | null;
+  avgPoints: number | null;
   vegasRank: number | null;
+  vegasPoints: number | null;
 }) {
   const fpts = player.fantasyPoints[scoring];
   const vbd = player.vbd[scoring];
+  const showPoints = view === "Points";
+  // Format points with one decimal, no padding. Rank stays integer.
+  const fmtPts = (v: number | null) => (v != null ? v.toFixed(1) : "—");
+  const fmtRank = (v: number | null) => (v != null ? v.toFixed(0) : "—");
 
   return (
     <>
@@ -552,9 +685,16 @@ function RankRow({
           </span>
         </td>
         {/* AVG is the leftmost data column — the consensus across every
-            source, sorted by default. Single-source columns follow. */}
+            source, sorted by default. Single-source columns follow. In Points
+            mode each cell shows the source's projected season FPts. */}
         <td className="min-w-[5rem] py-3 text-center font-mono text-sm font-semibold tabular-nums">
-          {avgRank != null ? (
+          {showPoints ? (
+            avgPoints != null ? (
+              <span className="text-zinc-100">{avgPoints.toFixed(1)}</span>
+            ) : (
+              <span className="text-zinc-600">—</span>
+            )
+          ) : avgRank != null ? (
             <span className="text-zinc-100">{avgRank.toFixed(1)}</span>
           ) : (
             <span className="text-zinc-600">—</span>
@@ -564,46 +704,50 @@ function RankRow({
           <td
             className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
             title={
-              councilRankerCount
-                ? `${councilRankerCount} ranker${councilRankerCount === 1 ? "" : "s"}`
-                : "No council ranking"
+              showPoints
+                ? "Council is a rank, not a projection — no points to show"
+                : councilRankerCount
+                  ? `${councilRankerCount} ranker${councilRankerCount === 1 ? "" : "s"}`
+                  : "No council ranking"
             }
           >
             <span className="text-emerald-400">
-              {councilAvgRank != null
-                ? Number.isInteger(councilAvgRank)
-                  ? councilAvgRank.toFixed(0)
-                  : councilAvgRank.toFixed(1)
-                : "—"}
+              {showPoints
+                ? "—"
+                : councilAvgRank != null
+                  ? Number.isInteger(councilAvgRank)
+                    ? councilAvgRank.toFixed(0)
+                    : councilAvgRank.toFixed(1)
+                  : "—"}
             </span>
           </td>
         )}
         <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
           <span className="text-amber-400">
-            {vegasRank != null ? vegasRank.toFixed(0) : "—"}
+            {showPoints ? fmtPts(vegasPoints) : fmtRank(vegasRank)}
           </span>
         </td>
         {hasEspn && (
           <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
             <span className="text-red-400">
-              {espnRank != null ? espnRank.toFixed(0) : "—"}
+              {showPoints ? fmtPts(espnPoints) : fmtRank(espnRank)}
             </span>
           </td>
         )}
         {hasFp && (
           <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
             <span className="text-teal-400">
-              {fpRank != null ? fpRank.toFixed(0) : "—"}
+              {showPoints ? fmtPts(fpPoints) : fmtRank(fpRank)}
             </span>
           </td>
         )}
-        {extraRanks.map((r, idx) => (
+        {(showPoints ? extraPoints : extraRanks).map((r, idx) => (
           <td
             key={EXTRA_PLATFORMS[idx].key}
             className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
           >
             <span className={EXTRA_PLATFORMS[idx].accent}>
-              {r != null ? r.toFixed(0) : "—"}
+              {showPoints ? fmtPts(r) : fmtRank(r)}
             </span>
           </td>
         ))}

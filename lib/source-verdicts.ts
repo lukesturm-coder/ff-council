@@ -118,7 +118,7 @@ function platformRank(
   for (const s of tryScoring) {
     for (const t of types) {
       const v = platformRankings[playerId]?.[source]?.[t]?.[s];
-      if (v != null) return v;
+      if (v != null) return v.rank;
     }
   }
   return null;
