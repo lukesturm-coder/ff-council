@@ -1,13 +1,30 @@
+import { Suspense } from "react";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Send } from "lucide-react";
+import {
+  projectionsFromFutures,
+  type PlayerRosterEntry,
+} from "@/lib/projections";
+import type {
+  FuturesResponse,
+  PlayerProjection,
+  ScoringSystem,
+} from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
+import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
+import type { PlatformRankingsMap } from "@/app/_components/RankingsTable";
+import TradeCalculator, {
+  type TradePlayer,
+} from "./_components/TradeCalculator";
 import TradeListClient, { type TradeCardData } from "./TradeListClient";
 
 export const metadata: Metadata = {
   title: "Trade Court · FF Council",
   description:
-    "Submit a trade. The council weighs in. Consensus emerges from the crowd.",
+    "Build a trade, see the math, then submit it to the council. Consensus emerges from the crowd.",
 };
 
 type SidePlayer = {
@@ -56,6 +73,86 @@ const MIN_VOTES_FOR_RANKED_SORT = 10;
 const SCORING_FILTERS = ["all", "PPR", "Half", "Standard", "Superflex", "TEPremium"] as const;
 const LEAGUE_FILTERS = ["all", "redraft", "dynasty", "keeper"] as const;
 
+// =====================================================================
+// Calculator data load — pulled in from the old /trade page so the
+// calculator can render at the top of /trades. Combines mock Vegas
+// projections with Supabase platform rankings + council consensus.
+// =====================================================================
+
+async function loadProjections(): Promise<PlayerProjection[]> {
+  const dataDir = path.join(process.cwd(), "data");
+  const [futuresRaw, rosterRaw] = await Promise.all([
+    fs.readFile(path.join(dataDir, "futures-mock.json"), "utf8"),
+    fs.readFile(path.join(dataDir, "players-mock.json"), "utf8"),
+  ]);
+  const futures: FuturesResponse = JSON.parse(futuresRaw);
+  const roster: PlayerRosterEntry[] = JSON.parse(rosterRaw);
+  return projectionsFromFutures(futures, roster);
+}
+
+type PlatformRow = {
+  player_id: number;
+  source: string;
+  ranking_type: "editorial" | "adp";
+  scoring_system: ScoringSystem;
+  rank_value: number;
+};
+
+async function loadCalculatorPlayers(): Promise<TradePlayer[]> {
+  const supabase = await createClient();
+  const projections = await loadProjections();
+
+  const [platformResult, councilResult] = await Promise.all([
+    supabase
+      .from("platform_rankings")
+      .select("player_id, source, ranking_type, scoring_system, rank_value"),
+    supabase
+      .from("council_consensus")
+      .select("scoring_system, player_id, avg_rank"),
+  ]);
+
+  type PerScoring = Partial<Record<ScoringSystem, number>>;
+  const council = new Map<number, PerScoring>();
+
+  const rawMap: PlatformRankingsMap = {};
+  for (const r of (platformResult.data ?? []) as PlatformRow[]) {
+    const player = rawMap[r.player_id] ?? (rawMap[r.player_id] = {});
+    const source = player[r.source] ?? (player[r.source] = {});
+    const byType = source[r.ranking_type] ?? (source[r.ranking_type] = {});
+    byType[r.scoring_system] = Number(r.rank_value);
+  }
+  const platformMap = withMockPlatformRankings(rawMap, projections);
+
+  for (const row of councilResult.data ?? []) {
+    const existing = council.get(row.player_id as number) ?? {};
+    existing[row.scoring_system as ScoringSystem] = Number(row.avg_rank);
+    council.set(row.player_id as number, existing);
+  }
+
+  const pickRanks = (
+    playerId: number,
+    source: string,
+    type: "editorial" | "adp",
+  ): PerScoring => {
+    return (platformMap[playerId]?.[source]?.[type] ?? {}) as PerScoring;
+  };
+
+  return projections.map((p) => ({
+    playerId: p.playerId,
+    name: p.name,
+    position: p.position,
+    team: p.team,
+    fantasyPoints: p.fantasyPoints,
+    vbd: p.vbd,
+    espnAdp: pickRanks(p.playerId, "espn", "adp"),
+    fpAdp: pickRanks(p.playerId, "fantasypros", "adp"),
+    sleeperAdp: pickRanks(p.playerId, "sleeper", "adp"),
+    nflRank: pickRanks(p.playerId, "nfl", "editorial"),
+    yahooRank: pickRanks(p.playerId, "yahoo", "editorial"),
+    councilRank: council.get(p.playerId) ?? {},
+  }));
+}
+
 export default async function TradesIndexPage({
   searchParams,
 }: {
@@ -63,6 +160,10 @@ export default async function TradesIndexPage({
     sort?: SortMode;
     scoring?: string;
     league?: string;
+    a?: string;
+    b?: string;
+    pa?: string;
+    pb?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -72,6 +173,9 @@ export default async function TradesIndexPage({
   const scoringFilter = (params.scoring ?? "all") as (typeof SCORING_FILTERS)[number];
   const leagueFilter = (params.league ?? "all") as (typeof LEAGUE_FILTERS)[number];
 
+  // Load list rows and calculator players in parallel — the calculator
+  // payload is small (top-200ish projections) and the list rows are
+  // capped at 100 anyway. Both come from the same Supabase client.
   const supabase = await createClient();
   let query = supabase
     .from("trade_submissions")
@@ -87,7 +191,10 @@ export default async function TradesIndexPage({
   }
   query = query.order("created_at", { ascending: false });
 
-  const { data: trades } = await query;
+  const [{ data: trades }, calcPlayers] = await Promise.all([
+    query,
+    loadCalculatorPlayers(),
+  ]);
   const ids = (trades ?? []).map((t) => t.id);
   // Aggregate vote counts directly from trade_votes — the trade_vote_summary
   // view had a NULL-counting bug for anon votes (see migration 012). Going
@@ -154,79 +261,122 @@ export default async function TradesIndexPage({
     rows.sort((a, b) => lopsidedScore(b.summary) - lopsidedScore(a.summary));
   }
 
+  // Calculator + list share the URL. When the user clicks a list filter
+  // we need to preserve any calculator params (a/b/pa/pb) so the trade
+  // they're building doesn't get wiped. `scoring` is intentionally shared
+  // between both surfaces — picking PPR on either side filters both.
+  const calculatorParams = {
+    a: params.a ?? "",
+    b: params.b ?? "",
+    pa: params.pa ?? "",
+    pb: params.pb ?? "",
+  };
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
 
-        <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">Trade Court</h2>
-            <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
-              Submit a fantasy trade. The council weighs in. Consensus emerges.
+        {/* Calculator — top of page. Empty state is compact (header +
+            side cards with the Add input prominent). As soon as the user
+            adds a player the verdict math drops in below. */}
+        <section className="mb-6">
+          <div className="mb-4 space-y-1">
+            <h2 className="text-xl font-semibold sm:text-2xl">Build a trade</h2>
+            <p className="text-xs text-zinc-400 sm:text-sm">
+              Add players to each side. See whether the trade is fair across
+              every source we track — Vegas season points, ESPN, FantasyPros,
+              Sleeper, NFL, Yahoo, and the Council Consensus.
             </p>
           </div>
-          <Link
-            href="/trades/new"
-            className="inline-flex items-center justify-center gap-1.5 self-start rounded-md bg-emerald-500/20 px-3 py-1.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 sm:self-auto"
-          >
-            <Send className="h-3.5 w-3.5" />
-            Submit a trade
-          </Link>
-        </div>
+          <Suspense fallback={null}>
+            <TradeCalculator players={calcPlayers} />
+          </Suspense>
+        </section>
 
-        {/* Filters + sort */}
-        <div className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto text-xs sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <FilterDropdown
-            label="Sort"
-            options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-            current={sortMode}
-            param="sort"
-            otherParams={{ scoring: scoringFilter, league: leagueFilter }}
-          />
-          <FilterDropdown
-            label="Scoring"
-            options={SCORING_FILTERS.map((s) => ({
-              value: s,
-              label: s === "all" ? "All scoring" : s,
-            }))}
-            current={scoringFilter}
-            param="scoring"
-            otherParams={{ sort: sortMode, league: leagueFilter }}
-          />
-          <FilterDropdown
-            label="League"
-            options={LEAGUE_FILTERS.map((s) => ({
-              value: s,
-              label: s === "all" ? "All leagues" : s,
-            }))}
-            current={leagueFilter}
-            param="league"
-            otherParams={{ sort: sortMode, scoring: scoringFilter }}
-          />
-          <span className="ml-auto shrink-0 text-zinc-500">
-            {rows.length} trade{rows.length === 1 ? "" : "s"}
-          </span>
-        </div>
-
-        {rows.length === 0 ? (
-          <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900 p-10 text-center">
-            <p className="text-lg font-bold text-emerald-300">
-              No trades on the docket.
-            </p>
-            <p className="mt-2 text-sm text-zinc-300">
-              Submit a trade — the council will render its verdict.
-            </p>
+        {/* Trade Court — below the calculator. Same surface, same URL. */}
+        <section className="border-t border-zinc-800 pt-6">
+          <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Trade Court</h2>
+              <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
+                Submitted trades. The council weighs in. Consensus emerges.
+              </p>
+            </div>
             <Link
               href="/trades/new"
-              className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/30"
+              className="inline-flex items-center justify-center gap-1.5 self-start rounded-md bg-emerald-500/20 px-3 py-1.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 sm:self-auto"
             >
               <Send className="h-3.5 w-3.5" />
               Submit a trade
             </Link>
           </div>
-        ) : (
-          <TradeListClient trades={rows} />
-        )}
+
+          {/* Filters + sort */}
+          <div className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto text-xs sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <FilterDropdown
+              label="Sort"
+              options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              current={sortMode}
+              param="sort"
+              otherParams={{
+                scoring: scoringFilter,
+                league: leagueFilter,
+                ...calculatorParams,
+              }}
+            />
+            <FilterDropdown
+              label="Scoring"
+              options={SCORING_FILTERS.map((s) => ({
+                value: s,
+                label: s === "all" ? "All scoring" : s,
+              }))}
+              current={scoringFilter}
+              param="scoring"
+              otherParams={{
+                sort: sortMode,
+                league: leagueFilter,
+                ...calculatorParams,
+              }}
+            />
+            <FilterDropdown
+              label="League"
+              options={LEAGUE_FILTERS.map((s) => ({
+                value: s,
+                label: s === "all" ? "All leagues" : s,
+              }))}
+              current={leagueFilter}
+              param="league"
+              otherParams={{
+                sort: sortMode,
+                scoring: scoringFilter,
+                ...calculatorParams,
+              }}
+            />
+            <span className="ml-auto shrink-0 text-zinc-500">
+              {rows.length} trade{rows.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          {rows.length === 0 ? (
+            <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900 p-10 text-center">
+              <p className="text-lg font-bold text-emerald-300">
+                No trades on the docket.
+              </p>
+              <p className="mt-2 text-sm text-zinc-300">
+                Submit a trade — the council will render its verdict.
+              </p>
+              <Link
+                href="/trades/new"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/30"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Submit a trade
+              </Link>
+            </div>
+          ) : (
+            <TradeListClient trades={rows} />
+          )}
+        </section>
       </div>
     </main>
   );
@@ -245,15 +395,22 @@ function FilterDropdown({
   param: string;
   otherParams: Record<string, string>;
 }) {
-  // Simple link-based filter — each option is its own URL.
+  // Simple link-based filter — each option is its own URL. otherParams
+  // carries forward the calculator state (a/b/pa/pb) so changing a
+  // filter doesn't wipe the trade the user is building above.
   return (
     <div className="flex shrink-0 items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
       <span className="px-1.5 text-xs uppercase tracking-wider text-zinc-500">
         {label}
       </span>
       {options.map((opt) => {
-        const allParams = { ...otherParams, [param]: opt.value };
-        const qs = new URLSearchParams(allParams).toString();
+        // Drop empty values so the URL stays tidy.
+        const merged: Record<string, string> = {};
+        for (const [k, v] of Object.entries(otherParams)) {
+          if (v) merged[k] = v;
+        }
+        merged[param] = opt.value;
+        const qs = new URLSearchParams(merged).toString();
         const isActive = current === opt.value;
         return (
           <Link
