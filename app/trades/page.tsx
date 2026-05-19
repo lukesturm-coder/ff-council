@@ -119,7 +119,7 @@ async function loadCalculatorPlayers(): Promise<TradePlayer[]> {
     const player = rawMap[r.player_id] ?? (rawMap[r.player_id] = {});
     const source = player[r.source] ?? (player[r.source] = {});
     const byType = source[r.ranking_type] ?? (source[r.ranking_type] = {});
-    byType[r.scoring_system] = Number(r.rank_value);
+    byType[r.scoring_system] = { rank: Number(r.rank_value), points: null };
   }
   const platformMap = withMockPlatformRankings(rawMap, projections);
 
@@ -129,12 +129,19 @@ async function loadCalculatorPlayers(): Promise<TradePlayer[]> {
     council.set(row.player_id as number, existing);
   }
 
+  // PlatformRankingsMap leaf is now { rank, points }; the Trade Calculator
+  // still wants a flat Record<ScoringSystem, number> of ranks, so unwrap.
   const pickRanks = (
     playerId: number,
     source: string,
     type: "editorial" | "adp",
   ): PerScoring => {
-    return (platformMap[playerId]?.[source]?.[type] ?? {}) as PerScoring;
+    const byScoring = platformMap[playerId]?.[source]?.[type] ?? {};
+    const out: PerScoring = {};
+    for (const [scoring, entry] of Object.entries(byScoring)) {
+      if (entry?.rank != null) out[scoring as ScoringSystem] = entry.rank;
+    }
+    return out;
   };
 
   return projections.map((p) => ({
