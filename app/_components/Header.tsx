@@ -32,10 +32,11 @@ const UTILITY_NAV: NavItem[] = [
   { href: "/trade", label: "Trade Calc" },
   { href: "/draft", label: "Mock Draft" },
   { href: "/league", label: "League Analyzer" },
-  { href: "/council", label: "Council Rankings" },
-  { href: "/tiers", label: "Tiers" },
-  { href: "/rank", label: "Rank" },
   { href: "/leaderboard", label: "Leaderboard" },
+  // Council Rankings, Tiers, and Rank intentionally removed from the Tools
+  // menu — Council Rankings is shown inline on /rankings; tiers will become
+  // visual dividers on /rankings based on clean breaks in projected points;
+  // the Beli-style ranking flow at /council/rank lives off /rankings, not nav.
 ];
 
 // =====================================================================
