@@ -145,7 +145,7 @@ export default async function RankingsPage() {
     ]);
 
   // Real platforms only have ESPN + FantasyPros so far. Layer mock Sleeper /
-  // NFL / CBS / Yahoo ranks on top so we can design the multi-source table
+  // NFL / Yahoo ranks on top so we can design the multi-source table
   // UX while we wait for those platforms to publish 2026 preseason data.
   const platformRankings = withMockPlatformRankings(realPlatformRankings, projections);
 

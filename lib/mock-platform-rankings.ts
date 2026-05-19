@@ -2,13 +2,13 @@ import type { PlatformRankingsMap } from "@/app/_components/RankingsTable";
 import type { PlayerProjection, ScoringSystem } from "@/lib/types";
 
 /**
- * Until we have real 2026 preseason rankings from Sleeper/NFL/CBS/Yahoo
- * (publishes ~July), we generate plausible mock rankings derived from the
- * Vegas baseline + deterministic per-platform noise. Lets us iterate on
- * table layout / multi-source UX without waiting for real data.
+ * Layer plausible mock rankings on top of any source that doesn't have full
+ * real coverage yet — keeps the multi-source table from looking sparse
+ * while real fetches grow. Numbers are deterministic from Vegas baseline +
+ * per-platform noise so same player + same platform = same rank.
  *
- * Numbers look organic (each platform disagrees with Vegas by a few spots)
- * but are 100% reproducible: same player + same platform = same rank.
+ * CBS is intentionally absent — the column is removed from the product
+ * entirely (Akamai-protected, not worth bypassing).
  */
 
 const SCORINGS: ScoringSystem[] = ["PPR", "Half", "Standard"];
@@ -16,7 +16,6 @@ const SCORINGS: ScoringSystem[] = ["PPR", "Half", "Standard"];
 const MOCK_PLATFORMS: { source: string; type: "editorial" | "adp" }[] = [
   { source: "sleeper", type: "adp" },
   { source: "nfl", type: "editorial" },
-  { source: "cbs", type: "editorial" },
   { source: "yahoo", type: "editorial" },
 ];
 

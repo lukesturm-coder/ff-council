@@ -161,7 +161,7 @@ export default async function SourceVerdictsPanel({
     loadPlatformRankings(),
     loadCouncilConsensus(),
   ]);
-  // Same mock-layering trick the rankings page uses so Sleeper/NFL/CBS/Yahoo
+  // Same mock-layering trick the rankings page uses so Sleeper/NFL/Yahoo
   // have data while we wait on real 2026 preseason fetches.
   const platformRankings = withMockPlatformRankings(
     realPlatformRankings,
