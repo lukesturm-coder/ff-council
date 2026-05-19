@@ -345,26 +345,30 @@ export default async function JudgePage({
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
-        <div className="mb-4 flex items-baseline justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold sm:text-xl">Judge mode</h2>
-            <p className="text-xs text-zinc-400 sm:text-sm">
-              One scenario at a time. Tap your verdict. Next.
-            </p>
-          </div>
-          <Link
-            href="/verdict/new"
-            className="shrink-0 text-xs text-zinc-400 underline-offset-4 hover:text-zinc-200 hover:underline"
-          >
-            + Post a tough call
-          </Link>
-        </div>
+      <div className="mx-auto max-w-3xl px-3 py-3 sm:px-6 sm:py-6">
+        {/* Header chrome demoted to a single small label — the nav already
+            announces this page is "Judge"; we just want context, not a
+            big h1 + tagline pushing the card below the fold. */}
+        <p className="mb-3 text-xs uppercase tracking-wider text-zinc-500">
+          Judge
+        </p>
 
         {/* Filter chips collapsed into a floating bottom-sheet so the trade
             card lands above the fold on mobile. Each pill is still a Link
-            keyed by URL search params — no client state for filter values. */}
-        <FilterSheet activeCount={activeFilterCount}>
+            keyed by URL search params — no client state for filter values.
+            "+ Post a tough call" lives in the sheet footer so it's still
+            reachable without claiming header real estate. */}
+        <FilterSheet
+          activeCount={activeFilterCount}
+          footer={
+            <Link
+              href="/verdict/new"
+              className="block text-center text-xs font-medium text-emerald-300 underline-offset-4 hover:text-emerald-200 hover:underline"
+            >
+              + Post a tough call
+            </Link>
+          }
+        >
           <FilterRow
             label="Sort"
             options={SORT_OPTIONS}
