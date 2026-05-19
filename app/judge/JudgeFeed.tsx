@@ -235,7 +235,7 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
           verdict{judged === 1 ? "" : "s"} rendered.
         </p>
         <p className="mt-2 text-sm text-zinc-400">
-          That&apos;s every open scenario in the queue.
+          That&apos;s every open question in the queue.
         </p>
         {skipped > 0 && (
           <p className="mt-1 text-xs text-zinc-500">
@@ -247,13 +247,7 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
             href="/trades"
             className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
           >
-            Browse Trade Court
-          </Link>
-          <Link
-            href="/verdict"
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
-          >
-            Browse Verdict
+            Browse trades
           </Link>
           <Link
             href="/verdict/new"

@@ -5,9 +5,9 @@ import JudgeFeed, { type JudgeItem } from "./JudgeFeed";
 import FilterSheet from "./FilterSheet";
 
 export const metadata: Metadata = {
-  title: "Judge mode · FF Council",
+  title: "Vote · FF Council",
   description:
-    "Rapid-fire voting on the council's open trades and verdicts — swipe through unvoted calls one tap at a time.",
+    "Speed-vote on open trades and tough calls — swipe through one tap at a time.",
 };
 
 // /judge — single-card full-screen feed of unvoted scenarios. Mixed feed
@@ -50,7 +50,7 @@ type VerdictRow = {
 const TYPE_OPTIONS = [
   { value: "all", label: "All" },
   { value: "trades", label: "Trades only" },
-  { value: "verdicts", label: "Verdicts only" },
+  { value: "verdicts", label: "Tough calls only" },
 ] as const;
 
 const LEAGUE_OPTIONS = [
@@ -347,10 +347,10 @@ export default async function JudgePage({
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-3xl px-3 py-3 sm:px-6 sm:py-6">
         {/* Header chrome demoted to a single small label — the nav already
-            announces this page is "Judge"; we just want context, not a
+            announces this page is "Vote"; we just want context, not a
             big h1 + tagline pushing the card below the fold. */}
         <p className="mb-3 text-xs uppercase tracking-wider text-zinc-500">
-          Judge
+          Speed vote
         </p>
 
         {/* Filter chips collapsed into a floating bottom-sheet so the trade
@@ -440,7 +440,7 @@ export default async function JudgePage({
                 href="/verdict/new"
                 className="rounded-md bg-emerald-500/20 px-4 py-2 text-xs font-medium text-emerald-200 hover:bg-emerald-500/30"
               >
-                Post a verdict scenario
+                Post a tough call
               </Link>
               <Link
                 href="/trades/new"
