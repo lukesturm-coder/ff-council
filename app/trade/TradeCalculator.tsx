@@ -856,21 +856,27 @@ function VerdictPanel({
 
   return (
     <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-3 sm:p-5">
-      {/* Winner banner */}
-      <div
-        className={`rounded-md border px-3 py-3 sm:px-4 sm:py-4 ${winnerBg}`}
-      >
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-          <p className={`text-lg font-semibold sm:text-xl ${winnerColor}`}>
-            {headline}
-          </p>
-          <p className="text-xs uppercase tracking-wider text-zinc-500">
-            Verdict · {scoring}
+      {/* Winner banner — sticky so the verdict stays onscreen while the
+          user scans evidence rows below. Negative margin + matching
+          horizontal padding lets the sticky band span the full panel
+          width (bleeding to the panel border) without the rounded
+          banner card itself losing its inner styling. */}
+      <div className="sticky top-0 z-10 -mx-3 bg-zinc-900/95 px-3 py-2 backdrop-blur sm:-mx-5 sm:px-5">
+        <div
+          className={`rounded-md border px-3 py-3 sm:px-4 sm:py-4 ${winnerBg}`}
+        >
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+            <p className={`text-lg font-semibold sm:text-xl ${winnerColor}`}>
+              {headline}
+            </p>
+            <p className="text-xs uppercase tracking-wider text-zinc-500">
+              Verdict · {scoring}
+            </p>
+          </div>
+          <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
+            {fairnessCopy}
           </p>
         </div>
-        <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
-          {fairnessCopy}
-        </p>
       </div>
 
       <table className="w-full text-xs sm:text-sm">
