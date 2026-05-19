@@ -51,7 +51,7 @@ export default function MoreMenu({ items }: { items: NavItem[] }) {
             : "border-transparent text-zinc-400 hover:text-zinc-100"
         }`}
       >
-        More
+        Tools
         <ChevronDown
           className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden
