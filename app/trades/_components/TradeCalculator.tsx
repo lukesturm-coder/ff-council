@@ -194,6 +194,8 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
 
   // Sync state → URL (replace, not push, so back button isn't polluted).
   // Skip the first render — initialization already matches the URL.
+  // Preserve any list-side params (sort, league) that live in the same URL
+  // — the calculator and the Trade Court list now share `/trades`.
   const firstRender = useRef(true);
   useEffect(() => {
     if (firstRender.current) {
@@ -201,14 +203,20 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
       return;
     }
     const sp = new URLSearchParams();
+    // Carry forward list filters so updating the calculator doesn't clobber
+    // them. `scoring` is shared between both surfaces and gets re-set below.
+    const sort = searchParams?.get("sort");
+    const league = searchParams?.get("league");
+    if (sort) sp.set("sort", sort);
+    if (league) sp.set("league", league);
     if (sideA.length) sp.set("a", sideA.join(","));
     if (sideB.length) sp.set("b", sideB.join(","));
     if (picksA.length) sp.set("pa", serializePicks(picksA));
     if (picksB.length) sp.set("pb", serializePicks(picksB));
     if (scoring !== "PPR") sp.set("scoring", scoring);
     const qs = sp.toString();
-    router.replace(qs ? `/trade?${qs}` : "/trade", { scroll: false });
-  }, [sideA, sideB, picksA, picksB, scoring, router]);
+    router.replace(qs ? `/trades?${qs}` : "/trades", { scroll: false });
+  }, [sideA, sideB, picksA, picksB, scoring, router, searchParams]);
 
   const currentYear = new Date().getFullYear();
   const aMetrics = computeMetrics(aPlayers, picksA, scoring, currentYear);
