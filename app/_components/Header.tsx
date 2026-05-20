@@ -8,6 +8,7 @@ import {
 } from "@/lib/projections";
 import type { FuturesResponse } from "@/lib/types";
 import PrimaryNav, { type NavItem } from "./PrimaryNav";
+import MoreMenu from "./MoreMenu";
 import SearchBar from "./SearchBar";
 import type {
   SearchIndex,
@@ -220,15 +221,20 @@ export default async function Header() {
           </div>
         </div>
 
-        {/* Sub-tools row — second tier, always visible. Every secondary
-            surface exposed (no dropdown). Scrolls horizontally on narrow
-            phones rather than hiding anything. */}
-        <PrimaryNav
-          items={subToolsNav}
-          variant="desktop"
-          size="compact"
-          className="mt-2 flex items-center gap-x-4 overflow-x-auto border-t border-zinc-800/60 pt-2 text-xs [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        />
+        {/* Sub-tools — second tier. Desktop (sm+): a full visible row, every
+            surface exposed. Mobile (<sm): a "Tools" dropdown, since a 7-item
+            scroll row hides items off-screen with no affordance anyway. */}
+        <div className="mt-2 border-t border-zinc-800/60 pt-2">
+          <PrimaryNav
+            items={subToolsNav}
+            variant="desktop"
+            size="compact"
+            className="hidden items-center gap-x-4 text-xs sm:flex"
+          />
+          <div className="sm:hidden">
+            <MoreMenu items={subToolsNav} />
+          </div>
+        </div>
       </div>
     </header>
   );
