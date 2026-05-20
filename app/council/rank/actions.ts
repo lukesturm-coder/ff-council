@@ -70,39 +70,56 @@ export async function savePersonalRank(input: {
     seen.add(rank);
   }
 
-  // Mark the existing current submission as not-current (if any).
-  const { error: clearErr } = await supabase
+  // Reuse the SINGLE current submission for this (member, scoring) and
+  // replace its entries. The previous approach marked old submissions
+  // not-current then inserted a fresh one on EVERY save — under the editors'
+  // rapid per-player saves that races, leaving the wrong submission (or none)
+  // marked current, so the user's ranks "reset" on reload. Find-or-create +
+  // replace-entries removes the is_current flag-flip race entirely.
+  const { data: currentSubs } = await supabase
     .from("ranking_submissions")
-    .update({ is_current: false })
+    .select("id")
     .eq("member_id", user.id)
     .eq("scoring_system", scoring)
-    .eq("is_current", true);
-  if (clearErr) return { ok: false, error: clearErr.message };
+    .eq("is_current", true)
+    .order("created_at", { ascending: false });
 
-  // Insert a fresh current submission.
-  const { data: submission, error: insErr } = await supabase
-    .from("ranking_submissions")
-    .insert({
-      member_id: user.id,
-      scoring_system: scoring,
-      is_current: true,
-    })
-    .select("id")
-    .single();
-  if (insErr || !submission) {
-    return { ok: false, error: insErr?.message ?? "Submission insert failed" };
+  let submissionId: string;
+  if (currentSubs && currentSubs.length > 0) {
+    submissionId = currentSubs[0].id;
+    // Heal any duplicate "current" rows left by past races — keep the newest.
+    if (currentSubs.length > 1) {
+      await supabase
+        .from("ranking_submissions")
+        .update({ is_current: false })
+        .in(
+          "id",
+          currentSubs.slice(1).map((s) => s.id),
+        );
+    }
+    // Replace this submission's entries wholesale.
+    await supabase
+      .from("ranking_entries")
+      .delete()
+      .eq("submission_id", submissionId);
+  } else {
+    const { data: submission, error: insErr } = await supabase
+      .from("ranking_submissions")
+      .insert({ member_id: user.id, scoring_system: scoring, is_current: true })
+      .select("id")
+      .single();
+    if (insErr || !submission) {
+      return { ok: false, error: insErr?.message ?? "Submission insert failed" };
+    }
+    submissionId = submission.id;
   }
 
-  // Bulk-insert every entry. ranking_entries has FK to the submission, so
-  // when the old submission flipped to is_current=false its entries are
-  // preserved as history.
-  //
-  // We attempt the insert WITH the tier column first. If migration 018 hasn't
-  // run yet, PostgREST rejects the unknown `tier` column — we detect that and
-  // retry without it, so the order still persists (mirrors the
+  // Insert every entry. We attempt WITH the tier column first; if migration
+  // 018 hasn't run yet, PostgREST rejects the unknown `tier` column — detect
+  // that and retry without it so the order still persists (mirrors the
   // projected_points fallback in app/rankings/page.tsx#loadPlatformRankings).
   const baseRows = ranks.map((r) => ({
-    submission_id: submission.id,
+    submission_id: submissionId,
     player_id: r.playerId,
     rank: r.rank,
   }));
@@ -132,7 +149,7 @@ export async function savePersonalRank(input: {
   if (from !== "board") revalidatePath("/council/rankings");
   // /council always reads fresh consensus and is never the editing surface.
   revalidatePath("/council");
-  return { ok: true, submissionId: submission.id };
+  return { ok: true, submissionId };
 }
 
 /**
