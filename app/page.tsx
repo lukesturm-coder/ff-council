@@ -67,8 +67,8 @@ const TILES: Tile[] = [
   },
   {
     href: "/council",
-    title: "Council Rankings",
-    description: "What the council collectively ranks.",
+    title: "My Rankings",
+    description: "Build your own ranking — list, quick head-to-heads, or tiers.",
     icon: Users,
   },
   {

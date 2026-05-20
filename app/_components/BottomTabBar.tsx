@@ -30,7 +30,7 @@ const TABS: Tab[] = [
 const TOOLS: NavItem[] = [
   { href: "/draft", label: "Mock Draft" },
   { href: "/trades", label: "Trade Calculator" },
-  { href: "/council", label: "Council Rankings" },
+  { href: "/council", label: "My Rankings" },
   { href: "/league", label: "League Analyzer" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];

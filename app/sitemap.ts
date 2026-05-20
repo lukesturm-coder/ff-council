@@ -22,7 +22,6 @@ const STATIC_PATHS = [
   "/draft",
   "/league",
   "/council",
-  "/council/rankings",
   "/privacy",
   "/terms",
 ] as const;

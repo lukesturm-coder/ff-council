@@ -42,15 +42,6 @@ export type SavePersonalRankResult =
 export async function savePersonalRank(input: {
   scoring: ScoringSystem;
   ranks: Array<{ playerId: number; rank: number; tier?: TierLetter | null }>;
-  /**
-   * Which surface is calling. We never revalidate the route the user is
-   * actively editing on, because revalidatePath of the current route inside a
-   * client useTransition wedges the transition queue (it froze the Beli flow
-   * after a couple of saves). "rank" = the Beli tap-flow at /council/rank,
-   * "board" = the tier board at /council/rankings. Defaults to "rank" to
-   * preserve the original behaviour for existing callers.
-   */
-  from?: "rank" | "board";
 }): Promise<SavePersonalRankResult> {
   const supabase = await createClient();
   const {
@@ -140,15 +131,14 @@ export async function savePersonalRank(input: {
     }
   }
 
-  // Revalidate the OTHER surfaces that read these tables — but NEVER the route
-  // the caller is actively editing on. Calling revalidatePath for the current
-  // route inside the client's useTransition wedges the transition queue (the
-  // flow freezes after a couple of saves). Each editor holds its working state
-  // client-side, so it doesn't need a server refresh while the user is ranking.
-  const from = input.from ?? "rank";
-  if (from !== "board") revalidatePath("/council/rankings");
-  // /council always reads fresh consensus and is never the editing surface.
-  revalidatePath("/council");
+  // All three editors (List / Quick Rank / Tier Board) now live on /council, so
+  // we must NEVER revalidate /council here: revalidatePath for the route the
+  // user is actively editing wedges the client useTransition queue (the flow
+  // freezes after a couple of saves). The editors hold their working state
+  // client-side and don't need a server refresh mid-edit. We revalidate
+  // /rankings instead so the public Council consensus column there reflects the
+  // updated aggregate. (/council/rankings is now just a redirect.)
+  revalidatePath("/rankings");
   return { ok: true, submissionId };
 }
 

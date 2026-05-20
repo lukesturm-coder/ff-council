@@ -487,7 +487,7 @@ export default function RankClient({
         </div>
 
         <Link
-          href="/council/rankings"
+          href="/council?view=board"
           className="text-xs text-zinc-500 transition hover:text-zinc-300"
           title="Drag players into tier rows"
         >
@@ -876,7 +876,7 @@ function DoneState({ totalRanked }: { totalRanked: number }) {
       <div className="mt-1 text-xs text-zinc-400">
         Switch scoring above to rank another, or pull up the{" "}
         <Link
-          href="/council/rankings"
+          href="/council?view=board"
           className="text-emerald-300 underline-offset-4 hover:underline"
         >
           tier board

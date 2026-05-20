@@ -11,26 +11,23 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import type { ConsensusRow } from "./ConsensusView";
 import type { TierLetter } from "./rank/actions";
 import type { ExistingRankings } from "./rankings/TierBoardEditor";
 import RankingsHub, { type HubView } from "./RankingsHub";
 
 export const metadata: Metadata = {
-  title: "Council Rankings · FF Council",
+  title: "My Rankings · FF Council",
   description:
-    "The council rankings hub — build your own (tap-flow or tier board) and see the aggregated council consensus.",
+    "Build your personal fantasy ranking — a drag list, quick head-to-heads, or a tier board. Your picks feed the Council consensus.",
 };
 
-// Always fresh — consensus + the signed-in member's saved ranks live in
-// supabase and we want cross-device edits to show up.
+// Always fresh — the signed-in member's saved ranks live in supabase and we
+// want cross-device edits to show up.
 export const dynamic = "force-dynamic";
 
 /**
  * Full 300-player pool: real Vegas projections plus stubs for roster players
- * without betting markets, so every player is rankable in the builders. The
- * consensus view only looks up players that appear in council_consensus rows,
- * so the wider pool is a harmless superset there.
+ * without betting markets, so every player is rankable in the builders.
  */
 async function loadProjections(): Promise<PlayerProjection[]> {
   const dataDir = path.join(process.cwd(), "data");
@@ -124,19 +121,8 @@ async function loadExistingRanks(
   return out;
 }
 
-type ConsensusRowDb = {
-  scoring_system: string;
-  player_id: number;
-  ranker_count: number;
-  avg_rank: number;
-  median_rank: number;
-  stddev_rank: number | null;
-  min_rank: number;
-  max_rank: number;
-};
-
 function normalizeView(v: string | undefined): HubView {
-  return v === "rank" || v === "board" ? v : "council";
+  return v === "rank" || v === "board" ? v : "list";
 }
 
 export default async function CouncilPage({
@@ -149,58 +135,12 @@ export default async function CouncilPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [projections, { data: consensusRows }, { data: memberRows }, existing] =
-    await Promise.all([
-      loadProjections(),
-      supabase
-        .from("council_consensus")
-        .select(
-          "scoring_system, player_id, ranker_count, avg_rank, median_rank, stddev_rank, min_rank, max_rank",
-        ),
-      supabase
-        .from("council_members")
-        .select("user_id", { count: "exact" })
-        .eq("status", "approved"),
-      user
-        ? loadExistingRanks(supabase, user.id)
-        : Promise.resolve({} as ExistingRankings),
-    ]);
-
-  const playerById = new Map<number, PlayerProjection>(
-    projections.map((p) => [p.playerId, p]),
-  );
-
-  const consensusByScoring: Record<ScoringSystem, ConsensusRow[]> = {
-    PPR: [],
-    Half: [],
-    Standard: [],
-  };
-
-  for (const row of (consensusRows ?? []) as ConsensusRowDb[]) {
-    const scoring = row.scoring_system as ScoringSystem;
-    const player = playerById.get(row.player_id);
-    if (!player) continue;
-    consensusByScoring[scoring].push({
-      playerId: row.player_id,
-      name: player.name,
-      team: player.team,
-      position: player.position,
-      vegasVbd: player.vbd[scoring],
-      vegasFpts: player.fantasyPoints[scoring],
-      rankerCount: row.ranker_count,
-      avgRank: Number(row.avg_rank),
-      medianRank: Number(row.median_rank),
-      stddevRank: row.stddev_rank == null ? null : Number(row.stddev_rank),
-      minRank: row.min_rank,
-      maxRank: row.max_rank,
-    });
-  }
-
-  for (const s of Object.keys(consensusByScoring) as ScoringSystem[]) {
-    consensusByScoring[s].sort((a, b) => a.avgRank - b.avgRank);
-  }
-
-  const totalApprovedMembers = memberRows?.length ?? 0;
+  const [projections, existing] = await Promise.all([
+    loadProjections(),
+    user
+      ? loadExistingRanks(supabase, user.id)
+      : Promise.resolve({} as ExistingRankings),
+  ]);
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -210,8 +150,6 @@ export default async function CouncilPage({
           isLoggedIn={Boolean(user)}
           projections={projections}
           existing={existing}
-          consensusByScoring={consensusByScoring}
-          totalApprovedMembers={totalApprovedMembers}
         />
       </div>
     </main>

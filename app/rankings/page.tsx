@@ -191,9 +191,7 @@ export default async function RankingsPage() {
         <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">
           <p>
             Council{" "}
-            {hasCouncil
-              ? "consensus active"
-              : "(submit at /council/rankings)"}
+            {hasCouncil ? "consensus active" : "(build yours at /council)"}
             {" · "}
             ESPN {hasEspn ? "rankings + ADP wired" : "(run `npm run fetch:espn`)"}
             {" · "}

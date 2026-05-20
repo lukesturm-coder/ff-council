@@ -46,12 +46,12 @@ import { savePersonalRank, type TierLetter } from "../rank/actions";
 // node, making dnd-kit cancel the drop. The hovered row still highlights via
 // useDroppable's isOver.
 //
-// Save: debounced after each drag-end via savePersonalRank({ from: "board" }).
+// Save: debounced after each drag-end via savePersonalRank.
 //   - We compute the next ordering purely (from a ref mirror of state) and
 //     persist it outside the setState updater (never fire a transition from
 //     inside a state updater).
-//   - The action does NOT revalidatePath("/council/rankings") when from:"board"
-//     (it's the route we're on) — both of those caused the Beli-flow freeze.
+//   - The action never revalidates /council (the route every editor lives on)
+//     — doing so wedges the client transition queue and froze the flow.
 // ---------------------------------------------------------------------------
 
 const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
@@ -235,7 +235,6 @@ export default function TierBoardEditor({
         const res = await savePersonalRank({
           scoring: scoringSys,
           ranks,
-          from: "board",
         });
         setSaveMsg(res.ok ? "Saved" : `Save failed: ${res.error}`);
       });
@@ -371,7 +370,7 @@ export default function TierBoardEditor({
         </div>
 
         <Link
-          href="/council/rank"
+          href="/council?view=rank"
           className="text-xs text-zinc-500 transition hover:text-zinc-300"
           title="Beli-style tap-to-rank flow"
         >
