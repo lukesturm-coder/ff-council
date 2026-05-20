@@ -37,9 +37,19 @@ import { recordComparison, savePersonalRank } from "./actions";
 const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
 const CONFIRM_MS = 1200;
 
-type TierLetter = "S" | "A" | "B" | "C" | "D";
-const TIERS: TierLetter[] = ["S", "A", "B", "C", "D"];
-const TIER_RANK: Record<TierLetter, number> = { S: 0, A: 1, B: 2, C: 3, D: 4 };
+type TierLetter = "S" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+const TIERS: TierLetter[] = ["S", "A", "B", "C", "D", "E", "F", "G", "H"];
+const TIER_RANK: Record<TierLetter, number> = {
+  S: 0,
+  A: 1,
+  B: 2,
+  C: 3,
+  D: 4,
+  E: 5,
+  F: 6,
+  G: 7,
+  H: 8,
+};
 
 const TIER_META: Record<
   TierLetter,
@@ -54,22 +64,46 @@ const TIER_META: Record<
   A: {
     label: "Every-Week Starter",
     classes:
+      "bg-teal-500/15 text-teal-200 ring-teal-500/40 hover:bg-teal-500/25",
+    ring: "ring-teal-400/60",
+  },
+  B: {
+    label: "Strong Flex",
+    classes:
       "bg-cyan-500/15 text-cyan-200 ring-cyan-500/40 hover:bg-cyan-500/25",
     ring: "ring-cyan-400/60",
   },
-  B: {
+  C: {
     label: "Flex",
+    classes:
+      "bg-sky-500/15 text-sky-200 ring-sky-500/40 hover:bg-sky-500/25",
+    ring: "ring-sky-400/60",
+  },
+  D: {
+    label: "Bench",
+    classes:
+      "bg-blue-500/15 text-blue-200 ring-blue-500/40 hover:bg-blue-500/25",
+    ring: "ring-blue-400/60",
+  },
+  E: {
+    label: "Deep Bench",
+    classes:
+      "bg-indigo-500/15 text-indigo-200 ring-indigo-500/40 hover:bg-indigo-500/25",
+    ring: "ring-indigo-400/60",
+  },
+  F: {
+    label: "Bye-Week Fill",
     classes:
       "bg-amber-500/15 text-amber-200 ring-amber-500/40 hover:bg-amber-500/25",
     ring: "ring-amber-400/60",
   },
-  C: {
-    label: "Bench",
+  G: {
+    label: "Stash",
     classes:
-      "bg-zinc-500/15 text-zinc-200 ring-zinc-500/40 hover:bg-zinc-500/25",
-    ring: "ring-zinc-400/60",
+      "bg-orange-500/15 text-orange-200 ring-orange-500/40 hover:bg-orange-500/25",
+    ring: "ring-orange-400/60",
   },
-  D: {
+  H: {
     label: "Drop",
     classes:
       "bg-rose-500/15 text-rose-200 ring-rose-500/40 hover:bg-rose-500/25",
@@ -695,17 +729,19 @@ function TierStateView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+      <div className="grid grid-cols-3 gap-2">
         {TIERS.map((t) => {
           const meta = TIER_META[t];
           return (
             <button
               key={t}
               onClick={() => onTierPick(t)}
-              className={`flex items-center justify-between gap-2 rounded-xl px-4 py-3 text-left ring-1 ring-inset transition sm:flex-col sm:items-stretch sm:justify-center sm:gap-1 sm:py-4 sm:text-center ${meta.classes}`}
+              className={`flex flex-col items-stretch justify-center gap-0.5 rounded-xl px-3 py-3 text-center ring-1 ring-inset transition ${meta.classes}`}
             >
-              <span className="text-xl font-bold sm:text-2xl">{t}</span>
-              <span className="text-xs opacity-80">{meta.label}</span>
+              <span className="text-lg font-bold sm:text-xl">{t}</span>
+              <span className="text-[11px] leading-tight opacity-80">
+                {meta.label}
+              </span>
             </button>
           );
         })}
@@ -905,8 +941,8 @@ function HeadshotPlaceholder({ position }: { position: FantasyPosition }) {
  */
 function computeGlobalInsertIndex(
   ordered: number[],
-  tierOf: Map<number, "S" | "A" | "B" | "C" | "D">,
-  tier: "S" | "A" | "B" | "C" | "D",
+  tierOf: Map<number, TierLetter>,
+  tier: TierLetter,
   sliceLocalIndex: number,
   tierSlice: number[],
 ): number {
