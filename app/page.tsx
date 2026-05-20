@@ -4,7 +4,6 @@ import {
   BarChart3,
   ClipboardList,
   Gavel,
-  Layers,
   Network,
   Scale,
   Trophy,
@@ -71,12 +70,6 @@ const TILES: Tile[] = [
     title: "Council Rankings",
     description: "What the council collectively ranks.",
     icon: Users,
-  },
-  {
-    href: "/tiers",
-    title: "Tiers",
-    description: "S/A/B/C/D tiers with the on-the-clock draft board.",
-    icon: Layers,
   },
   {
     href: "/leaderboard",

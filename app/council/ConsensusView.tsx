@@ -6,7 +6,6 @@ import type {
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
-import Link from "next/link";
 import { computeTiersByPlayer, tierStyle, tierDescription, tierLetter } from "@/lib/tiers";
 
 export type ConsensusRow = {
@@ -111,7 +110,7 @@ export default function ConsensusView({
               <th className="py-3 pl-2">Pos</th>
               <th
                 className="py-3 pl-2"
-                title="Numbered per-position tier from Jenks natural-breaks clustering on Vegas FPts. Click to open the Tiers chart."
+                title="Numbered per-position tier from Jenks natural-breaks clustering on Vegas FPts."
               >
                 Tier
               </th>
@@ -184,13 +183,12 @@ export default function ConsensusView({
                       if (!info) return <span className="text-xs text-zinc-600">—</span>;
                       const style = tierStyle(info.tier);
                       return (
-                        <Link
-                          href={`/tiers?scoring=${scoring}&source=council`}
-                          className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset transition hover:brightness-125 ${style.badge}`}
+                        <span
+                          className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-mono text-xs font-semibold ring-1 ring-inset ${style.badge}`}
                           title={tierDescription(info.tier, info.position, info.tierSize)}
                         >
                           {tierLetter(info.tier)}
-                        </Link>
+                        </span>
                       );
                     })()}
                   </td>

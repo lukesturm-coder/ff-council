@@ -11,14 +11,27 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import ConsensusView, { type ConsensusRow } from "./ConsensusView";
+import type { ConsensusRow } from "./ConsensusView";
+import type { TierLetter } from "./rank/actions";
+import type { ExistingRankings } from "./rankings/TierBoardEditor";
+import RankingsHub, { type HubView } from "./RankingsHub";
 
 export const metadata: Metadata = {
-  title: "Council Consensus · FF Council",
+  title: "Council Rankings · FF Council",
   description:
-    "The aggregated council rankings — average rank, agreement, and dispersion across every council member.",
+    "The council rankings hub — build your own (tap-flow or tier board) and see the aggregated council consensus.",
 };
 
+// Always fresh — consensus + the signed-in member's saved ranks live in
+// supabase and we want cross-device edits to show up.
+export const dynamic = "force-dynamic";
+
+/**
+ * Full 300-player pool: real Vegas projections plus stubs for roster players
+ * without betting markets, so every player is rankable in the builders. The
+ * consensus view only looks up players that appear in council_consensus rows,
+ * so the wider pool is a harmless superset there.
+ */
 async function loadProjections(): Promise<PlayerProjection[]> {
   const dataDir = path.join(process.cwd(), "data");
   const [futuresRaw, rosterRaw] = await Promise.all([
@@ -27,7 +40,88 @@ async function loadProjections(): Promise<PlayerProjection[]> {
   ]);
   const futures: FuturesResponse = JSON.parse(futuresRaw);
   const roster: PlayerRosterEntry[] = JSON.parse(rosterRaw);
-  return projectionsFromFutures(futures, roster);
+  const projected = projectionsFromFutures(futures, roster);
+  const projectedIds = new Set(projected.map((p) => p.playerId));
+
+  const stubs: PlayerProjection[] = roster
+    .filter((r) => !projectedIds.has(r.PlayerID))
+    .map((r) => ({
+      playerId: r.PlayerID,
+      name: r.Name,
+      team: r.Team,
+      position: r.FantasyPosition,
+      adp: r.AverageDraftPosition,
+      adpPPR: r.AverageDraftPositionPPR,
+      impliedStats: {},
+      fantasyPoints: { PPR: 0, Half: 0, Standard: 0 },
+      vbd: { PPR: 0, Half: 0, Standard: 0 },
+      markets: [],
+    }));
+
+  return [...projected, ...stubs];
+}
+
+const TIER_SET = new Set<TierLetter>([
+  "S",
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+]);
+
+function asTier(t: string | null | undefined): TierLetter | null {
+  return t && TIER_SET.has(t as TierLetter) ? (t as TierLetter) : null;
+}
+
+/**
+ * Load the signed-in member's current submission per scoring system as
+ * {playerId: {rank, tier}}. Tries the tier column first and falls back to
+ * rank-only if migration 018 hasn't run (mirrors the builders' own loaders).
+ */
+async function loadExistingRanks(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<ExistingRankings> {
+  const withTier = await supabase
+    .from("ranking_submissions")
+    .select("scoring_system, ranking_entries(player_id, rank, tier)")
+    .eq("member_id", userId)
+    .eq("is_current", true);
+
+  let subs: Array<{
+    scoring_system: string;
+    ranking_entries: Array<{
+      player_id: number;
+      rank: number;
+      tier?: string | null;
+    }>;
+  }>;
+
+  if (!withTier.error) {
+    subs = (withTier.data ?? []) as unknown as typeof subs;
+  } else {
+    const fallback = await supabase
+      .from("ranking_submissions")
+      .select("scoring_system, ranking_entries(player_id, rank)")
+      .eq("member_id", userId)
+      .eq("is_current", true);
+    subs = (fallback.data ?? []) as unknown as typeof subs;
+  }
+
+  const out: ExistingRankings = {};
+  for (const row of subs) {
+    const scoring = row.scoring_system as ScoringSystem;
+    const dict: Record<number, { rank: number; tier: TierLetter | null }> = {};
+    for (const e of row.ranking_entries) {
+      dict[e.player_id] = { rank: e.rank, tier: asTier(e.tier) };
+    }
+    out[scoring] = dict;
+  }
+  return out;
 }
 
 type ConsensusRowDb = {
@@ -41,10 +135,21 @@ type ConsensusRowDb = {
   max_rank: number;
 };
 
-export default async function CouncilConsensusPage() {
-  const supabase = await createClient();
+function normalizeView(v: string | undefined): HubView {
+  return v === "rank" || v === "board" ? v : "council";
+}
 
-  const [projections, { data: consensusRows }, { data: memberRows }] =
+export default async function CouncilPage({
+  searchParams,
+}: {
+  searchParams: { view?: string };
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [projections, { data: consensusRows }, { data: memberRows }, existing] =
     await Promise.all([
       loadProjections(),
       supabase
@@ -56,6 +161,9 @@ export default async function CouncilConsensusPage() {
         .from("council_members")
         .select("user_id", { count: "exact" })
         .eq("status", "approved"),
+      user
+        ? loadExistingRanks(supabase, user.id)
+        : Promise.resolve({} as ExistingRankings),
     ]);
 
   const playerById = new Map<number, PlayerProjection>(
@@ -88,7 +196,6 @@ export default async function CouncilConsensusPage() {
     });
   }
 
-  // Sort each scoring system by avg rank ascending (rank 1 = best)
   for (const s of Object.keys(consensusByScoring) as ScoringSystem[]) {
     consensusByScoring[s].sort((a, b) => a.avgRank - b.avgRank);
   }
@@ -98,20 +205,13 @@ export default async function CouncilConsensusPage() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
-        <div className="mb-4 space-y-1">
-          <h2 className="text-lg font-semibold sm:text-xl">Council Consensus</h2>
-          <p className="text-xs text-zinc-400 sm:text-sm">
-            Average ranking across {totalApprovedMembers} council member
-            {totalApprovedMembers === 1 ? "" : "s"}&apos; current submissions.
-            The <span className="text-zinc-200">spread</span> column shows
-            disagreement — high spread = controversial pick. The Edge vs Vegas
-            column compares Council consensus to the Vegas Edge ranking.
-          </p>
-        </div>
-
-        <ConsensusView
-          consensusByScoring={consensusByScoring}
+        <RankingsHub
+          initialView={normalizeView(searchParams.view)}
+          isLoggedIn={Boolean(user)}
           projections={projections}
+          existing={existing}
+          consensusByScoring={consensusByScoring}
+          totalApprovedMembers={totalApprovedMembers}
         />
       </div>
     </main>

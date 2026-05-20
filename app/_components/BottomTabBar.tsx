@@ -24,15 +24,13 @@ const TABS: Tab[] = [
   { href: "/trades", label: "Trade Court", icon: Scale },
 ];
 
-// The standing secondary surfaces. Auth-gated entries (My Rankings, Admin)
-// arrive via the `extraTools` prop because this client component can't run
-// the server-side auth check.
+// The standing secondary surfaces. Auth-gated entries (Admin) arrive via the
+// `extraTools` prop because this client component can't run the server-side
+// auth check.
 const TOOLS: NavItem[] = [
   { href: "/draft", label: "Mock Draft" },
   { href: "/trades", label: "Trade Calculator" },
-  { href: "/council/rank", label: "Rank Players" },
   { href: "/council", label: "Council Rankings" },
-  { href: "/tiers", label: "Tiers" },
   { href: "/league", label: "League Analyzer" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];

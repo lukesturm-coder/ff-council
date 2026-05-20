@@ -33,9 +33,7 @@ const PRIORITY_NAV: NavItem[] = [
 const UTILITY_NAV: NavItem[] = [
   { href: "/draft", label: "Mock Draft" },
   { href: "/trades", label: "Trade Calculator" },
-  { href: "/council/rank", label: "Rank Players" },
   { href: "/council", label: "Council Rankings" },
-  { href: "/tiers", label: "Tiers" },
   { href: "/league", label: "League Analyzer" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
@@ -171,7 +169,6 @@ export default async function Header() {
   // to the mobile bottom bar's Tools sheet via the extraTools prop (the bar is
   // a client component and can't run the server-side auth check itself).
   const extraTools: NavItem[] = [];
-  if (user) extraTools.push({ href: "/council/rankings", label: "My Rankings" });
   if (isAdmin) extraTools.push({ href: "/council/admin", label: "Admin" });
 
   // Desktop sub-tools row — every secondary surface, always visible.

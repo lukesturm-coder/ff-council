@@ -841,10 +841,9 @@ export default async function PlayerDetailPage({
         })()}
 
         {/* Tier callout — this player's Jenks tier under each scoring system,
-           color-coded by tier color so you can read it at a glance. Each card
-           deep-links into /tiers?scoring=… so the user can see the full
-           position grid. Renders nothing if we somehow don't have tier data
-           (very small position pools, etc.). */}
+           color-coded by tier color so you can read it at a glance. Renders
+           nothing if we somehow don't have tier data (very small position
+           pools, etc.). */}
         {SCORINGS.some((s) => tierByScoring[s]) && (
           <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {SCORINGS.map((s) => {
@@ -852,10 +851,9 @@ export default async function PlayerDetailPage({
               if (!info) return null;
               const style = tierStyle(info.tier);
               return (
-                <Link
+                <div
                   key={s}
-                  href={`/tiers?scoring=${s}`}
-                  className={`group rounded-lg border ${style.border} ${style.row} p-3 transition hover:brightness-125`}
+                  className={`rounded-lg border ${style.border} ${style.row} p-3`}
                 >
                   <div className="flex items-baseline justify-between gap-2">
                     <span
@@ -874,9 +872,9 @@ export default async function PlayerDetailPage({
                     of {info.position}s · {style.label}
                   </p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    Tier {info.tier} of {info.totalTiers} · view tiers →
+                    Tier {info.tier} of {info.totalTiers}
                   </p>
-                </Link>
+                </div>
               );
             })}
           </div>
