@@ -8,7 +8,7 @@ import {
 } from "@/lib/projections";
 import type { FuturesResponse } from "@/lib/types";
 import PrimaryNav, { type NavItem } from "./PrimaryNav";
-import MoreMenu from "./MoreMenu";
+import BottomTabBar from "./BottomTabBar";
 import SearchBar from "./SearchBar";
 import type {
   SearchIndex,
@@ -166,11 +166,15 @@ export default async function Header() {
     isAdmin = Boolean(data?.is_admin);
   }
 
-  // Sub-tools row — every secondary surface, always visible (no dropdown).
-  // Auth-gated entries slot in alongside the standing tools.
-  const subToolsNav: NavItem[] = [...UTILITY_NAV];
-  if (user) subToolsNav.push({ href: "/council/rankings", label: "My Rankings" });
-  if (isAdmin) subToolsNav.push({ href: "/council/admin", label: "Admin" });
+  // Auth-gated entries — slotted into the desktop sub-tools row, and threaded
+  // to the mobile bottom bar's Tools sheet via the extraTools prop (the bar is
+  // a client component and can't run the server-side auth check itself).
+  const extraTools: NavItem[] = [];
+  if (user) extraTools.push({ href: "/council/rankings", label: "My Rankings" });
+  if (isAdmin) extraTools.push({ href: "/council/admin", label: "Admin" });
+
+  // Desktop sub-tools row — every secondary surface, always visible.
+  const subToolsNav: NavItem[] = [...UTILITY_NAV, ...extraTools];
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60">
@@ -182,15 +186,15 @@ export default async function Header() {
             </h1>
           </Link>
 
-          {/* Priority nav: 4 tabs, visible on all sizes. Scrolls horizontally
-              on very narrow phones if needed. */}
+          {/* Priority nav: 4 tabs. Desktop only (md+) — on mobile the fixed
+              bottom tab bar covers these surfaces. */}
           <PrimaryNav
             items={PRIORITY_NAV}
             variant="desktop"
-            className="flex min-w-0 flex-1 items-center gap-x-4 overflow-x-auto text-sm sm:gap-x-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="hidden min-w-0 flex-1 items-center gap-x-4 overflow-x-auto text-sm sm:gap-x-5 md:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           />
 
-          <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm">
+          <div className="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap text-sm">
             <SearchBar index={searchIndex} />
             {user ? (
               <>
@@ -221,21 +225,22 @@ export default async function Header() {
           </div>
         </div>
 
-        {/* Sub-tools — second tier. Desktop (sm+): a full visible row, every
-            surface exposed. Mobile (<sm): a "Tools" dropdown, since a 7-item
-            scroll row hides items off-screen with no affordance anyway. */}
-        <div className="mt-2 border-t border-zinc-800/60 pt-2">
+        {/* Sub-tools — second tier, desktop only (md+): a full visible row,
+            every surface exposed. On mobile these live in the bottom bar's
+            Tools sheet instead. */}
+        <div className="mt-2 hidden border-t border-zinc-800/60 pt-2 md:block">
           <PrimaryNav
             items={subToolsNav}
             variant="desktop"
             size="compact"
-            className="hidden items-center gap-x-4 text-xs sm:flex"
+            className="hidden items-center gap-x-4 text-xs md:flex"
           />
-          <div className="sm:hidden">
-            <MoreMenu items={subToolsNav} />
-          </div>
         </div>
       </div>
+
+      {/* Mobile-only fixed bottom tab bar. Auth-gated tools are threaded in
+          via extraTools since the bar is a client component. */}
+      <BottomTabBar extraTools={extraTools} />
     </header>
   );
 }
