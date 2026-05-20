@@ -13,12 +13,10 @@ import {
   useSensors,
   useDroppable,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  arrayMove,
   rectSortingStrategy,
   useSortable,
 } from "@dnd-kit/sortable";
@@ -42,9 +40,16 @@ import { savePersonalRank, type TierLetter } from "../rank/actions";
 // persist the tier letter (migration 018) so the board reloads players back
 // into their rows.
 //
+// Placement happens once on drop (onDragEnd) — we intentionally do NOT shuffle
+// chips between containers during onDragOver, because the pool only renders a
+// filtered subset and moving the active chip out of it mid-drag unmounts its
+// node, making dnd-kit cancel the drop. The hovered row still highlights via
+// useDroppable's isOver.
+//
 // Save: debounced after each drag-end via savePersonalRank({ from: "board" }).
-//   - We compute the next ordering OUTSIDE the setState updater and persist it
-//     from there (never fire a transition from inside a state updater).
+//   - We compute the next ordering purely (from a ref mirror of state) and
+//     persist it outside the setState updater (never fire a transition from
+//     inside a state updater).
 //   - The action does NOT revalidatePath("/council/rankings") when from:"board"
 //     (it's the route we're on) — both of those caused the Beli-flow freeze.
 // ---------------------------------------------------------------------------
@@ -181,6 +186,12 @@ export default function TierBoardEditor({
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Always-fresh mirror of `boards` so drag handlers can read the latest state
+  // synchronously (without the fragile "capture via setState side-effect" hack)
+  // and compute the next board purely before saving.
+  const boardsRef = useRef(boards);
+  boardsRef.current = boards;
+
   const board = boards[scoring];
 
   const sensors = useSensors(
@@ -244,116 +255,74 @@ export default function TierBoardEditor({
   );
 
   // ---- drag handlers -------------------------------------------------------
+  // Placement happens ONCE on drop (not live during drag). We deliberately do
+  // NOT move chips between containers in onDragOver: the pool only renders a
+  // filtered subset, so moving the active chip out of the pool mid-drag would
+  // unmount its node and remount it under a different SortableContext —
+  // dnd-kit then loses the active node and cancels the drop ("lifts but won't
+  // drop / snaps back"). Keeping the chip put until drop avoids that entirely.
+  // The hovered tier still highlights via useDroppable's `isOver`.
   function handleDragStart(e: DragStartEvent) {
     setActiveId(Number(e.active.id));
-  }
-
-  // Move a chip between containers live as you drag over them, so the drop
-  // zones visibly reflow. All container lookups happen against the FRESH state
-  // inside the functional updater so rapid over-events don't act on a stale
-  // board. We only touch the active scoring system's board.
-  function handleDragOver(e: DragOverEvent) {
-    const { active, over } = e;
-    if (!over) return;
-    const activePid = Number(active.id);
-    const overId = over.id;
-
-    setBoards((prev) => {
-      const cur = prev[scoring];
-      // Resolve `from` (active chip's current container) from fresh state.
-      let from: ContainerId | null = null;
-      for (const c of [POOL_ID, ...TIERS] as ContainerId[]) {
-        if (cur[c].includes(activePid)) {
-          from = c;
-          break;
-        }
-      }
-      if (!from) return prev;
-      // Resolve `to`: either a container id directly, or the container that
-      // holds the over-chip.
-      let to: ContainerId | null = null;
-      if (overId === POOL_ID || TIERS.includes(overId as TierLetter)) {
-        to = overId as ContainerId;
-      } else {
-        const overPid = Number(overId);
-        for (const c of [POOL_ID, ...TIERS] as ContainerId[]) {
-          if (cur[c].includes(overPid)) {
-            to = c;
-            break;
-          }
-        }
-      }
-      if (!to || from === to) return prev;
-
-      const fromArr = cur[from].filter((p) => p !== activePid);
-      const toArr = [...cur[to]];
-      const overIdx = toArr.indexOf(Number(overId));
-      if (overIdx >= 0) toArr.splice(overIdx, 0, activePid);
-      else toArr.push(activePid);
-      return {
-        ...prev,
-        [scoring]: { ...cur, [from]: fromArr, [to]: toArr },
-      };
-    });
   }
 
   function handleDragEnd(e: DragEndEvent) {
     setActiveId(null);
     const { active, over } = e;
-    if (!over) {
-      // Dropped outside any droppable — still persist whatever the over-moves
-      // produced. Read the freshest board, then schedule outside the updater.
-      let snapshot: Board | null = null;
-      setBoards((prev) => {
-        snapshot = prev[scoring];
-        return prev;
-      });
-      if (snapshot) scheduleSave(snapshot, scoring);
-      return;
-    }
-    const activePid = Number(active.id);
-    const overPid = Number(over.id);
+    if (!over) return;
 
-    // Compute the final board inside a functional updater so we read the state
-    // AFTER any handleDragOver cross-container moves landed (the render-time
-    // `board` closure is stale mid-drag). Capture the result to schedule the
-    // save OUTSIDE the updater — never fire a transition from within setState.
-    let computed: Board | null = null;
-    setBoards((prev) => {
-      const cur = prev[scoring];
-      // Locate the active chip's container in the fresh state.
-      let container: ContainerId | null = null;
+    const activePid = Number(active.id);
+    if (active.id === over.id) return; // dropped on itself — no-op
+
+    // Read the freshest board from the ref and compute the next board purely.
+    const cur = boardsRef.current[scoring];
+
+    // Source container (where the active chip currently lives).
+    let from: ContainerId | null = null;
+    for (const c of [POOL_ID, ...TIERS] as ContainerId[]) {
+      if (cur[c].includes(activePid)) {
+        from = c;
+        break;
+      }
+    }
+    if (!from) return;
+
+    // Target container + the over-chip (if dropped onto a sibling chip rather
+    // than empty container space). `over.id` is a container id (string) when
+    // dropped on empty space, or a player id (number) when dropped on a chip.
+    const overId = over.id;
+    let to: ContainerId;
+    let overPid = Number(overId);
+    if (overId === POOL_ID || TIERS.includes(overId as TierLetter)) {
+      to = overId as ContainerId;
+      overPid = NaN;
+    } else {
+      let holder: ContainerId | null = null;
       for (const c of [POOL_ID, ...TIERS] as ContainerId[]) {
-        if (cur[c].includes(activePid)) {
-          container = c;
+        if (cur[c].includes(overPid)) {
+          holder = c;
           break;
         }
       }
-      if (!container) {
-        computed = cur;
-        return prev;
-      }
-      // Reorder within the final container if dropped onto a sibling chip.
-      if (
-        !Number.isNaN(overPid) &&
-        activePid !== overPid &&
-        cur[container].includes(overPid)
-      ) {
-        const oldIdx = cur[container].indexOf(activePid);
-        const newIdx = cur[container].indexOf(overPid);
-        if (oldIdx >= 0 && newIdx >= 0) {
-          const reordered = arrayMove(cur[container], oldIdx, newIdx);
-          const next = { ...cur, [container]: reordered };
-          computed = next;
-          return { ...prev, [scoring]: next };
-        }
-      }
-      computed = cur;
-      return prev;
-    });
+      if (!holder) return;
+      to = holder;
+    }
 
-    // Persist the final board (debounced) from the captured snapshot.
-    if (computed) scheduleSave(computed, scoring);
+    // Build the next board: pull the active chip out of its source, then insert
+    // it into the target — before the over-chip, or at the end for empty space.
+    const fromArr = cur[from].filter((p) => p !== activePid);
+    const toArr = to === from ? fromArr : [...cur[to]];
+    const insertAt = Number.isNaN(overPid) ? toArr.length : toArr.indexOf(overPid);
+    if (insertAt >= 0) toArr.splice(insertAt, 0, activePid);
+    else toArr.push(activePid);
+
+    const next: Board =
+      from === to
+        ? { ...cur, [to]: toArr }
+        : { ...cur, [from]: fromArr, [to]: toArr };
+
+    setBoards((prev) => ({ ...prev, [scoring]: next }));
+    scheduleSave(next, scoring);
   }
 
   function handleDragCancel() {
@@ -432,7 +401,6 @@ export default function TierBoardEditor({
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
