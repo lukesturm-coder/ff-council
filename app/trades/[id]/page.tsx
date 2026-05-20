@@ -5,6 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import ShareButton from "./ShareButton";
 import SourceVerdictsPanel from "./SourceVerdictsPanel";
 import VotingPanel from "./VotingPanel";
+import TradeVerdictMeter from "../_components/TradeVerdictMeter";
+import {
+  computeTradeVerdict,
+  type TradeVoteInput,
+} from "@/lib/trade-verdict";
 import type { ScoringSystem } from "@/lib/types";
 
 const SITE_URL = "https://www.ffcouncil.com";
@@ -182,6 +187,15 @@ export default async function TradeDetailPage({
   const bPct = total > 0 ? Math.round((summary.votes_b / total) * 100) : 0;
   const evenPct = total > 0 ? 100 - aPct - bPct : 0;
 
+  // Signed direction + severity verdict — drives the meter that leads the
+  // consensus block. Fed the raw vote rows so true magnitude is preserved.
+  const verdict = computeTradeVerdict(
+    ((voteRows ?? []) as TradeVoteInput[]).map((v) => ({
+      winner: v.winner,
+      fairness_tier: v.fairness_tier,
+    })),
+  );
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
@@ -213,40 +227,16 @@ export default async function TradeDetailPage({
         </div>
 
         {/* Crowd consensus — anchor block of the page when votes exist.
-            Gradient frame, oversized headline percentage, and the winning
-            side called out by name so it reads at a single glance. */}
+            Leads with the signed severity meter (direction + how lopsided),
+            then keeps the per-side tally + fairness-mix detail below it. */}
         {(() => {
+          // Tally winner only used to highlight the per-side detail bars
+          // below the meter (the meter itself drives the headline).
           type Winner = "A" | "B" | "EVEN" | null;
           const winner: Winner =
             total === 0
               ? null
-              : aPct >= bPct && aPct >= evenPct
-                ? "A"
-                : bPct >= aPct && bPct >= evenPct
-                  ? "B"
-                  : "EVEN";
-          const winnerPct =
-            winner === "A"
-              ? aPct
-              : winner === "B"
-                ? bPct
-                : winner === "EVEN"
-                  ? evenPct
-                  : 0;
-          const winnerLabel =
-            winner === "A"
-              ? "favor Team A"
-              : winner === "B"
-                ? "favor Team B"
-                : winner === "EVEN"
-                  ? "called it even"
-                  : "";
-          const winnerColor =
-            winner === "A"
-              ? "text-rose-300"
-              : winner === "B"
-                ? "text-sky-300"
-                : "text-emerald-300";
+              : verdict.leader;
           return (
             <div
               className={`mb-6 overflow-hidden rounded-lg border p-4 sm:p-5 ${
@@ -269,17 +259,12 @@ export default async function TradeDetailPage({
                 </div>
               ) : (
                 <>
-                  <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span
-                      className={`font-mono text-4xl font-bold leading-none tabular-nums sm:text-5xl ${winnerColor}`}
-                    >
-                      {winnerPct}%
-                    </span>
-                    <p className="text-sm text-zinc-300 sm:text-base">
-                      {winnerLabel}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
+                  {/* THE METER — leads the block. */}
+                  <TradeVerdictMeter verdict={verdict} />
+
+                  {/* Per-side tally + fairness mix — kept below the meter
+                      as supporting detail (don't lose the breakdown). */}
+                  <div className="mt-6 space-y-2 border-t border-zinc-800 pt-4">
                     <ConsensusBar
                       label="Team A wins"
                       count={summary?.votes_a ?? 0}
@@ -303,7 +288,7 @@ export default async function TradeDetailPage({
                     />
                   </div>
                   <p className="mt-4 text-xs text-zinc-500">
-                    {total} vote{total === 1 ? "" : "s"} · fairness mix:{" "}
+                    fairness mix:{" "}
                     {summary?.tier_balanced ?? 0} balanced ·{" "}
                     {(summary?.tier_slight_edge ?? 0) +
                       (summary?.tier_clear_advantage ?? 0)}{" "}
