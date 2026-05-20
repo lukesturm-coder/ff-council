@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type {
@@ -107,6 +107,14 @@ function formatAmerican(odds: number): string {
   return odds > 0 ? `+${odds}` : String(odds);
 }
 
+// "Jared Goff" → "J. Goff". Used in the sticky Player column once the table
+// is scrolled sideways on mobile, to free horizontal room for data columns.
+function condenseName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
+}
+
 function lookupPlatformEntry(
   pr: PlatformRankingsMap,
   playerId: number,
@@ -159,6 +167,17 @@ export default function RankingsTable({
   const [position, setPosition] = useState<PositionFilter>("ALL");
   const [view, setView] = useState<ViewMode>("Ranks");
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  // When the table is scrolled sideways (mobile), condense the sticky Player
+  // column to "J. Goff" so the data columns get room. At rest, full names.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [condensed, setCondensed] = useState(false);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => setCondensed(el.scrollLeft > 8);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
   // AVG (the consensus across every source) is the default sort — it's the
   // integrated verdict that this multi-source comparison page is for. Single
   // sources stay clickable for users who want to see one perspective.
@@ -453,7 +472,10 @@ export default function RankingsTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900">
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900"
+      >
         <table className="w-full text-sm">
           <thead className="border-b border-zinc-800 bg-zinc-900/50 text-left text-sm uppercase tracking-wider text-zinc-500">
             <tr>
@@ -553,6 +575,7 @@ export default function RankingsTable({
                     rank={idx + 1}
                     scoring={scoring}
                     view={view}
+                    condensed={condensed}
                     isExpanded={isExpanded}
                     onToggle={() =>
                       setExpandedId(isExpanded ? null : row.player.playerId)
@@ -705,6 +728,7 @@ function RankRow({
   rank,
   scoring,
   view,
+  condensed,
   isExpanded,
   onToggle,
   hasEspn,
@@ -727,6 +751,7 @@ function RankRow({
   rank: number;
   scoring: ScoringSystem;
   view: ViewMode;
+  condensed: boolean;
   isExpanded: boolean;
   onToggle: () => void;
   hasEspn: boolean;
@@ -772,7 +797,7 @@ function RankRow({
             onClick={(e) => e.stopPropagation()}
             className="hover:text-emerald-300 hover:underline underline-offset-4"
           >
-            {player.name}
+            {condensed ? condenseName(player.name) : player.name}
           </Link>
           <span className="ml-2 font-mono text-sm text-zinc-500">
             ({player.team})
