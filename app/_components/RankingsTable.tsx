@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type {
@@ -8,17 +8,7 @@ import type {
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
-import { computeTiersForPosition, tierLetter, tierStyle } from "@/lib/tiers";
-
-// Short tier labels for the rankings-table dividers. Keyed by tier number
-// (1 = best). computeTiersForPosition caps at 5, so we never go past D.
-const TIER_DIVIDER_LABELS: Record<number, string> = {
-  1: "League Winners",
-  2: "Every-Week Starters",
-  3: "Flex",
-  4: "Bench",
-  5: "Deep",
-};
+import { computeTiersForPosition } from "@/lib/tiers";
 
 type PositionFilter = "ALL" | FantasyPosition;
 type SortKey =
@@ -397,31 +387,76 @@ export default function RankingsTable({
 
     const sorted = [...rows].sort((a, b) => valueOf(a) - valueOf(b));
 
-    // Tier dividers only apply to the single-position, sorted-by-AVG view.
-    // They break on consensus avgPoints regardless of Ranks/Points view, so
-    // the same grouping shows in both. Null avgPoints → 0 (bottom tier) so the
-    // Jenks math never sees a missing value. Returns playerId → tier (1=best)
-    // plus per-tier counts for the divider label.
-    const showTiers = sortKey === "AVG" && position !== "ALL";
-    let tierByPlayerId: Map<number, number> | null = null;
-    let tierCounts: Map<number, number> | null = null;
+    // Per-column tier break lines: each points-bearing source gets its OWN
+    // horizontal lines, drawn at that source's significant point gaps. We run
+    // Jenks (computeTiersForPosition) once per source over the sorted rows,
+    // using that source's PROJECTED POINTS (not ranks). A line is drawn under a
+    // cell when this row's tier differs from the NEXT row's tier for that
+    // source, so the line sits beneath the last player of each tier in that
+    // column. The lines come from points, so they show in both Ranks & Points
+    // view, and across every column regardless of which one we sort by.
+    //
+    // Gating: only when a single position is selected — cross-position point
+    // tiers are misleading (QBs would dominate). Council and Yahoo have no
+    // points, so they get no lines. EXTRA_PLATFORMS order is sleeper, nfl,
+    // yahoo; we only tier sleeper + nfl.
+    const sleeperIdx = EXTRA_PLATFORMS.findIndex((pf) => pf.key === "sleeper");
+    const nflIdx = EXTRA_PLATFORMS.findIndex((pf) => pf.key === "nfl");
+    type TierBreaks = {
+      avg: boolean;
+      vegas: boolean;
+      espn: boolean;
+      fp: boolean;
+      sleeper: boolean;
+      nfl: boolean;
+    };
+    const showTiers = position !== "ALL";
+    let tierBreaksByPlayerId: Map<number, TierBreaks> | null = null;
     if (showTiers && sorted.length > 0) {
-      const tierInput = sorted.map((r) => ({
-        playerId: r.player.playerId,
-        avgPoints: r.avgPoints ?? 0,
-      }));
-      const { tiers } = computeTiersForPosition(
-        tierInput,
-        (p) => p.avgPoints,
-      );
-      tierByPlayerId = new Map(tiers.map((t) => [t.playerId, t.tier]));
-      tierCounts = new Map<number, number>();
-      for (const t of tiers) {
-        tierCounts.set(t.tier, (tierCounts.get(t.tier) ?? 0) + 1);
-      }
+      // Build a playerId → tier map for one source, clustering on its points.
+      // Sources with no/sparse data simply yield few or no breaks — that's fine.
+      const tierMapFor = (
+        getPoints: (r: RowData) => number | null,
+      ): Map<number, number> => {
+        const input = sorted.map((r) => ({
+          playerId: r.player.playerId,
+          value: getPoints(r) ?? 0,
+        }));
+        const { tiers } = computeTiersForPosition(input, (p) => p.value);
+        return new Map(tiers.map((t) => [t.playerId, t.tier]));
+      };
+
+      const avgMap = tierMapFor((r) => r.avgPoints);
+      const vegasMap = tierMapFor((r) => r.vegasPoints);
+      const espnMap = tierMapFor((r) => r.espnPoints);
+      const fpMap = tierMapFor((r) => r.fpPoints);
+      const sleeperMap =
+        sleeperIdx >= 0 ? tierMapFor((r) => r.extraPoints[sleeperIdx]) : null;
+      const nflMap = nflIdx >= 0 ? tierMapFor((r) => r.extraPoints[nflIdx]) : null;
+
+      // For each source map, a row breaks (gets a bottom border) when its tier
+      // differs from the next row's tier. The last row never breaks.
+      const breaksFor = (map: Map<number, number> | null, idx: number) => {
+        if (!map || idx >= sorted.length - 1) return false;
+        const cur = map.get(sorted[idx].player.playerId);
+        const next = map.get(sorted[idx + 1].player.playerId);
+        return cur != null && next != null && cur !== next;
+      };
+
+      tierBreaksByPlayerId = new Map();
+      sorted.forEach((r, idx) => {
+        tierBreaksByPlayerId!.set(r.player.playerId, {
+          avg: breaksFor(avgMap, idx),
+          vegas: breaksFor(vegasMap, idx),
+          espn: breaksFor(espnMap, idx),
+          fp: breaksFor(fpMap, idx),
+          sleeper: breaksFor(sleeperMap, idx),
+          nfl: breaksFor(nflMap, idx),
+        });
+      });
     }
 
-    return { sorted, tierByPlayerId, tierCounts };
+    return { sorted, tierBreaksByPlayerId };
   }, [
     projections,
     scoring,
@@ -434,15 +469,6 @@ export default function RankingsTable({
     hasFp,
     hasCouncil,
   ]);
-
-  // Total <td> count per body row — used so the full-width tier divider spans
-  // every column. Mirrors the expand-row colSpan formula exactly.
-  const columnCount =
-    7 +
-    (hasEspn ? 1 : 0) +
-    (hasCouncil ? 1 : 0) +
-    (hasFp ? 1 : 0) +
-    EXTRA_PLATFORMS.length;
 
   return (
     <div className="space-y-4">
@@ -550,53 +576,37 @@ export default function RankingsTable({
           <tbody>
             {tableData.sorted.map((row, idx) => {
               const isExpanded = expandedId === row.player.playerId;
-              // Tier divider: render a full-width header row whenever this
-              // player's tier differs from the previous row's tier (and we're
-              // in the AVG single-position view, where tierByPlayerId is set).
-              const tier = tableData.tierByPlayerId?.get(row.player.playerId);
-              const prevTier =
-                idx > 0
-                  ? tableData.tierByPlayerId?.get(
-                      tableData.sorted[idx - 1].player.playerId,
-                    )
-                  : undefined;
-              const showDivider = tier != null && tier !== prevTier;
+              const tierBreaks =
+                tableData.tierBreaksByPlayerId?.get(row.player.playerId) ?? null;
               return (
-                <Fragment key={row.player.playerId}>
-                  {showDivider && (
-                    <TierDivider
-                      tier={tier}
-                      count={tableData.tierCounts?.get(tier) ?? 0}
-                      colSpan={columnCount}
-                    />
-                  )}
-                  <RankRow
-                    player={row.player}
-                    rank={idx + 1}
-                    scoring={scoring}
-                    view={view}
-                    condensed={condensed}
-                    isExpanded={isExpanded}
-                    onToggle={() =>
-                      setExpandedId(isExpanded ? null : row.player.playerId)
-                    }
-                    hasEspn={hasEspn}
-                    espnRank={row.espnRank}
-                    espnPoints={row.espnPoints}
-                    hasFp={hasFp}
-                    fpRank={row.fpRank}
-                    fpPoints={row.fpPoints}
-                    hasCouncil={hasCouncil}
-                    councilAvgRank={row.councilAvgRank}
-                    councilRankerCount={row.councilRankerCount}
-                    extraRanks={row.extraRanks}
-                    extraPoints={row.extraPoints}
-                    avgRank={row.avgRank}
-                    avgPoints={row.avgPoints}
-                    vegasRank={row.vegasRank}
-                    vegasPoints={row.vegasPoints}
-                  />
-                </Fragment>
+                <RankRow
+                  key={row.player.playerId}
+                  player={row.player}
+                  rank={idx + 1}
+                  scoring={scoring}
+                  view={view}
+                  condensed={condensed}
+                  isExpanded={isExpanded}
+                  onToggle={() =>
+                    setExpandedId(isExpanded ? null : row.player.playerId)
+                  }
+                  hasEspn={hasEspn}
+                  espnRank={row.espnRank}
+                  espnPoints={row.espnPoints}
+                  hasFp={hasFp}
+                  fpRank={row.fpRank}
+                  fpPoints={row.fpPoints}
+                  hasCouncil={hasCouncil}
+                  councilAvgRank={row.councilAvgRank}
+                  councilRankerCount={row.councilRankerCount}
+                  extraRanks={row.extraRanks}
+                  extraPoints={row.extraPoints}
+                  avgRank={row.avgRank}
+                  avgPoints={row.avgPoints}
+                  vegasRank={row.vegasRank}
+                  vegasPoints={row.vegasPoints}
+                  tierBreaks={tierBreaks}
+                />
               );
             })}
           </tbody>
@@ -613,44 +623,6 @@ export default function RankingsTable({
           : " Sleeper / NFL / Yahoo gaps are filled with mock numbers until their fetches reach full coverage."}
       </p>
     </div>
-  );
-}
-
-/**
- * Full-width tier separator injected between player rows in the AVG
- * single-position view. One <td> spans every column so the table grid stays
- * intact. Reads "TIER A · Every-Week Starters · 6 players".
- */
-function TierDivider({
-  tier,
-  count,
-  colSpan,
-}: {
-  tier: number;
-  count: number;
-  colSpan: number;
-}) {
-  const style = tierStyle(tier);
-  const label = TIER_DIVIDER_LABELS[tier] ?? style.label;
-  return (
-    <tr className="border-t border-zinc-800/60 bg-zinc-900/40">
-      <td colSpan={colSpan} className="px-3 py-2 sm:px-4">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-zinc-400">
-          <span
-            className={`inline-flex h-5 w-5 items-center justify-center rounded font-mono text-xs font-bold ring-1 ring-inset ${style.badge}`}
-          >
-            {tierLetter(tier)}
-          </span>
-          <span className="font-semibold text-zinc-200">Tier {tierLetter(tier)}</span>
-          <span className="text-zinc-500">·</span>
-          <span className="text-zinc-300">{label}</span>
-          <span className="text-zinc-500">·</span>
-          <span className="font-mono text-zinc-500 normal-case">
-            {count} player{count === 1 ? "" : "s"}
-          </span>
-        </div>
-      </td>
-    </tr>
   );
 }
 
@@ -746,6 +718,7 @@ function RankRow({
   avgPoints,
   vegasRank,
   vegasPoints,
+  tierBreaks,
 }: {
   player: PlayerProjection;
   rank: number;
@@ -769,6 +742,17 @@ function RankRow({
   avgPoints: number | null;
   vegasRank: number | null;
   vegasPoints: number | null;
+  // Per-source tier-break flags: true = draw a bottom border under this cell
+  // for that source (last player of a tier in that column). null on the ALL
+  // view, where tier lines are gated off.
+  tierBreaks: {
+    avg: boolean;
+    vegas: boolean;
+    espn: boolean;
+    fp: boolean;
+    sleeper: boolean;
+    nfl: boolean;
+  } | null;
 }) {
   const fpts = player.fantasyPoints[scoring];
   const vbd = player.vbd[scoring];
@@ -776,6 +760,11 @@ function RankRow({
   // Format points with one decimal, no padding. Rank stays integer.
   const fmtPts = (v: number | null) => (v != null ? v.toFixed(1) : "—");
   const fmtRank = (v: number | null) => (v != null ? v.toFixed(0) : "—");
+  // Per-source tier break line: a colored bottom border under the last player
+  // of each tier in that column. Each source uses its own brand color so the
+  // lines are visually attributable to the column they sit in.
+  const breakClass = (flag: boolean | undefined, color: string) =>
+    flag ? ` border-b-2 ${color}` : "";
 
   return (
     <>
@@ -813,7 +802,9 @@ function RankRow({
         {/* AVG is the leftmost data column — the consensus across every
             source, sorted by default. Single-source columns follow. In Points
             mode each cell shows the source's projected season FPts. */}
-        <td className="min-w-[5rem] py-3 text-center font-mono text-sm font-semibold tabular-nums">
+        <td
+          className={`min-w-[5rem] py-3 text-center font-mono text-sm font-semibold tabular-nums${breakClass(tierBreaks?.avg, "border-zinc-400/50")}`}
+        >
           {showPoints ? (
             avgPoints != null ? (
               <span className="text-zinc-100">{avgPoints.toFixed(1)}</span>
@@ -848,35 +839,52 @@ function RankRow({
             </span>
           </td>
         )}
-        <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
+        <td
+          className={`min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums${breakClass(tierBreaks?.vegas, "border-amber-400/60")}`}
+        >
           <span className="text-amber-400">
             {showPoints ? fmtPts(vegasPoints) : fmtRank(vegasRank)}
           </span>
         </td>
         {hasEspn && (
-          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
+          <td
+            className={`min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums${breakClass(tierBreaks?.espn, "border-red-400/60")}`}
+          >
             <span className="text-red-400">
               {showPoints ? fmtPts(espnPoints) : fmtRank(espnRank)}
             </span>
           </td>
         )}
         {hasFp && (
-          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
+          <td
+            className={`min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums${breakClass(tierBreaks?.fp, "border-teal-400/60")}`}
+          >
             <span className="text-teal-400">
               {showPoints ? fmtPts(fpPoints) : fmtRank(fpRank)}
             </span>
           </td>
         )}
-        {(showPoints ? extraPoints : extraRanks).map((r, idx) => (
-          <td
-            key={EXTRA_PLATFORMS[idx].key}
-            className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
-          >
-            <span className={EXTRA_PLATFORMS[idx].accent}>
-              {showPoints ? fmtPts(r) : fmtRank(r)}
-            </span>
-          </td>
-        ))}
+        {(showPoints ? extraPoints : extraRanks).map((r, idx) => {
+          // Sleeper (cyan) and NFL (blue) carry points → tier lines; Yahoo
+          // has no points, so it never breaks.
+          const key = EXTRA_PLATFORMS[idx].key;
+          const extraBreak =
+            key === "sleeper"
+              ? breakClass(tierBreaks?.sleeper, "border-cyan-400/60")
+              : key === "nfl"
+                ? breakClass(tierBreaks?.nfl, "border-blue-400/60")
+                : "";
+          return (
+            <td
+              key={key}
+              className={`min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums${extraBreak}`}
+            >
+              <span className={EXTRA_PLATFORMS[idx].accent}>
+                {showPoints ? fmtPts(r) : fmtRank(r)}
+              </span>
+            </td>
+          );
+        })}
         <td aria-hidden="true" />
       </tr>
       {isExpanded && (
