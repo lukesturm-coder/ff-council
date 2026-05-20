@@ -1,19 +1,31 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Send, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import JudgeFeed, { type JudgeItem } from "./JudgeFeed";
-import FilterSheet from "./FilterSheet";
+import { type TradeCardData } from "../trades/TradeListClient";
+import { type VerdictCardData } from "../verdict/VerdictListClient";
+import type {
+  VerdictPlayer,
+  VerdictContext,
+  VerdictScenarioType,
+} from "../verdict/types";
+import JudgeListClient, { type CourtCase } from "./JudgeListClient";
 
 export const metadata: Metadata = {
-  title: "Vote · FF Council",
+  title: "Judge · FF Council",
   description:
-    "Speed-vote on open trades and tough calls — swipe through one tap at a time.",
+    "Every case the council is weighing — trades, start/sit, and draft calls. Browse, filter, and vote. Consensus emerges from the crowd.",
 };
 
-// /judge — single-card full-screen feed of unvoted scenarios. Mixed feed
-// of trade-court trades + verdict scenarios, ordered by recency. Optimised
-// for high-throughput one-tap voting. Filters (type, league, scoring, sort)
-// live in URL search params so they survive refresh.
+// =====================================================================
+// /judge — the community hub. Every submitted case lives here: trades,
+// start/sit, and draft picks, interleaved newest-first. Users browse,
+// filter by type, and vote (TradeModal / VerdictModal). Two side doors:
+//   - "Speed vote →"      → /judge/feed (rapid one-tap feed)
+//   - "Post a tough call" → /verdict/new
+//
+// Built on the restored CourtListClient pattern (JudgeListClient).
+// =====================================================================
 
 type SidePlayer = {
   player_id: number | null;
@@ -24,480 +36,439 @@ type SidePlayer = {
 type SidePick = { year: number; round: number; slot: number | null };
 type Side = { players: SidePlayer[]; picks: SidePick[] };
 
-type TradeRow = {
-  id: string;
-  league_type: string;
-  scoring: string;
-  team_count: number;
-  side_a: Side;
-  side_b: Side;
-  created_at: string;
+// Summary fields used by the list cards — vote counts for the verdict
+// chip + the derived sort modes.
+type Summary = {
+  total_votes: number;
+  votes_a: number;
+  votes_b: number;
+  votes_even: number;
 };
 
-type VerdictRow = {
-  id: string;
-  scenario_type: "draft" | "start_sit";
-  candidates: { player_id: number; name: string; team: string; position: string }[];
-  roster:
-    | { player_id: number; name: string; team: string; position: string }[]
-    | null;
-  context: Record<string, unknown>;
-  notes: string | null;
-  image_url: string | null;
-  created_at: string;
-};
-
-const TYPE_OPTIONS = [
-  { value: "all", label: "All" },
-  { value: "trades", label: "Trades only" },
-  { value: "verdicts", label: "Tough calls only" },
-] as const;
-
-const LEAGUE_OPTIONS = [
-  { value: "all", label: "Any league" },
-  { value: "redraft", label: "Redraft" },
-  { value: "dynasty", label: "Dynasty" },
-  { value: "keeper", label: "Keeper" },
-] as const;
-
-const SCORING_OPTIONS = [
-  { value: "all", label: "Any scoring" },
-  { value: "PPR", label: "PPR" },
-  { value: "Half", label: "Half" },
-  { value: "Standard", label: "Standard" },
-  { value: "Superflex", label: "Superflex" },
-  { value: "TEPremium", label: "TE Prem" },
-] as const;
-
-const SORT_OPTIONS = [
+type SortMode = "recent" | "controversial" | "lopsided" | "popular";
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
   { value: "recent", label: "Recent" },
-  { value: "controversial", label: "Most controversial" },
   { value: "popular", label: "Most voted" },
-] as const;
+  { value: "controversial", label: "Most controversial" },
+  { value: "lopsided", label: "Most lopsided" },
+];
 
 // Minimum vote threshold for an item to qualify for the controversial /
-// popular sort. Anything below this falls to the bottom of the list so a
-// 2-vote 1-1 split doesn't trump a 200-vote real split.
+// lopsided sort. Anything below this falls to the bottom so a 2-vote 1-1
+// split doesn't trump a real split with 200 votes.
 const MIN_VOTES_FOR_RANKED_SORT = 10;
+
+const SCORING_FILTERS = ["all", "PPR", "Half", "Standard", "Superflex", "TEPremium"] as const;
+const LEAGUE_FILTERS = ["all", "redraft", "dynasty", "keeper"] as const;
+
+// Case-type chip row. Independent of Sort / Scoring / League filters.
+// "All" interleaves trades + start-sit + draft picks chronologically;
+// the other modes hide everything else.
+type CaseTypeFilter = "all" | "trade" | "start_sit" | "draft";
+const CASE_TYPE_FILTERS: { value: CaseTypeFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "trade", label: "Trades" },
+  { value: "start_sit", label: "Start/Sit" },
+  { value: "draft", label: "Draft Picks" },
+];
 
 export default async function JudgePage({
   searchParams,
 }: {
   searchParams: Promise<{
-    type?: string;
-    league?: string;
+    sort?: SortMode;
     scoring?: string;
-    sort?: string;
+    league?: string;
+    case?: string;
   }>;
 }) {
   const params = await searchParams;
-  const typeFilter =
-    TYPE_OPTIONS.find((o) => o.value === params.type)?.value ?? "all";
-  const leagueFilter =
-    LEAGUE_OPTIONS.find((o) => o.value === params.league)?.value ?? "all";
-  const scoringFilter =
-    SCORING_OPTIONS.find((o) => o.value === params.scoring)?.value ?? "all";
-  const sortMode =
+  const sortMode: SortMode =
     SORT_OPTIONS.find((o) => o.value === params.sort)?.value ?? "recent";
+  const scoringFilter = (params.scoring ?? "all") as (typeof SCORING_FILTERS)[number];
+  const leagueFilter = (params.league ?? "all") as (typeof LEAGUE_FILTERS)[number];
+  const caseFilter: CaseTypeFilter =
+    CASE_TYPE_FILTERS.find((o) => o.value === params.case)?.value ?? "all";
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  // Trade query — server-side filters where columns are real columns.
-  let tradeQuery = supabase
+  // Trades query — only run if the case filter allows trades.
+  const wantTrades = caseFilter === "all" || caseFilter === "trade";
+  // Verdicts query — only run if the case filter allows at least one
+  // verdict type (start_sit / draft).
+  const wantVerdicts =
+    caseFilter === "all" ||
+    caseFilter === "start_sit" ||
+    caseFilter === "draft";
+
+  let tradesQuery = supabase
     .from("trade_submissions")
     .select("id, league_type, scoring, team_count, side_a, side_b, created_at")
-    .order("created_at", { ascending: false })
-    .limit(80);
-  if (leagueFilter !== "all") tradeQuery = tradeQuery.eq("league_type", leagueFilter);
-  if (scoringFilter !== "all") tradeQuery = tradeQuery.eq("scoring", scoringFilter);
+    .limit(100);
+  if (scoringFilter !== "all") {
+    tradesQuery = tradesQuery.eq("scoring", scoringFilter);
+  }
+  if (leagueFilter !== "all") {
+    tradesQuery = tradesQuery.eq("league_type", leagueFilter);
+  }
+  tradesQuery = tradesQuery.order("created_at", { ascending: false });
 
-  // Verdict scoring lives in the context jsonb — filter in memory after fetch.
-  // actual_winner_player_id / resolved_at pulled through so downstream
-  // surfaces can flag already-graded scenarios; not displayed here yet.
-  const verdictQuery = supabase
+  let verdictsQuery = supabase
     .from("verdict_scenarios")
     .select(
-      "id, scenario_type, candidates, roster, context, notes, image_url, created_at, actual_winner_player_id, resolved_at",
+      "id, asker_id, scenario_type, candidates, roster, context, notes, image_url, created_at",
     )
     .order("created_at", { ascending: false })
-    .limit(80);
-
-  // Skip fetches we don't need based on the type filter (saves a round-trip
-  // and keeps the data small for the longest possible feed when one type
-  // is selected). When sorting by controversial/popular we also need the
-  // raw vote rows aggregated in-memory.
-  const needsVoteCounts = sortMode !== "recent";
-
-  // Phase 1: feed rows + the signed-in user's votes (used to hide already-
-  // voted items from the feed).
-  const [tradeRes, verdictRes, myTradeVotesRes, myVerdictVotesRes] =
-    await Promise.all([
-      typeFilter === "verdicts"
-        ? Promise.resolve({ data: [] as TradeRow[] })
-        : tradeQuery,
-      typeFilter === "trades"
-        ? Promise.resolve({ data: [] as VerdictRow[] })
-        : verdictQuery,
-      user
-        ? supabase
-            .from("trade_votes")
-            .select("trade_id")
-            .eq("voter_id", user.id)
-        : Promise.resolve({ data: [] as { trade_id: string }[] }),
-      user
-        ? supabase
-            .from("verdict_votes")
-            .select("scenario_id")
-            .eq("voter_id", user.id)
-        : Promise.resolve({ data: [] as { scenario_id: string }[] }),
-    ]);
-
-  // Phase 2: vote rows scoped to JUST the IDs in this feed. Previously this
-  // selected every vote row in the DB when sort mode wasn't "recent" — fine
-  // at 100 votes, catastrophic at 100k.
-  const tradeIdsForVotes = ((tradeRes.data ?? []) as TradeRow[]).map(
-    (t) => t.id,
-  );
-  const verdictIdsForVotes = ((verdictRes.data ?? []) as VerdictRow[]).map(
-    (v) => v.id,
-  );
-  const [tradeVotesRes, verdictVotesRes] = await Promise.all([
-    needsVoteCounts && typeFilter !== "verdicts" && tradeIdsForVotes.length > 0
-      ? supabase
-          .from("trade_votes")
-          .select("trade_id, winner")
-          .in("trade_id", tradeIdsForVotes)
-      : Promise.resolve({
-          data: [] as { trade_id: string; winner: "A" | "B" | "EVEN" }[],
-        }),
-    needsVoteCounts && typeFilter !== "trades" && verdictIdsForVotes.length > 0
-      ? supabase
-          .from("verdict_votes")
-          .select("scenario_id, pick_player_id")
-          .in("scenario_id", verdictIdsForVotes)
-      : Promise.resolve({
-          data: [] as { scenario_id: string; pick_player_id: number }[],
-        }),
-  ]);
-
-  const myTradeIds = new Set(
-    ((myTradeVotesRes.data ?? []) as { trade_id: string }[]).map(
-      (r) => r.trade_id,
-    ),
-  );
-  const myVerdictIds = new Set(
-    ((myVerdictVotesRes.data ?? []) as { scenario_id: string }[]).map(
-      (r) => r.scenario_id,
-    ),
-  );
-
-  const trades = ((tradeRes.data ?? []) as TradeRow[]).filter(
-    (t) => !myTradeIds.has(t.id),
-  );
-  let verdicts = ((verdictRes.data ?? []) as VerdictRow[]).filter(
-    (v) => !myVerdictIds.has(v.id),
-  );
-  // Verdict scoring filter has to happen client-side because scoring lives
-  // inside the context jsonb. Skip when "all".
-  if (scoringFilter !== "all") {
-    verdicts = verdicts.filter(
-      (v) => (v.context as { scoring?: string })?.scoring === scoringFilter,
-    );
+    .limit(100);
+  if (caseFilter === "start_sit") {
+    verdictsQuery = verdictsQuery.eq("scenario_type", "start_sit");
+  } else if (caseFilter === "draft") {
+    verdictsQuery = verdictsQuery.eq("scenario_type", "draft");
   }
 
-  // Aggregate vote rows in-memory keyed by their scenario id. Only computed
-  // when the active sort needs them.
-  type TradeTally = { total: number; a: number; b: number; even: number };
-  const tradeTallies = new Map<string, TradeTally>();
-  if (needsVoteCounts) {
-    for (const v of (tradeVotesRes.data ?? []) as {
+  const [{ data: trades }, { data: scenarios }] = await Promise.all([
+    wantTrades
+      ? tradesQuery
+      : Promise.resolve({ data: [] as Awaited<typeof tradesQuery>["data"] }),
+    wantVerdicts
+      ? verdictsQuery
+      : Promise.resolve({ data: [] as Awaited<typeof verdictsQuery>["data"] }),
+  ]);
+
+  // ----- Trade vote aggregation -----
+  const tradeIds = (trades ?? []).map((t) => t.id);
+  const summariesById = new Map<string, Summary>();
+  if (tradeIds.length > 0) {
+    const { data: voteRows } = await supabase
+      .from("trade_votes")
+      .select("trade_id, winner")
+      .in("trade_id", tradeIds);
+    for (const v of (voteRows ?? []) as {
       trade_id: string;
       winner: "A" | "B" | "EVEN";
     }[]) {
-      const t = tradeTallies.get(v.trade_id) ?? {
-        total: 0,
-        a: 0,
-        b: 0,
-        even: 0,
+      const s = summariesById.get(v.trade_id) ?? {
+        total_votes: 0,
+        votes_a: 0,
+        votes_b: 0,
+        votes_even: 0,
       };
-      t.total += 1;
-      if (v.winner === "A") t.a += 1;
-      else if (v.winner === "B") t.b += 1;
-      else if (v.winner === "EVEN") t.even += 1;
-      tradeTallies.set(v.trade_id, t);
-    }
-  }
-  // For verdicts: tally per-candidate plus total.
-  type VerdictTally = { total: number; byPlayer: Map<number, number> };
-  const verdictTallies = new Map<string, VerdictTally>();
-  if (needsVoteCounts) {
-    for (const v of (verdictVotesRes.data ?? []) as {
-      scenario_id: string;
-      pick_player_id: number;
-    }[]) {
-      const t = verdictTallies.get(v.scenario_id) ?? {
-        total: 0,
-        byPlayer: new Map<number, number>(),
-      };
-      t.total += 1;
-      t.byPlayer.set(
-        v.pick_player_id,
-        (t.byPlayer.get(v.pick_player_id) ?? 0) + 1,
-      );
-      verdictTallies.set(v.scenario_id, t);
+      s.total_votes += 1;
+      if (v.winner === "A") s.votes_a += 1;
+      else if (v.winner === "B") s.votes_b += 1;
+      else if (v.winner === "EVEN") s.votes_even += 1;
+      summariesById.set(v.trade_id, s);
     }
   }
 
-  // Controversy score: HIGHER = more controversial.
-  // Trade: 1 - max(share_a, share_b, share_even). Even three-way → 2/3.
-  // Verdict: 1 - (gap between top two candidates' shares). Tie → 1.0.
-  // Both require >= MIN_VOTES_FOR_RANKED_SORT and (verdict) >= 2 voted-for
-  // candidates; ineligible items get -1 so they sort to the bottom.
-  function tradeControversy(id: string): number {
-    const t = tradeTallies.get(id);
-    if (!t || t.total < MIN_VOTES_FOR_RANKED_SORT) return -1;
-    const maxShare = Math.max(t.a, t.b, t.even) / t.total;
-    return 1 - maxShare;
-  }
-  function verdictControversy(id: string): number {
-    const t = verdictTallies.get(id);
-    if (!t || t.total < MIN_VOTES_FOR_RANKED_SORT) return -1;
-    const shares = Array.from(t.byPlayer.values())
-      .filter((c) => c > 0)
-      .map((c) => c / t.total)
-      .sort((a, b) => b - a);
-    if (shares.length < 2) return -1;
-    return 1 - (shares[0] - shares[1]);
+  // ----- Verdict vote aggregation -----
+  // Scoring filter is applied client-side because it lives inside the
+  // jsonb context blob (not its own column). Cheap at 100-row scale.
+  const filteredScenarios = (scenarios ?? []).filter((s) => {
+    if (scoringFilter === "all") return true;
+    const ctx = (s.context as VerdictContext | null) ?? {};
+    return ctx.scoring === scoringFilter;
+  });
+
+  const scenarioIds = filteredScenarios.map((s) => s.id as string);
+  const tallyByScenario = new Map<
+    string,
+    { byPlayer: Record<number, number>; total: number }
+  >();
+  if (scenarioIds.length > 0) {
+    const { data: votes } = await supabase
+      .from("verdict_votes")
+      .select("scenario_id, pick_player_id")
+      .in("scenario_id", scenarioIds);
+    for (const v of votes ?? []) {
+      const sid = v.scenario_id as string;
+      const pid = v.pick_player_id as number;
+      const t = tallyByScenario.get(sid) ?? { byPlayer: {}, total: 0 };
+      t.byPlayer[pid] = (t.byPlayer[pid] ?? 0) + 1;
+      t.total += 1;
+      tallyByScenario.set(sid, t);
+    }
   }
 
-  function tradeTotal(id: string): number {
-    return tradeTallies.get(id)?.total ?? 0;
-  }
-  function verdictTotal(id: string): number {
-    return verdictTallies.get(id)?.total ?? 0;
-  }
+  const tradeRows: TradeCardData[] = (trades ?? []).map((t) => ({
+    id: t.id as string,
+    league_type: t.league_type as string,
+    scoring: t.scoring as string,
+    team_count: t.team_count as number,
+    side_a: t.side_a as Side,
+    side_b: t.side_b as Side,
+    created_at: t.created_at as string,
+    summary: summariesById.get(t.id as string) ?? null,
+  }));
 
-  const feed: JudgeItem[] = [
-    ...trades.map(
-      (t): JudgeItem => ({
+  const verdictRows: VerdictCardData[] = filteredScenarios.map((s) => ({
+    id: s.id as string,
+    scenario_type: s.scenario_type as VerdictScenarioType,
+    candidates: (s.candidates as VerdictPlayer[]) ?? [],
+    roster: (s.roster as VerdictPlayer[] | null) ?? null,
+    context: (s.context as VerdictContext) ?? {},
+    notes: (s.notes as string | null) ?? null,
+    image_url: (s.image_url as string | null) ?? null,
+    created_at: s.created_at as string,
+    tally: tallyByScenario.get(s.id as string) ?? { byPlayer: {}, total: 0 },
+  }));
+
+  // ----- Build the unified case list -----
+  const allCases: CourtCase[] = [
+    ...tradeRows.map(
+      (t): CourtCase => ({
         kind: "trade",
-        id: t.id,
-        league_type: t.league_type,
-        scoring: t.scoring,
-        side_a: t.side_a,
-        side_b: t.side_b,
         created_at: t.created_at,
+        data: t,
       }),
     ),
-    ...verdicts.map(
-      (v): JudgeItem => ({
+    ...verdictRows.map(
+      (v): CourtCase => ({
         kind: "verdict",
-        id: v.id,
-        scenario_type: v.scenario_type,
-        candidates: v.candidates,
-        roster: v.roster,
-        context: v.context,
-        notes: v.notes,
-        image_url: v.image_url,
         created_at: v.created_at,
+        data: v,
       }),
     ),
   ];
 
-  function scoreFor(item: JudgeItem): number {
-    if (sortMode === "controversial") {
-      return item.kind === "trade"
-        ? tradeControversy(item.id)
-        : verdictControversy(item.id);
-    }
-    if (sortMode === "popular") {
-      return item.kind === "trade" ? tradeTotal(item.id) : verdictTotal(item.id);
-    }
-    return 0;
-  }
+  // Helpers for the unified sort modes. Trades and verdicts have
+  // different shapes, so we project each into a (total, splitScore,
+  // lopsidedScore) tuple and rank against the combined feed.
+  const totalVotes = (c: CourtCase): number =>
+    c.kind === "trade" ? c.data.summary?.total_votes ?? 0 : c.data.tally.total;
 
+  const splitScore = (c: CourtCase): number => {
+    if (c.kind === "trade") {
+      const s = c.data.summary;
+      if (!s || s.total_votes < MIN_VOTES_FOR_RANKED_SORT) return -1;
+      const maxShare =
+        Math.max(s.votes_a, s.votes_b, s.votes_even) / s.total_votes;
+      return 1 - maxShare;
+    }
+    const t = c.data.tally;
+    if (t.total < MIN_VOTES_FOR_RANKED_SORT) return -1;
+    const shares = Object.values(t.byPlayer)
+      .filter((n) => n > 0)
+      .map((n) => n / t.total)
+      .sort((a, b) => b - a);
+    if (shares.length < 2) return -1;
+    return 1 - (shares[0] - shares[1]);
+  };
+
+  const lopsidedScore = (c: CourtCase): number => {
+    if (c.kind === "trade") {
+      const s = c.data.summary;
+      if (!s || s.total_votes < MIN_VOTES_FOR_RANKED_SORT) return -1;
+      return Math.max(s.votes_a, s.votes_b) / s.total_votes;
+    }
+    const t = c.data.tally;
+    if (t.total < MIN_VOTES_FOR_RANKED_SORT) return -1;
+    const shares = Object.values(t.byPlayer)
+      .filter((n) => n > 0)
+      .map((n) => n / t.total);
+    return shares.length > 0 ? Math.max(...shares) : -1;
+  };
+
+  // Sort the unified feed. "recent" keeps the chronological interleave;
+  // other modes use the derived projections above.
   if (sortMode === "recent") {
-    feed.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-  } else {
-    feed.sort((a, b) => {
-      const sb = scoreFor(b);
-      const sa = scoreFor(a);
-      if (sb !== sa) return sb - sa;
-      // Stable tiebreak: newer first
+    allCases.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  } else if (sortMode === "popular") {
+    allCases.sort((a, b) => totalVotes(b) - totalVotes(a));
+  } else if (sortMode === "controversial") {
+    allCases.sort((a, b) => {
+      const diff = splitScore(b) - splitScore(a);
+      if (diff !== 0) return diff;
+      return a.created_at < b.created_at ? 1 : -1;
+    });
+  } else if (sortMode === "lopsided") {
+    allCases.sort((a, b) => {
+      const diff = lopsidedScore(b) - lopsidedScore(a);
+      if (diff !== 0) return diff;
       return a.created_at < b.created_at ? 1 : -1;
     });
   }
 
-  const anyFilterActive =
-    typeFilter !== "all" || leagueFilter !== "all" || scoringFilter !== "all";
-
-  // Count of non-default filters currently in effect — drives the
-  // "Filter (N)" label on the floating trigger. Sort is excluded; it
-  // defaults to "recent" which feels like an empty state.
-  const activeFilterCount =
-    (typeFilter !== "all" ? 1 : 0) +
-    (leagueFilter !== "all" ? 1 : 0) +
-    (scoringFilter !== "all" ? 1 : 0) +
-    (sortMode !== "recent" ? 1 : 0);
-
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-3xl px-3 py-3 sm:px-6 sm:py-6">
-        {/* Header chrome demoted to a single small label — the nav already
-            announces this page is "Vote"; we just want context, not a
-            big h1 + tagline pushing the card below the fold. */}
-        <p className="mb-3 text-xs uppercase tracking-wider text-zinc-500">
-          Speed vote
-        </p>
-
-        {/* Filter chips collapsed into a floating bottom-sheet so the trade
-            card lands above the fold on mobile. Each pill is still a Link
-            keyed by URL search params — no client state for filter values.
-            "+ Post a tough call" lives in the sheet footer so it's still
-            reachable without claiming header real estate. */}
-        <FilterSheet
-          activeCount={activeFilterCount}
-          footer={
+      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-6">
+        {/* Header — the hub's two prominent side doors live here:
+            speed-vote (rapid one-tap) + post-a-tough-call. The browse
+            list below is the default view. */}
+        <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800 pb-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-semibold sm:text-2xl">Judge</h2>
+            <p className="text-xs text-zinc-400 sm:text-sm">
+              Every case the council is weighing — trades, start/sit, and draft
+              calls. Tap a case to cast your vote.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/judge/feed"
+              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+            >
+              <Zap className="h-4 w-4" />
+              Speed vote
+              <span aria-hidden>→</span>
+            </Link>
             <Link
               href="/verdict/new"
-              className="block text-center text-xs font-medium text-emerald-300 underline-offset-4 hover:text-emerald-200 hover:underline"
+              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
             >
-              + Post a tough call
+              <Send className="h-3.5 w-3.5" />
+              Post a tough call
             </Link>
-          }
-        >
-          <FilterRow
-            label="Sort"
-            options={SORT_OPTIONS}
-            current={sortMode}
-            paramName="sort"
-            otherParams={{
-              type: typeFilter,
-              league: leagueFilter,
-              scoring: scoringFilter,
-            }}
-          />
-          <FilterRow
-            label="Type"
-            options={TYPE_OPTIONS}
-            current={typeFilter}
-            paramName="type"
-            otherParams={{
-              league: leagueFilter,
-              scoring: scoringFilter,
-              sort: sortMode,
-            }}
-          />
-          {typeFilter !== "verdicts" && (
-            <FilterRow
-              label="League"
-              options={LEAGUE_OPTIONS}
-              current={leagueFilter}
-              paramName="league"
-              otherParams={{
-                type: typeFilter,
-                scoring: scoringFilter,
-                sort: sortMode,
-              }}
-            />
-          )}
-          <FilterRow
-            label="Scoring"
-            options={SCORING_OPTIONS}
-            current={scoringFilter}
-            paramName="scoring"
-            otherParams={{
-              type: typeFilter,
-              league: leagueFilter,
-              sort: sortMode,
-            }}
-          />
-        </FilterSheet>
+          </div>
+        </div>
 
-        {feed.length === 0 ? (
+        {/* Case-type chip row — independent of Sort / Scoring / League.
+            Sits above the other filters because it changes WHICH rows you
+            see, not how they're ranked. */}
+        <div className="mb-3 flex flex-nowrap items-center gap-1.5 overflow-x-auto text-xs [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {CASE_TYPE_FILTERS.map((opt) => {
+            const merged: Record<string, string> = {};
+            for (const [k, v] of Object.entries({
+              sort: sortMode,
+              scoring: scoringFilter,
+              league: leagueFilter,
+            })) {
+              if (v && v !== "all" && v !== "recent") merged[k] = v;
+            }
+            if (opt.value !== "all") merged.case = opt.value;
+            const qs = new URLSearchParams(merged).toString();
+            const isActive = caseFilter === opt.value;
+            return (
+              <Link
+                key={opt.value}
+                href={qs ? `/judge?${qs}` : "/judge"}
+                className={`shrink-0 rounded-full px-3 py-1 font-medium transition ${
+                  isActive
+                    ? "bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
+                    : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                }`}
+              >
+                {opt.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Filters + sort */}
+        <div className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto text-xs sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <FilterDropdown
+            label="Sort"
+            options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            current={sortMode}
+            param="sort"
+            otherParams={{
+              scoring: scoringFilter,
+              league: leagueFilter,
+              case: caseFilter === "all" ? "" : caseFilter,
+            }}
+          />
+          <FilterDropdown
+            label="Scoring"
+            options={SCORING_FILTERS.map((s) => ({
+              value: s,
+              label: s === "all" ? "All scoring" : s,
+            }))}
+            current={scoringFilter}
+            param="scoring"
+            otherParams={{
+              sort: sortMode,
+              league: leagueFilter,
+              case: caseFilter === "all" ? "" : caseFilter,
+            }}
+          />
+          <FilterDropdown
+            label="League"
+            options={LEAGUE_FILTERS.map((s) => ({
+              value: s,
+              label: s === "all" ? "All leagues" : s,
+            }))}
+            current={leagueFilter}
+            param="league"
+            otherParams={{
+              sort: sortMode,
+              scoring: scoringFilter,
+              case: caseFilter === "all" ? "" : caseFilter,
+            }}
+          />
+          <span className="ml-auto shrink-0 text-zinc-500">
+            {allCases.length} case{allCases.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        {allCases.length === 0 ? (
           <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/5 to-zinc-900 p-10 text-center">
-            <p className="text-2xl font-bold text-emerald-300">
-              {anyFilterActive ? "Nothing matches." : "All caught up."}
-            </p>
+            <p className="text-lg font-bold text-emerald-300">No open cases.</p>
             <p className="mt-2 text-sm text-zinc-300">
-              {anyFilterActive
-                ? "Try widening the filters or posting a new tough call."
-                : "You've weighed in on every open scenario."}
+              Post a tough call or submit a trade — the council will render its
+              verdict.
             </p>
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              {anyFilterActive && (
-                <Link
-                  href="/judge"
-                  className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
-                >
-                  Clear filters
-                </Link>
-              )}
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
               <Link
                 href="/verdict/new"
-                className="rounded-md bg-emerald-500/20 px-4 py-2 text-xs font-medium text-emerald-200 hover:bg-emerald-500/30"
+                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/30"
               >
+                <Send className="h-3.5 w-3.5" />
                 Post a tough call
               </Link>
               <Link
-                href="/trades/new"
-                className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
+                href="/trades"
+                className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
               >
-                Post a trade
+                Analyze a trade
               </Link>
             </div>
           </div>
         ) : (
-          <JudgeFeed feed={feed} />
+          <JudgeListClient cases={allCases} />
         )}
       </div>
     </main>
   );
 }
 
-function FilterRow({
+function FilterDropdown({
   label,
   options,
   current,
-  paramName,
+  param,
   otherParams,
 }: {
   label: string;
-  options: readonly { value: string; label: string }[];
+  options: { value: string; label: string }[];
   current: string;
-  paramName: string;
+  param: string;
   otherParams: Record<string, string>;
 }) {
-  // Build a URL with this pill's value applied + other filters preserved.
-  // Default values ("all", "recent") are omitted to keep URLs short and clean.
-  function hrefFor(value: string): string {
-    const params: Record<string, string> = { ...otherParams, [paramName]: value };
-    const entries = Object.entries(params).filter(
-      ([, v]) => v && v !== "all" && v !== "recent",
-    );
-    if (entries.length === 0) return "/judge";
-    const qs = new URLSearchParams(entries).toString();
-    return `/judge?${qs}`;
-  }
-
+  // Simple link-based filter — each option is its own URL. Default values
+  // ("all", "recent") are dropped so the URL stays tidy.
   return (
-    <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 text-xs [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <span className="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+    <div className="flex shrink-0 items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
+      <span className="px-1.5 text-xs uppercase tracking-wider text-zinc-500">
         {label}
       </span>
       {options.map((opt) => {
-        const isActive = opt.value === current;
+        const merged: Record<string, string> = {};
+        for (const [k, v] of Object.entries(otherParams)) {
+          if (v && v !== "all" && v !== "recent") merged[k] = v;
+        }
+        if (opt.value !== "all" && opt.value !== "recent") {
+          merged[param] = opt.value;
+        }
+        const qs = new URLSearchParams(merged).toString();
+        const isActive = current === opt.value;
         return (
           <Link
             key={opt.value}
-            href={hrefFor(opt.value)}
-            className={`shrink-0 whitespace-nowrap rounded-md border px-3 py-1.5 transition ${
+            href={qs ? `/judge?${qs}` : "/judge"}
+            className={`rounded px-2 py-0.5 text-xs font-medium transition ${
               isActive
-                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
-                : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                ? "bg-emerald-500/20 text-emerald-200"
+                : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             {opt.label}
