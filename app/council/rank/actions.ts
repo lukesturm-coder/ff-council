@@ -16,10 +16,15 @@ import type { ScoringSystem } from "@/lib/types";
 //     `player_comparisons` (existing table, drives /rank Elos). A trigger on
 //     that table updates `player_elo`.
 //
-// We can't persist the S/A/B/C/D tier letter in the existing schema, so the
-// flow keeps that purely as a client-session affordance. Global rank order
-// across tiers (S before A before B…) is the canonical persisted artefact.
+// The S/A/B/C/D…/H tier letter is persisted on ranking_entries.tier (added
+// in migration 018) so the /council/rankings tier board can reload with each
+// player back in its row. Global rank order across tiers (S before A before
+// B…) remains the canonical persisted artefact that feeds council_consensus.
+// When migration 018 hasn't been applied yet we transparently fall back to
+// inserting entries WITHOUT the tier column, so the flow keeps working.
 // ---------------------------------------------------------------------------
+
+export type TierLetter = "S" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
 
 export type SavePersonalRankResult =
   | { ok: true; submissionId: string }
@@ -36,7 +41,16 @@ export type SavePersonalRankResult =
  */
 export async function savePersonalRank(input: {
   scoring: ScoringSystem;
-  ranks: Array<{ playerId: number; rank: number }>;
+  ranks: Array<{ playerId: number; rank: number; tier?: TierLetter | null }>;
+  /**
+   * Which surface is calling. We never revalidate the route the user is
+   * actively editing on, because revalidatePath of the current route inside a
+   * client useTransition wedges the transition queue (it froze the Beli flow
+   * after a couple of saves). "rank" = the Beli tap-flow at /council/rank,
+   * "board" = the tier board at /council/rankings. Defaults to "rank" to
+   * preserve the original behaviour for existing callers.
+   */
+  from?: "rank" | "board";
 }): Promise<SavePersonalRankResult> {
   const supabase = await createClient();
   const {
@@ -82,24 +96,55 @@ export async function savePersonalRank(input: {
   // Bulk-insert every entry. ranking_entries has FK to the submission, so
   // when the old submission flipped to is_current=false its entries are
   // preserved as history.
-  const { error: entriesErr } = await supabase.from("ranking_entries").insert(
-    ranks.map((r) => ({
-      submission_id: submission.id,
-      player_id: r.playerId,
-      rank: r.rank,
-    })),
-  );
-  if (entriesErr) return { ok: false, error: entriesErr.message };
+  //
+  // We attempt the insert WITH the tier column first. If migration 018 hasn't
+  // run yet, PostgREST rejects the unknown `tier` column — we detect that and
+  // retry without it, so the order still persists (mirrors the
+  // projected_points fallback in app/rankings/page.tsx#loadPlatformRankings).
+  const baseRows = ranks.map((r) => ({
+    submission_id: submission.id,
+    player_id: r.playerId,
+    rank: r.rank,
+  }));
+  const rowsWithTier = ranks.map((r, i) => ({
+    ...baseRows[i],
+    tier: r.tier ?? null,
+  }));
 
-  // Revalidate the OTHER surfaces that read these tables — but NOT
-  // /council/rank itself. The user is actively mid-flow on that page; calling
-  // revalidatePath for the current route inside the client's useTransition
-  // wedges the transition queue (the flow freezes after a couple of saves).
-  // The rank page holds its working state client-side, so it doesn't need a
-  // server refresh while the user is ranking.
-  revalidatePath("/council/rankings");
+  const withTier = await supabase.from("ranking_entries").insert(rowsWithTier);
+  if (withTier.error) {
+    if (isMissingTierColumn(withTier.error)) {
+      const fallback = await supabase
+        .from("ranking_entries")
+        .insert(baseRows);
+      if (fallback.error) return { ok: false, error: fallback.error.message };
+    } else {
+      return { ok: false, error: withTier.error.message };
+    }
+  }
+
+  // Revalidate the OTHER surfaces that read these tables — but NEVER the route
+  // the caller is actively editing on. Calling revalidatePath for the current
+  // route inside the client's useTransition wedges the transition queue (the
+  // flow freezes after a couple of saves). Each editor holds its working state
+  // client-side, so it doesn't need a server refresh while the user is ranking.
+  const from = input.from ?? "rank";
+  if (from !== "board") revalidatePath("/council/rankings");
+  // /council always reads fresh consensus and is never the editing surface.
   revalidatePath("/council");
   return { ok: true, submissionId: submission.id };
+}
+
+/**
+ * PostgREST error shape when a column doesn't exist on the target table.
+ * Postgres reports SQLSTATE 42703 (undefined_column); PostgREST surfaces the
+ * code and a message mentioning the column. We check both to be safe across
+ * PostgREST versions.
+ */
+function isMissingTierColumn(err: { code?: string; message?: string }): boolean {
+  if (err.code === "42703") return true;
+  const msg = (err.message ?? "").toLowerCase();
+  return msg.includes("tier") && msg.includes("column");
 }
 
 export type RecordComparisonResult = { ok: true } | { ok: false; error: string };
