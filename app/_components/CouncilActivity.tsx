@@ -247,7 +247,7 @@ export default async function CouncilActivity() {
               Tough calls
             </h3>
             <Link
-              href="/verdict"
+              href="/judge"
               className="text-xs text-emerald-400 underline-offset-4 hover:underline"
             >
               All tough calls →

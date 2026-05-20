@@ -754,7 +754,7 @@ export default async function PlayerDetailPage({
                       Recent verdicts
                     </h3>
                     <Link
-                      href="/verdict"
+                      href="/judge"
                       className="text-[10px] text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline sm:text-xs"
                     >
                       All →
@@ -1177,7 +1177,7 @@ export default async function PlayerDetailPage({
               Verdict appearances
             </h3>
             <Link
-              href="/verdict"
+              href="/judge"
               className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
             >
               All verdicts →

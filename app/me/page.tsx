@@ -523,10 +523,10 @@ export default async function MePage() {
                   <p className="text-zinc-500">
                     No trade votes yet —{" "}
                     <Link
-                      href="/trades"
+                      href="/judge"
                       className="text-emerald-300 underline-offset-4 hover:underline"
                     >
-                      head to Trades
+                      weigh in
                     </Link>
                     .
                   </p>
@@ -558,10 +558,10 @@ export default async function MePage() {
                   <p className="text-zinc-500">
                     No verdict votes yet —{" "}
                     <Link
-                      href="/verdict"
+                      href="/judge"
                       className="text-emerald-300 underline-offset-4 hover:underline"
                     >
-                      try Verdict
+                      weigh in
                     </Link>
                     .
                   </p>
