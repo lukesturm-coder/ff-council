@@ -511,10 +511,10 @@ export default async function VerdictDetailPage({
         {/* Footer */}
         <div className="mt-6 flex items-center justify-between text-xs">
           <Link
-            href="/verdict"
+            href="/judge"
             className="text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
           >
-            ← All verdicts
+            ← All cases
           </Link>
           <ShareButton scenarioId={scenario.id} />
         </div>

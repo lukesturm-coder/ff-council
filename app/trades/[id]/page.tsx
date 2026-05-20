@@ -198,10 +198,10 @@ export default async function TradeDetailPage({
           <div className="flex items-center gap-3">
             <ShareButton tradeId={id} />
             <Link
-              href="/trades"
+              href="/judge"
               className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
             >
-              ← All trades
+              ← All cases
             </Link>
           </div>
         </div>

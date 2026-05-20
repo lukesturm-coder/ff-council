@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type SubmittedPlayer = {
@@ -69,5 +70,7 @@ export async function submitTrade(formData: FormData) {
     );
   }
 
+  // The submitted trade joins the docket in /judge; refresh that surface.
+  revalidatePath("/judge");
   redirect(`/trades/${data.id}`);
 }

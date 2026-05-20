@@ -66,6 +66,9 @@ export async function submitVerdict(formData: FormData) {
     .single();
 
   if (error || !data) return;
+  // /judge is where the new case shows up in the docket; revalidate both
+  // the feed surface and the (now-redirecting) /verdict path.
+  revalidatePath("/judge");
   revalidatePath("/verdict");
   redirect(`/verdict/${data.id}`);
 }
