@@ -8,7 +8,6 @@ import {
 } from "@/lib/projections";
 import type { FuturesResponse } from "@/lib/types";
 import PrimaryNav, { type NavItem } from "./PrimaryNav";
-import MoreMenu from "./MoreMenu";
 import SearchBar from "./SearchBar";
 import type {
   SearchIndex,
@@ -17,13 +16,9 @@ import type {
   SearchVerdict,
 } from "./SearchIndex";
 
-// Single-row nav: four primary product surfaces (Rankings, Judge, Court, Mock
-// Draft) always visible — the "things you do" on FF Council. The old "Tools"
-// dropdown was killed since the surfaces it contained were either disconnected
-// (Leaderboard) or required auth context (League Analyzer). Auth-gated entries
-// (My Rankings, Admin) still flow through the overflow menu when present; the
-// trigger is hidden when there are no items. League Analyzer + Leaderboard
-// live in the home page footer and /me page instead of header chrome.
+// Two-tier nav, both rows ALWAYS visible (no dropdowns — owner wants every
+// feature exposed). Priority row = the four core surfaces. Sub-tools row =
+// everything else, rendered smaller + muted directly under the priority row.
 const PRIORITY_NAV: NavItem[] = [
   { href: "/rankings", label: "Rankings" },
   { href: "/judge", label: "Judge" },
@@ -31,10 +26,8 @@ const PRIORITY_NAV: NavItem[] = [
   { href: "/verdict", label: "Verdict" },
 ];
 
-// Tools dropdown. Restored after the empty-menu experiment buried too many
-// features. Items live here until their functionality is integrated inline
-// elsewhere (e.g., the Beli flow will eventually live on /rankings; tier
-// dividers will live on /rankings — those entries fall out at that point).
+// Sub-tools row — second visible tier. Every secondary surface lives here in
+// plain sight. Nothing is hidden behind a menu.
 const UTILITY_NAV: NavItem[] = [
   { href: "/draft", label: "Mock Draft" },
   { href: "/trades", label: "Trade Calculator" },
@@ -172,14 +165,15 @@ export default async function Header() {
     isAdmin = Boolean(data?.is_admin);
   }
 
-  // Overflow items (auth-gated entries slot in here too).
-  const moreNav: NavItem[] = [...UTILITY_NAV];
-  if (user) moreNav.push({ href: "/council/rankings", label: "My Rankings" });
-  if (isAdmin) moreNav.push({ href: "/council/admin", label: "Admin" });
+  // Sub-tools row — every secondary surface, always visible (no dropdown).
+  // Auth-gated entries slot in alongside the standing tools.
+  const subToolsNav: NavItem[] = [...UTILITY_NAV];
+  if (user) subToolsNav.push({ href: "/council/rankings", label: "My Rankings" });
+  if (isAdmin) subToolsNav.push({ href: "/council/admin", label: "Admin" });
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60">
-      <div className="mx-auto max-w-7xl px-3 py-3 sm:px-6">
+      <div className="mx-auto max-w-7xl px-3 pb-2 pt-3 sm:px-6">
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/" className="shrink-0">
             <h1 className="whitespace-nowrap font-mono text-lg font-bold tracking-tight text-emerald-400 sm:text-2xl md:text-[1.625rem]">
@@ -194,8 +188,6 @@ export default async function Header() {
             variant="desktop"
             className="flex min-w-0 flex-1 items-center gap-x-4 overflow-x-auto text-sm sm:gap-x-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           />
-
-          {moreNav.length > 0 && <MoreMenu items={moreNav} />}
 
           <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm">
             <SearchBar index={searchIndex} />
@@ -227,6 +219,16 @@ export default async function Header() {
             )}
           </div>
         </div>
+
+        {/* Sub-tools row — second tier, always visible. Every secondary
+            surface exposed (no dropdown). Scrolls horizontally on narrow
+            phones rather than hiding anything. */}
+        <PrimaryNav
+          items={subToolsNav}
+          variant="desktop"
+          size="compact"
+          className="mt-2 flex items-center gap-x-4 overflow-x-auto border-t border-zinc-800/60 pt-2 text-xs [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        />
       </div>
     </header>
   );
