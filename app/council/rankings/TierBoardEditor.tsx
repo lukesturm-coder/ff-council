@@ -1,0 +1,752 @@
+"use client";
+
+import { useCallback, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+  useDroppable,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Search, X } from "lucide-react";
+import type {
+  FantasyPosition,
+  PlayerProjection,
+  ScoringSystem,
+} from "@/lib/types";
+import { savePersonalRank, type TierLetter } from "../rank/actions";
+
+// ---------------------------------------------------------------------------
+// Tiermaker-style board. The member drags player chips from a filterable
+// "unranked pool" into 9 global tier rows (S…H, best→worst across ALL
+// positions). Order within a row matters (left→right = better).
+//
+// The canonical persisted artefact is the global rank order: concatenate the
+// tiers S→H, preserving within-tier order, and number 1..N. That order feeds
+// council_consensus exactly like the Beli tap-flow does. We additionally
+// persist the tier letter (migration 018) so the board reloads players back
+// into their rows.
+//
+// Save: debounced after each drag-end via savePersonalRank({ from: "board" }).
+//   - We compute the next ordering OUTSIDE the setState updater and persist it
+//     from there (never fire a transition from inside a state updater).
+//   - The action does NOT revalidatePath("/council/rankings") when from:"board"
+//     (it's the route we're on) — both of those caused the Beli-flow freeze.
+// ---------------------------------------------------------------------------
+
+const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
+const TIERS: TierLetter[] = ["S", "A", "B", "C", "D", "E", "F", "G", "H"];
+const POOL_ID = "pool";
+const SAVE_DEBOUNCE_MS = 700;
+
+const TIER_META: Record<
+  TierLetter,
+  { label: string; label1: string; cell: string; ring: string; chip: string }
+> = {
+  S: {
+    label: "League Winner",
+    label1: "text-emerald-200",
+    cell: "bg-emerald-500/15 text-emerald-200 ring-emerald-500/40",
+    ring: "ring-emerald-400/40",
+    chip: "hover:border-emerald-500/40",
+  },
+  A: {
+    label: "Every-Week Starter",
+    label1: "text-teal-200",
+    cell: "bg-teal-500/15 text-teal-200 ring-teal-500/40",
+    ring: "ring-teal-400/40",
+    chip: "hover:border-teal-500/40",
+  },
+  B: {
+    label: "Strong Flex",
+    label1: "text-cyan-200",
+    cell: "bg-cyan-500/15 text-cyan-200 ring-cyan-500/40",
+    ring: "ring-cyan-400/40",
+    chip: "hover:border-cyan-500/40",
+  },
+  C: {
+    label: "Flex",
+    label1: "text-sky-200",
+    cell: "bg-sky-500/15 text-sky-200 ring-sky-500/40",
+    ring: "ring-sky-400/40",
+    chip: "hover:border-sky-500/40",
+  },
+  D: {
+    label: "Bench",
+    label1: "text-blue-200",
+    cell: "bg-blue-500/15 text-blue-200 ring-blue-500/40",
+    ring: "ring-blue-400/40",
+    chip: "hover:border-blue-500/40",
+  },
+  E: {
+    label: "Deep Bench",
+    label1: "text-indigo-200",
+    cell: "bg-indigo-500/15 text-indigo-200 ring-indigo-500/40",
+    ring: "ring-indigo-400/40",
+    chip: "hover:border-indigo-500/40",
+  },
+  F: {
+    label: "Bye-Week Fill",
+    label1: "text-amber-200",
+    cell: "bg-amber-500/15 text-amber-200 ring-amber-500/40",
+    ring: "ring-amber-400/40",
+    chip: "hover:border-amber-500/40",
+  },
+  G: {
+    label: "Stash",
+    label1: "text-orange-200",
+    cell: "bg-orange-500/15 text-orange-200 ring-orange-500/40",
+    ring: "ring-orange-400/40",
+    chip: "hover:border-orange-500/40",
+  },
+  H: {
+    label: "Drop",
+    label1: "text-rose-200",
+    cell: "bg-rose-500/15 text-rose-200 ring-rose-500/40",
+    ring: "ring-rose-400/40",
+    chip: "hover:border-rose-500/40",
+  },
+};
+
+const POSITION_STYLES: Record<FantasyPosition, string> = {
+  QB: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
+  RB: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
+  WR: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
+  TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
+};
+
+const POSITION_FILTERS: Array<"ALL" | FantasyPosition> = [
+  "ALL",
+  "QB",
+  "RB",
+  "WR",
+  "TE",
+];
+
+// A container is either a tier letter or the pool.
+type ContainerId = TierLetter | typeof POOL_ID;
+
+// Board state for one scoring system: ordered player ids per container.
+type Board = Record<ContainerId, number[]>;
+
+function emptyBoard(): Board {
+  const b = {} as Board;
+  b[POOL_ID] = [];
+  for (const t of TIERS) b[t] = [];
+  return b;
+}
+
+// Existing data shape from the server: {playerId: {rank, tier}} per scoring.
+export type ExistingEntry = { rank: number; tier: TierLetter | null };
+export type ExistingRankings = Partial<
+  Record<ScoringSystem, Record<number, ExistingEntry>>
+>;
+
+export default function TierBoardEditor({
+  projections,
+  existingRankings,
+}: {
+  projections: PlayerProjection[];
+  existingRankings: ExistingRankings;
+}) {
+  const playerMap = useMemo(() => {
+    const m = new Map<number, PlayerProjection>();
+    for (const p of projections) m.set(p.playerId, p);
+    return m;
+  }, [projections]);
+
+  // Auto pool order per scoring (vegas fpts desc, alpha fallback). Drives the
+  // initial unranked-pool ordering for players without a saved entry.
+  const poolOrderByScoring = useMemo(() => {
+    const out: Record<ScoringSystem, number[]> = {
+      PPR: [],
+      Half: [],
+      Standard: [],
+    };
+    for (const s of SCORING_OPTIONS) {
+      out[s] = [...projections]
+        .sort((a, b) => {
+          const fa = a.fantasyPoints[s] ?? 0;
+          const fb = b.fantasyPoints[s] ?? 0;
+          if (fb !== fa) return fb - fa;
+          return a.name.localeCompare(b.name);
+        })
+        .map((p) => p.playerId);
+    }
+    return out;
+  }, [projections]);
+
+  // Seed one Board per scoring system from saved entries:
+  //   - players with a saved tier go into that tier in rank order
+  //   - players with a saved rank but NO tier are re-clustered: they keep
+  //     their relative rank order and drop into the pool (graceful degrade
+  //     before migration 018, and for entries written by the Beli flow).
+  //   - players with no entry at all fall into the pool in auto order.
+  const [boards, setBoards] = useState<Record<ScoringSystem, Board>>(() => {
+    const out = {
+      PPR: emptyBoard(),
+      Half: emptyBoard(),
+      Standard: emptyBoard(),
+    } as Record<ScoringSystem, Board>;
+    for (const s of SCORING_OPTIONS) {
+      const board = emptyBoard();
+      const saved = existingRankings[s] ?? {};
+      const placed = new Set<number>();
+      // Sort saved player ids by rank so within-tier order is preserved.
+      const savedSorted = Object.entries(saved)
+        .map(([pid, e]) => ({ pid: Number(pid), ...e }))
+        .sort((a, b) => a.rank - b.rank);
+      for (const e of savedSorted) {
+        if (!playerMap.has(e.pid)) continue;
+        if (e.tier) {
+          board[e.tier].push(e.pid);
+        } else {
+          board[POOL_ID].push(e.pid);
+        }
+        placed.add(e.pid);
+      }
+      // Everyone not placed → pool in auto order, appended after re-clustered.
+      for (const pid of poolOrderByScoring[s]) {
+        if (!placed.has(pid)) board[POOL_ID].push(pid);
+      }
+      out[s] = board;
+    }
+    return out;
+  });
+
+  const [scoring, setScoring] = useState<ScoringSystem>("PPR");
+  const [posFilter, setPosFilter] = useState<"ALL" | FantasyPosition>("ALL");
+  const [query, setQuery] = useState("");
+  const [activeId, setActiveId] = useState<number | null>(null);
+  const [, startSave] = useTransition();
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const board = boards[scoring];
+
+  const sensors = useSensors(
+    // Pointer (mouse/trackpad): tiny activation distance so chips are easy to
+    // pick up without blocking taps.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // Touch: short press-delay + tolerance so a scroll gesture isn't hijacked
+    // as a drag, but a deliberate press-and-move lifts the chip. This is what
+    // makes drag usable on a 390px phone.
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 8 },
+    }),
+    useSensor(KeyboardSensor),
+  );
+
+  // ---- persistence ---------------------------------------------------------
+  // Derive the global ordered list (with tiers) from a board: concatenate
+  // S→H, then number 1..N. Pool players are NOT ranked.
+  const persistBoard = useCallback(
+    (nextBoard: Board, scoringSys: ScoringSystem) => {
+      const ranks: Array<{
+        playerId: number;
+        rank: number;
+        tier: TierLetter;
+      }> = [];
+      let rank = 1;
+      for (const t of TIERS) {
+        for (const pid of nextBoard[t]) {
+          ranks.push({ playerId: pid, rank, tier: t });
+          rank += 1;
+        }
+      }
+      // Compute OUTSIDE any setState updater, then fire the transition.
+      startSave(async () => {
+        if (ranks.length === 0) {
+          // Nothing in any tier — nothing to persist. (We don't wipe the
+          // existing submission here; the user just hasn't placed anyone yet.)
+          setSaveMsg("Drop players into tiers to build your ranking.");
+          return;
+        }
+        const res = await savePersonalRank({
+          scoring: scoringSys,
+          ranks,
+          from: "board",
+        });
+        setSaveMsg(res.ok ? "Saved" : `Save failed: ${res.error}`);
+      });
+    },
+    [],
+  );
+
+  const scheduleSave = useCallback(
+    (nextBoard: Board, scoringSys: ScoringSystem) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      setSaveMsg("Saving…");
+      saveTimer.current = setTimeout(() => {
+        persistBoard(nextBoard, scoringSys);
+      }, SAVE_DEBOUNCE_MS);
+    },
+    [persistBoard],
+  );
+
+  // ---- drag handlers -------------------------------------------------------
+  function handleDragStart(e: DragStartEvent) {
+    setActiveId(Number(e.active.id));
+  }
+
+  // Move a chip between containers live as you drag over them, so the drop
+  // zones visibly reflow. All container lookups happen against the FRESH state
+  // inside the functional updater so rapid over-events don't act on a stale
+  // board. We only touch the active scoring system's board.
+  function handleDragOver(e: DragOverEvent) {
+    const { active, over } = e;
+    if (!over) return;
+    const activePid = Number(active.id);
+    const overId = over.id;
+
+    setBoards((prev) => {
+      const cur = prev[scoring];
+      // Resolve `from` (active chip's current container) from fresh state.
+      let from: ContainerId | null = null;
+      for (const c of [POOL_ID, ...TIERS] as ContainerId[]) {
+        if (cur[c].includes(activePid)) {
+          from = c;
+          break;
+        }
+      }
+      if (!from) return prev;
+      // Resolve `to`: either a container id directly, or the container that
+      // holds the over-chip.
+      let to: ContainerId | null = null;
+      if (overId === POOL_ID || TIERS.includes(overId as TierLetter)) {
+        to = overId as ContainerId;
+      } else {
+        const overPid = Number(overId);
+        for (const c of [POOL_ID, ...TIERS] as ContainerId[]) {
+          if (cur[c].includes(overPid)) {
+            to = c;
+            break;
+          }
+        }
+      }
+      if (!to || from === to) return prev;
+
+      const fromArr = cur[from].filter((p) => p !== activePid);
+      const toArr = [...cur[to]];
+      const overIdx = toArr.indexOf(Number(overId));
+      if (overIdx >= 0) toArr.splice(overIdx, 0, activePid);
+      else toArr.push(activePid);
+      return {
+        ...prev,
+        [scoring]: { ...cur, [from]: fromArr, [to]: toArr },
+      };
+    });
+  }
+
+  function handleDragEnd(e: DragEndEvent) {
+    setActiveId(null);
+    const { active, over } = e;
+    if (!over) {
+      // Dropped outside any droppable — still persist whatever the over-moves
+      // produced. Read the freshest board, then schedule outside the updater.
+      let snapshot: Board | null = null;
+      setBoards((prev) => {
+        snapshot = prev[scoring];
+        return prev;
+      });
+      if (snapshot) scheduleSave(snapshot, scoring);
+      return;
+    }
+    const activePid = Number(active.id);
+    const overPid = Number(over.id);
+
+    // Compute the final board inside a functional updater so we read the state
+    // AFTER any handleDragOver cross-container moves landed (the render-time
+    // `board` closure is stale mid-drag). Capture the result to schedule the
+    // save OUTSIDE the updater — never fire a transition from within setState.
+    let computed: Board | null = null;
+    setBoards((prev) => {
+      const cur = prev[scoring];
+      // Locate the active chip's container in the fresh state.
+      let container: ContainerId | null = null;
+      for (const c of [POOL_ID, ...TIERS] as ContainerId[]) {
+        if (cur[c].includes(activePid)) {
+          container = c;
+          break;
+        }
+      }
+      if (!container) {
+        computed = cur;
+        return prev;
+      }
+      // Reorder within the final container if dropped onto a sibling chip.
+      if (
+        !Number.isNaN(overPid) &&
+        activePid !== overPid &&
+        cur[container].includes(overPid)
+      ) {
+        const oldIdx = cur[container].indexOf(activePid);
+        const newIdx = cur[container].indexOf(overPid);
+        if (oldIdx >= 0 && newIdx >= 0) {
+          const reordered = arrayMove(cur[container], oldIdx, newIdx);
+          const next = { ...cur, [container]: reordered };
+          computed = next;
+          return { ...prev, [scoring]: next };
+        }
+      }
+      computed = cur;
+      return prev;
+    });
+
+    // Persist the final board (debounced) from the captured snapshot.
+    if (computed) scheduleSave(computed, scoring);
+  }
+
+  function handleDragCancel() {
+    setActiveId(null);
+  }
+
+  // ---- pool filtering ------------------------------------------------------
+  const filteredPool = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return board[POOL_ID].filter((pid) => {
+      const p = playerMap.get(pid);
+      if (!p) return false;
+      if (posFilter !== "ALL" && p.position !== posFilter) return false;
+      if (q && !p.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [board, playerMap, posFilter, query]);
+
+  const activePlayer = activeId != null ? playerMap.get(activeId) : null;
+  const rankedCount = TIERS.reduce((n, t) => n + board[t].length, 0);
+
+  return (
+    <div className="space-y-4">
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+          <span className="px-2 text-xs uppercase tracking-wider text-zinc-500">
+            Scoring
+          </span>
+          {SCORING_OPTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                setScoring(s);
+                setSaveMsg(null);
+              }}
+              className={`rounded-md px-2 py-1 text-sm font-medium transition sm:px-3 ${
+                scoring === s
+                  ? "bg-emerald-500/20 text-emerald-200"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
+        <Link
+          href="/council/rank"
+          className="text-xs text-zinc-500 transition hover:text-zinc-300"
+          title="Beli-style tap-to-rank flow"
+        >
+          Prefer tapping? Quick-rank →
+        </Link>
+
+        <span className="ml-auto text-xs text-zinc-500">
+          <span className="font-mono text-zinc-300">{rankedCount}</span> placed
+          {saveMsg && (
+            <>
+              <span className="mx-1.5 text-zinc-700">·</span>
+              <span
+                className={
+                  saveMsg.startsWith("Save failed")
+                    ? "text-rose-400"
+                    : "text-emerald-400/80"
+                }
+              >
+                {saveMsg}
+              </span>
+            </>
+          )}
+        </span>
+      </div>
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        {/* Tier rows */}
+        <div className="space-y-2">
+          {TIERS.map((t) => (
+            <TierRow
+              key={t}
+              tier={t}
+              playerIds={board[t]}
+              playerMap={playerMap}
+              activeId={activeId}
+            />
+          ))}
+        </div>
+
+        {/* Unranked pool */}
+        <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900/60">
+          <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800 px-3 py-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Unranked pool
+            </span>
+            <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-0.5">
+              {POSITION_FILTERS.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setPosFilter(f)}
+                  className={`rounded px-2 py-0.5 text-xs font-medium transition ${
+                    posFilter === f
+                      ? "bg-emerald-500/20 text-emerald-200"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+            <div className="relative ml-auto flex min-w-[140px] flex-1 items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 sm:max-w-[220px] sm:flex-initial">
+              <Search className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search pool…"
+                className="w-full bg-transparent text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                  className="text-zinc-500 transition hover:text-zinc-300"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <PoolZone
+            visibleIds={filteredPool}
+            allIds={board[POOL_ID]}
+            playerMap={playerMap}
+            activeId={activeId}
+            filtered={posFilter !== "ALL" || query.trim().length > 0}
+          />
+        </div>
+
+        <DragOverlay>
+          {activePlayer ? (
+            <Chip player={activePlayer} overlay />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      <p className="text-[11px] leading-relaxed text-zinc-600">
+        Drag players from the pool into tier rows — S is your best across every
+        position, H is droppable. Order within a row matters (left = better).
+        Your ranking auto-saves after each drop and feeds the Council column.
+      </p>
+    </div>
+  );
+}
+
+// ===========================================================================
+// Tier row
+// ===========================================================================
+
+function TierRow({
+  tier,
+  playerIds,
+  playerMap,
+  activeId,
+}: {
+  tier: TierLetter;
+  playerIds: number[];
+  playerMap: Map<number, PlayerProjection>;
+  activeId: number | null;
+}) {
+  const meta = TIER_META[tier];
+  const { setNodeRef, isOver } = useDroppable({ id: tier });
+
+  return (
+    <div
+      className={`flex overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 ring-inset transition ${
+        isOver ? `ring-2 ${meta.ring}` : "ring-0"
+      }`}
+    >
+      {/* Label cell */}
+      <div
+        className={`flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 px-1 py-2 text-center ring-1 ring-inset sm:w-24 ${meta.cell}`}
+      >
+        <span className="text-xl font-bold leading-none sm:text-2xl">
+          {tier}
+        </span>
+        <span className="hidden text-[10px] leading-tight opacity-80 sm:block">
+          {meta.label}
+        </span>
+      </div>
+
+      {/* Drop zone */}
+      <SortableContext items={playerIds} strategy={rectSortingStrategy}>
+        <div
+          ref={setNodeRef}
+          className="flex min-h-[52px] flex-1 flex-wrap content-start gap-1.5 p-1.5 sm:gap-2 sm:p-2"
+        >
+          {playerIds.length === 0 ? (
+            <span className="self-center px-1 text-[11px] text-zinc-600">
+              Drop players here
+            </span>
+          ) : (
+            playerIds.map((pid) => {
+              const p = playerMap.get(pid);
+              if (!p) return null;
+              return (
+                <SortableChip
+                  key={pid}
+                  player={p}
+                  hidden={activeId === pid}
+                />
+              );
+            })
+          )}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
+
+// ===========================================================================
+// Pool zone
+// ===========================================================================
+
+function PoolZone({
+  visibleIds,
+  allIds,
+  playerMap,
+  activeId,
+  filtered,
+}: {
+  visibleIds: number[];
+  allIds: number[];
+  playerMap: Map<number, PlayerProjection>;
+  activeId: number | null;
+  filtered: boolean;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: POOL_ID });
+
+  return (
+    // The SortableContext still spans ALL pool ids so dnd-kit's sortable
+    // bookkeeping is consistent; we only RENDER the filtered subset.
+    <SortableContext items={allIds} strategy={rectSortingStrategy}>
+      <div
+        ref={setNodeRef}
+        className={`flex max-h-[46vh] flex-wrap content-start gap-1.5 overflow-y-auto p-2 transition sm:gap-2 ${
+          isOver ? "bg-zinc-800/40" : ""
+        }`}
+      >
+        {visibleIds.length === 0 ? (
+          <span className="px-1 py-4 text-xs text-zinc-600">
+            {filtered
+              ? "No matching players in the pool."
+              : "Pool is empty — every player is in a tier."}
+          </span>
+        ) : (
+          visibleIds.map((pid) => {
+            const p = playerMap.get(pid);
+            if (!p) return null;
+            return (
+              <SortableChip key={pid} player={p} hidden={activeId === pid} />
+            );
+          })
+        )}
+      </div>
+    </SortableContext>
+  );
+}
+
+// ===========================================================================
+// Chips
+// ===========================================================================
+
+function SortableChip({
+  player,
+  hidden,
+}: {
+  player: PlayerProjection;
+  hidden: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: player.playerId });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: hidden || isDragging ? 0 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <Chip player={player} />
+    </div>
+  );
+}
+
+function Chip({
+  player,
+  overlay = false,
+}: {
+  player: PlayerProjection;
+  overlay?: boolean;
+}) {
+  return (
+    <div
+      className={`flex max-w-[150px] cursor-grab touch-none select-none items-center gap-1.5 rounded-md border bg-zinc-800 px-1.5 py-1 text-xs transition active:cursor-grabbing sm:px-2 ${
+        overlay
+          ? "border-emerald-500/50 shadow-2xl"
+          : "border-zinc-700 hover:border-zinc-500"
+      }`}
+    >
+      <span
+        className={`inline-flex shrink-0 items-center rounded px-1 py-0.5 text-[10px] font-bold ring-1 ring-inset ${POSITION_STYLES[player.position]}`}
+      >
+        {player.position}
+      </span>
+      <span className="min-w-0 truncate font-medium text-zinc-100">
+        {lastFirst(player.name)}
+      </span>
+      <span className="shrink-0 font-mono text-[10px] text-zinc-500">
+        {player.team}
+      </span>
+    </div>
+  );
+}
+
+// "Justin Jefferson" → "J. Jefferson" to keep chips compact (~3-4 per phone
+// row) while staying unambiguous.
+function lastFirst(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  const last = parts.slice(1).join(" ");
+  return `${parts[0][0]}. ${last}`;
+}

@@ -512,9 +512,9 @@ export default function RankClient({
         <Link
           href="/council/rankings"
           className="text-xs text-zinc-500 transition hover:text-zinc-300"
-          title="Old drag-and-drop editor"
+          title="Drag players into tier rows"
         >
-          Drag mode →
+          Prefer dragging? Tier board →
         </Link>
 
         {savedMsg && (
@@ -895,12 +895,12 @@ function DoneState({ totalRanked }: { totalRanked: number }) {
         You ranked all {totalRanked} players for this scoring system.
       </div>
       <div className="mt-1 text-xs text-zinc-400">
-        Switch scoring above to rank another, or pull up{" "}
+        Switch scoring above to rank another, or pull up the{" "}
         <Link
           href="/council/rankings"
           className="text-emerald-300 underline-offset-4 hover:underline"
         >
-          drag mode
+          tier board
         </Link>{" "}
         to make tweaks.
       </div>
