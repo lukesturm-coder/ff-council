@@ -74,7 +74,13 @@ const POSITION_STYLES: Record<FantasyPosition, string> = {
   TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
 };
 
-type ExistingRanks = Partial<Record<ScoringSystem, Record<number, number>>>;
+type ExistingRanks = Partial<
+  Record<ScoringSystem, Record<number, { rank: number; tier: string | null }>>
+>;
+
+function asTierLetter(t: string | null): TierLetter | null {
+  return t != null && (TIERS as string[]).includes(t) ? (t as TierLetter) : null;
+}
 
 // One scoring system's working state. `ordered` is the canonical global rank
 // list (rank 1..N = ordered[0..N-1]). `tierOf` is the in-session tier letter
@@ -139,8 +145,10 @@ export default function RankClient({
   }, [projections]);
 
   // Initialize working state from supabase data — one ScoringState per scoring
-  // system. Existing ranks come in as {playerId: rank}; we sort by rank to
-  // recover the ordered array. Tier letters are unknown for legacy data.
+  // system. Existing ranks come in as {playerId: {rank, tier}}; we sort by rank
+  // to recover the ordered array and rebuild the tier map so newly-ranked
+  // players compare against existing tier members. Legacy rows (pre-migration
+  // 018) carry tier=null and simply hydrate without a tier.
   const [states, setStates] = useState<Record<ScoringSystem, ScoringState>>(
     () => {
       const out: Record<ScoringSystem, ScoringState> = {
@@ -151,11 +159,19 @@ export default function RankClient({
       for (const s of SCORING_OPTIONS) {
         const dict = existingRanks[s] ?? {};
         const entries = Object.entries(dict)
-          .map(([pid, r]) => ({ playerId: Number(pid), rank: Number(r) }))
+          .map(([pid, e]) => ({
+            playerId: Number(pid),
+            rank: e.rank,
+            tier: asTierLetter(e.tier),
+          }))
           .sort((a, b) => a.rank - b.rank);
+        const tierOf = new Map<number, TierLetter>();
+        for (const e of entries) {
+          if (e.tier) tierOf.set(e.playerId, e.tier);
+        }
         out[s] = {
           ordered: entries.map((e) => e.playerId),
-          tierOf: new Map(),
+          tierOf,
         };
       }
       return out;
@@ -200,12 +216,17 @@ export default function RankClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scoring]);
 
-  // Persist the user's ordered list. Fire-and-forget; toast on result.
+  // Persist the user's ordered list (with tier letters). Fire-and-forget.
   const persistOrder = useCallback(
-    (nextOrdered: number[], scoringSys: ScoringSystem) => {
+    (
+      nextOrdered: number[],
+      scoringSys: ScoringSystem,
+      tierOf: Map<number, TierLetter>,
+    ) => {
       const ranks = nextOrdered.map((playerId, idx) => ({
         playerId,
         rank: idx + 1,
+        tier: tierOf.get(playerId) ?? null,
       }));
       startSaveTransition(async () => {
         const res = await savePersonalRank({ scoring: scoringSys, ranks });
@@ -291,7 +312,7 @@ export default function RankClient({
         [scoring]: { ordered: nextOrdered, tierOf: nextTierOf },
       }));
       // Persist AFTER the state update is queued, outside the updater.
-      persistOrder(nextOrdered, scoring);
+      persistOrder(nextOrdered, scoring, nextTierOf);
 
       // Tier-local position (1-indexed) for the confirm flash.
       const tierPosition = sliceLocalIndex + 1;
@@ -424,7 +445,7 @@ export default function RankClient({
           ...prev,
           [scoring]: { ordered: nextOrdered, tierOf: nextTierOf },
         }));
-        persistOrder(nextOrdered, scoring);
+        persistOrder(nextOrdered, scoring, nextTierOf);
       }
       setFlow({ kind: "tier", playerId });
     },

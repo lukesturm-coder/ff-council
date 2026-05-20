@@ -64,30 +64,51 @@ async function loadProjections(): Promise<PlayerProjection[]> {
   return [...projected, ...stubs];
 }
 
+export type ExistingRankEntry = { rank: number; tier: string | null };
+export type ExistingRanksMap = Partial<
+  Record<ScoringSystem, Record<number, ExistingRankEntry>>
+>;
+
 /**
  * Load each scoring system's current submission's ranking_entries, returned
- * as a {playerId: rank} dict per scoring system. Missing keys = scoring
- * systems with no prior submission.
+ * as {playerId: {rank, tier}} per scoring system. The tier letter lets the
+ * Beli flow rebuild its tier map on reload, so newly-ranked players compare
+ * against your existing tier members instead of dropping in unordered.
+ * Falls back to rank-only if migration 018 (the tier column) hasn't run.
  */
-async function loadExistingRanks(
-  userId: string,
-): Promise<Partial<Record<ScoringSystem, Record<number, number>>>> {
+type SubmissionRow = {
+  scoring_system: string;
+  ranking_entries: Array<{ player_id: number; rank: number; tier?: string | null }>;
+};
+
+async function loadExistingRanks(userId: string): Promise<ExistingRanksMap> {
   const supabase = await createClient();
-  const { data: subs } = await supabase
+  let subs: SubmissionRow[] = [];
+
+  const withTier = await supabase
     .from("ranking_submissions")
-    .select("id, scoring_system, ranking_entries(player_id, rank)")
+    .select("scoring_system, ranking_entries(player_id, rank, tier)")
     .eq("member_id", userId)
     .eq("is_current", true);
+  if (withTier.error) {
+    // Tier column not present yet — retry rank-only.
+    const fallback = await supabase
+      .from("ranking_submissions")
+      .select("scoring_system, ranking_entries(player_id, rank)")
+      .eq("member_id", userId)
+      .eq("is_current", true);
+    subs = (fallback.data ?? []) as unknown as SubmissionRow[];
+  } else {
+    subs = (withTier.data ?? []) as unknown as SubmissionRow[];
+  }
 
-  const out: Partial<Record<ScoringSystem, Record<number, number>>> = {};
-  for (const row of subs ?? []) {
+  const out: ExistingRanksMap = {};
+  for (const row of subs) {
     const scoring = row.scoring_system as ScoringSystem;
-    const entries = row.ranking_entries as Array<{
-      player_id: number;
-      rank: number;
-    }>;
-    const dict: Record<number, number> = {};
-    for (const e of entries) dict[e.player_id] = e.rank;
+    const dict: Record<number, ExistingRankEntry> = {};
+    for (const e of row.ranking_entries) {
+      dict[e.player_id] = { rank: e.rank, tier: e.tier ?? null };
+    }
     out[scoring] = dict;
   }
   return out;
