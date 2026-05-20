@@ -54,73 +54,17 @@ const TIERS: TierLetter[] = ["S", "A", "B", "C", "D", "E", "F", "G", "H"];
 const POOL_ID = "pool";
 const SAVE_DEBOUNCE_MS = 700;
 
-const TIER_META: Record<
-  TierLetter,
-  { label: string; label1: string; cell: string; ring: string; chip: string }
-> = {
-  S: {
-    label: "League Winner",
-    label1: "text-emerald-200",
-    cell: "bg-emerald-500/15 text-emerald-200 ring-emerald-500/40",
-    ring: "ring-emerald-400/40",
-    chip: "hover:border-emerald-500/40",
-  },
-  A: {
-    label: "Every-Week Starter",
-    label1: "text-teal-200",
-    cell: "bg-teal-500/15 text-teal-200 ring-teal-500/40",
-    ring: "ring-teal-400/40",
-    chip: "hover:border-teal-500/40",
-  },
-  B: {
-    label: "Strong Flex",
-    label1: "text-cyan-200",
-    cell: "bg-cyan-500/15 text-cyan-200 ring-cyan-500/40",
-    ring: "ring-cyan-400/40",
-    chip: "hover:border-cyan-500/40",
-  },
-  C: {
-    label: "Flex",
-    label1: "text-sky-200",
-    cell: "bg-sky-500/15 text-sky-200 ring-sky-500/40",
-    ring: "ring-sky-400/40",
-    chip: "hover:border-sky-500/40",
-  },
-  D: {
-    label: "Bench",
-    label1: "text-blue-200",
-    cell: "bg-blue-500/15 text-blue-200 ring-blue-500/40",
-    ring: "ring-blue-400/40",
-    chip: "hover:border-blue-500/40",
-  },
-  E: {
-    label: "Deep Bench",
-    label1: "text-indigo-200",
-    cell: "bg-indigo-500/15 text-indigo-200 ring-indigo-500/40",
-    ring: "ring-indigo-400/40",
-    chip: "hover:border-indigo-500/40",
-  },
-  F: {
-    label: "Bye-Week Fill",
-    label1: "text-amber-200",
-    cell: "bg-amber-500/15 text-amber-200 ring-amber-500/40",
-    ring: "ring-amber-400/40",
-    chip: "hover:border-amber-500/40",
-  },
-  G: {
-    label: "Stash",
-    label1: "text-orange-200",
-    cell: "bg-orange-500/15 text-orange-200 ring-orange-500/40",
-    ring: "ring-orange-400/40",
-    chip: "hover:border-orange-500/40",
-  },
-  H: {
-    label: "Drop",
-    label1: "text-rose-200",
-    cell: "bg-rose-500/15 text-rose-200 ring-rose-500/40",
-    ring: "ring-rose-400/40",
-    chip: "hover:border-rose-500/40",
-  },
+// TierMaker-standard color ramp: solid fills, dark text. S red → H blue.
+const TIER_META: Record<TierLetter, { label: string; hex: string }> = {
+  S: { label: "League Winner", hex: "#ff7f7f" },
+  A: { label: "Every-Week Starter", hex: "#ffbf7f" },
+  B: { label: "Strong Flex", hex: "#ffdf7f" },
+  C: { label: "Flex", hex: "#ffff7f" },
+  D: { label: "Bench", hex: "#bfff7f" },
+  E: { label: "Deep Bench", hex: "#7fff7f" },
+  F: { label: "Bye-Week Fill", hex: "#7fffff" },
+  G: { label: "Stash", hex: "#7fbfff" },
+  H: { label: "Drop", hex: "#7f7fff" },
 };
 
 const POSITION_STYLES: Record<FantasyPosition, string> = {
@@ -591,18 +535,18 @@ function TierRow({
 
   return (
     <div
-      className={`flex overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 ring-inset transition ${
-        isOver ? `ring-2 ${meta.ring}` : "ring-0"
-      }`}
+      style={isOver ? { boxShadow: `inset 0 0 0 2px ${meta.hex}` } : undefined}
+      className="flex overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 transition"
     >
       {/* Label cell */}
       <div
-        className={`flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 px-1 py-2 text-center ring-1 ring-inset sm:w-24 ${meta.cell}`}
+        style={{ backgroundColor: meta.hex }}
+        className="flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 px-1 py-2 text-center text-zinc-900 sm:w-24"
       >
         <span className="text-xl font-bold leading-none sm:text-2xl">
           {tier}
         </span>
-        <span className="hidden text-[10px] leading-tight opacity-80 sm:block">
+        <span className="hidden text-[10px] font-medium leading-tight opacity-75 sm:block">
           {meta.label}
         </span>
       </div>

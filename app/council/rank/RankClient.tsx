@@ -51,64 +51,20 @@ const TIER_RANK: Record<TierLetter, number> = {
   H: 8,
 };
 
+// TierMaker-standard color ramp: solid fills, dark text. S red → H blue.
 const TIER_META: Record<
   TierLetter,
-  { label: string; classes: string; ring: string }
+  { label: string; hex: string }
 > = {
-  S: {
-    label: "League Winner",
-    classes:
-      "bg-emerald-500/15 text-emerald-200 ring-emerald-500/40 hover:bg-emerald-500/25",
-    ring: "ring-emerald-400/60",
-  },
-  A: {
-    label: "Every-Week Starter",
-    classes:
-      "bg-teal-500/15 text-teal-200 ring-teal-500/40 hover:bg-teal-500/25",
-    ring: "ring-teal-400/60",
-  },
-  B: {
-    label: "Strong Flex",
-    classes:
-      "bg-cyan-500/15 text-cyan-200 ring-cyan-500/40 hover:bg-cyan-500/25",
-    ring: "ring-cyan-400/60",
-  },
-  C: {
-    label: "Flex",
-    classes:
-      "bg-sky-500/15 text-sky-200 ring-sky-500/40 hover:bg-sky-500/25",
-    ring: "ring-sky-400/60",
-  },
-  D: {
-    label: "Bench",
-    classes:
-      "bg-blue-500/15 text-blue-200 ring-blue-500/40 hover:bg-blue-500/25",
-    ring: "ring-blue-400/60",
-  },
-  E: {
-    label: "Deep Bench",
-    classes:
-      "bg-indigo-500/15 text-indigo-200 ring-indigo-500/40 hover:bg-indigo-500/25",
-    ring: "ring-indigo-400/60",
-  },
-  F: {
-    label: "Bye-Week Fill",
-    classes:
-      "bg-amber-500/15 text-amber-200 ring-amber-500/40 hover:bg-amber-500/25",
-    ring: "ring-amber-400/60",
-  },
-  G: {
-    label: "Stash",
-    classes:
-      "bg-orange-500/15 text-orange-200 ring-orange-500/40 hover:bg-orange-500/25",
-    ring: "ring-orange-400/60",
-  },
-  H: {
-    label: "Drop",
-    classes:
-      "bg-rose-500/15 text-rose-200 ring-rose-500/40 hover:bg-rose-500/25",
-    ring: "ring-rose-400/60",
-  },
+  S: { label: "League Winner", hex: "#ff7f7f" },
+  A: { label: "Every-Week Starter", hex: "#ffbf7f" },
+  B: { label: "Strong Flex", hex: "#ffdf7f" },
+  C: { label: "Flex", hex: "#ffff7f" },
+  D: { label: "Bench", hex: "#bfff7f" },
+  E: { label: "Deep Bench", hex: "#7fff7f" },
+  F: { label: "Bye-Week Fill", hex: "#7fffff" },
+  G: { label: "Stash", hex: "#7fbfff" },
+  H: { label: "Drop", hex: "#7f7fff" },
 };
 
 const POSITION_STYLES: Record<FantasyPosition, string> = {
@@ -736,10 +692,11 @@ function TierStateView({
             <button
               key={t}
               onClick={() => onTierPick(t)}
-              className={`flex flex-col items-stretch justify-center gap-0.5 rounded-xl px-3 py-3 text-center ring-1 ring-inset transition ${meta.classes}`}
+              style={{ backgroundColor: meta.hex }}
+              className="flex flex-col items-stretch justify-center gap-0.5 rounded-xl px-3 py-3 text-center text-zinc-900 ring-1 ring-inset ring-black/10 transition hover:brightness-105"
             >
               <span className="text-lg font-bold sm:text-xl">{t}</span>
-              <span className="text-[11px] leading-tight opacity-80">
+              <span className="text-[11px] font-medium leading-tight opacity-75">
                 {meta.label}
               </span>
             </button>
@@ -869,13 +826,14 @@ function ConfirmStateView({
   const meta = TIER_META[tier];
   return (
     <div
-      className={`flex flex-col items-center gap-3 rounded-2xl border bg-zinc-900 px-6 py-10 ring-1 ${meta.ring} border-zinc-800`}
+      style={{ borderColor: meta.hex }}
+      className="flex flex-col items-center gap-3 rounded-2xl border-2 bg-zinc-900 px-6 py-10"
     >
       <Check className="h-10 w-10 text-emerald-400" />
       <div className="text-center">
         <div className="text-lg font-semibold text-zinc-100 sm:text-xl">
           {firstName(player.name)} slots in at #{tierPosition} of your{" "}
-          <span className={`${meta.classes.split(" ")[1] ?? "text-emerald-200"}`}>
+          <span style={{ color: meta.hex }} className="font-bold">
             {tier}-tier
           </span>
         </div>
