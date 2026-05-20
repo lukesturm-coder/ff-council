@@ -40,7 +40,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} bg-zinc-950 text-zinc-100 antialiased`}
       >
         <Header />
-        {children}
+        {/* Bottom padding clears the fixed mobile bottom tab bar (md:hidden).
+            No-op on desktop, where the bar isn't rendered. */}
+        <div className="pb-16 md:pb-0">{children}</div>
       </body>
     </html>
   );
