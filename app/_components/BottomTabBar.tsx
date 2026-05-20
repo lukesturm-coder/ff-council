@@ -7,7 +7,6 @@ import {
   BarChart3,
   Gavel,
   Scale,
-  MessageSquareQuote,
   LayoutGrid,
   X,
   type LucideIcon,
@@ -16,13 +15,13 @@ import type { NavItem } from "./PrimaryNav";
 
 type Tab = { href: string; label: string; icon: LucideIcon };
 
-// The four core surfaces, mirrored from the desktop priority nav. Labels are
-// fixed by product (Rankings, Judge, Trade Court, Verdict) — do not rename.
+// The three core surfaces, mirrored from the desktop priority nav. Labels
+// are fixed by product (Rankings, Judge, Trade Court) — do not rename.
+// Verdict folded into Judge; the docket of every case lives there now.
 const TABS: Tab[] = [
   { href: "/rankings", label: "Rankings", icon: BarChart3 },
   { href: "/judge", label: "Judge", icon: Gavel },
   { href: "/trades", label: "Trade Court", icon: Scale },
-  { href: "/verdict", label: "Verdict", icon: MessageSquareQuote },
 ];
 
 // The standing secondary surfaces. Auth-gated entries (My Rankings, Admin)
@@ -45,8 +44,8 @@ function isActivePath(pathname: string, href: string): boolean {
 }
 
 /**
- * Mobile-only (`md:hidden`) fixed bottom tab bar. Five thumb-reachable tabs:
- * the four core surfaces plus a "Tools" tab that opens a full-screen sheet
+ * Mobile-only (`md:hidden`) fixed bottom tab bar. Four thumb-reachable tabs:
+ * the three core surfaces plus a "Tools" tab that opens a full-screen sheet
  * listing every secondary surface. Desktop is untouched — the bar never
  * renders at md+.
  */
@@ -82,7 +81,7 @@ export default function BottomTabBar({
     <>
       <nav
         aria-label="Primary"
-        className="fixed bottom-0 inset-x-0 z-50 grid grid-cols-5 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur md:hidden"
+        className="fixed bottom-0 inset-x-0 z-50 grid grid-cols-4 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur md:hidden"
       >
         {TABS.map((tab) => {
           const active = !sheetOpen && isActivePath(pathname, tab.href);

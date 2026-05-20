@@ -18,13 +18,14 @@ import type {
 } from "./SearchIndex";
 
 // Two-tier nav, both rows ALWAYS visible (no dropdowns — owner wants every
-// feature exposed). Priority row = the four core surfaces. Sub-tools row =
+// feature exposed). Priority row = the three core surfaces. Sub-tools row =
 // everything else, rendered smaller + muted directly under the priority row.
+// Verdict folded into Judge (the community hub now holds every case), and
+// Trade Court is the pure analyzer.
 const PRIORITY_NAV: NavItem[] = [
   { href: "/rankings", label: "Rankings" },
   { href: "/judge", label: "Judge" },
   { href: "/trades", label: "Trade Court" },
-  { href: "/verdict", label: "Verdict" },
 ];
 
 // Sub-tools row — second visible tier. Every secondary surface lives here in
