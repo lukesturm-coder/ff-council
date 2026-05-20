@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 //
 // Purpose: give first-time visitors a one-screen pitch for the product
 // before they hit the dense rankings grid. Two columns on desktop:
-//   - Left:  the message + primary CTAs ("Start judging", "Post a tough
-//            call", "Submit a trade")
+//   - Left:  the message + primary CTAs ("Weigh in" → /judge, "Analyze a
+//            trade" → /trades, "Post a tough call" → /verdict/new)
 //   - Right: live proof — four small stat cards seeded from the DB so
 //            the hero feels alive instead of static marketing copy.
 //
@@ -149,20 +149,20 @@ export default function HomeHero({ stats }: { stats: HeroStats }) {
               href="/judge"
               className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-6 py-3 text-base font-semibold text-zinc-950 transition hover:bg-emerald-400"
             >
-              Start judging
+              Weigh in
               <span aria-hidden>→</span>
+            </Link>
+            <Link
+              href="/trades"
+              className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900/50 px-6 py-3 text-base font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800/60"
+            >
+              Analyze a trade
             </Link>
             <Link
               href="/verdict/new"
               className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900/50 px-6 py-3 text-base font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800/60"
             >
               Post a tough call
-            </Link>
-            <Link
-              href="/trades/new"
-              className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900/50 px-6 py-3 text-base font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800/60"
-            >
-              Submit a trade
             </Link>
           </div>
         </div>
