@@ -15,9 +15,9 @@ const DYNAMIC_ROW_CAP = 500;
 const STATIC_PATHS = [
   "/",
   "/judge",
+  "/judge/feed",
   "/trades",
   "/trades/new",
-  "/trades/new/trade",
   "/verdict/new",
   "/draft",
   "/league",
@@ -26,8 +26,9 @@ const STATIC_PATHS = [
   "/privacy",
   "/terms",
 ] as const;
-// /trade and /verdict intentionally omitted — they now redirect to
-// /trades. Including a redirect URL in the sitemap confuses crawlers.
+// /verdict (list) intentionally omitted — it now redirects to /judge.
+// Including a redirect URL in the sitemap confuses crawlers. Detail rows
+// (/verdict/[id]) are still indexed via the dynamic block below.
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

@@ -194,8 +194,8 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
 
   // Sync state → URL (replace, not push, so back button isn't polluted).
   // Skip the first render — initialization already matches the URL.
-  // Preserve any list-side params (sort, league) that live in the same URL
-  // — the calculator and the Trade Court list now share `/trades`.
+  // /trades is now the pure analyzer (the submitted-trades list moved to
+  // /judge), so the only URL state is the trade being built + scoring.
   const firstRender = useRef(true);
   useEffect(() => {
     if (firstRender.current) {
@@ -203,12 +203,6 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
       return;
     }
     const sp = new URLSearchParams();
-    // Carry forward list filters so updating the calculator doesn't clobber
-    // them. `scoring` is shared between both surfaces and gets re-set below.
-    const sort = searchParams?.get("sort");
-    const league = searchParams?.get("league");
-    if (sort) sp.set("sort", sort);
-    if (league) sp.set("league", league);
     if (sideA.length) sp.set("a", sideA.join(","));
     if (sideB.length) sp.set("b", sideB.join(","));
     if (picksA.length) sp.set("pa", serializePicks(picksA));
@@ -216,7 +210,7 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
     if (scoring !== "PPR") sp.set("scoring", scoring);
     const qs = sp.toString();
     router.replace(qs ? `/trades?${qs}` : "/trades", { scroll: false });
-  }, [sideA, sideB, picksA, picksB, scoring, router, searchParams]);
+  }, [sideA, sideB, picksA, picksB, scoring, router]);
 
   const currentYear = new Date().getFullYear();
   const aMetrics = computeMetrics(aPlayers, picksA, scoring, currentYear);
@@ -292,11 +286,11 @@ export default function TradeCalculator({ players }: { players: TradePlayer[] })
     picksA.length > 0 ||
     picksB.length > 0;
 
-  // Submit-to-court link: picks aren't carried over (court form re-parses
-  // them on its own) but selected players prefill cleanly. We jump
-  // straight to /trades/new/trade and skip the case-type picker — the
-  // user already has a trade built, the intent is obvious.
-  const submitHref = `/trades/new/trade?a=${sideA.join(",")}&b=${sideB.join(",")}`;
+  // Submit-for-community-vote link: picks aren't carried over (the
+  // submission form re-parses them on its own) but selected players
+  // prefill cleanly. The form at /trades/new redirects to the trade's
+  // detail page on success, which now lives in Judge's world.
+  const submitHref = `/trades/new?a=${sideA.join(",")}&b=${sideB.join(",")}`;
 
   return (
     <div className="space-y-6">
