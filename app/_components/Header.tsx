@@ -181,7 +181,7 @@ export default async function Header() {
       <div className="mx-auto max-w-7xl px-3 pb-2 pt-3 sm:px-6">
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/" className="shrink-0">
-            <h1 className="whitespace-nowrap font-mono text-lg font-bold tracking-tight text-emerald-400 sm:text-2xl md:text-[1.625rem]">
+            <h1 className="whitespace-nowrap font-mono text-xl font-bold tracking-tight text-emerald-400 sm:text-2xl md:text-[1.625rem]">
               FF COUNCIL
             </h1>
           </Link>
