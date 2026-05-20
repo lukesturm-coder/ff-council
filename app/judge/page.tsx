@@ -37,12 +37,21 @@ type SidePick = { year: number; round: number; slot: number | null };
 type Side = { players: SidePlayer[]; picks: SidePick[] };
 
 // Summary fields used by the list cards — vote counts for the verdict
-// chip + the derived sort modes.
+// chip + the derived sort modes, plus the per-side fairness-tier
+// breakdown that drives the card's severity verdict.
+type FairnessTier =
+  | "balanced"
+  | "slight_edge"
+  | "clear_advantage"
+  | "major_advantage"
+  | "extreme_imbalance";
 type Summary = {
   total_votes: number;
   votes_a: number;
   votes_b: number;
   votes_even: number;
+  tiers_a: Partial<Record<FairnessTier, number>>;
+  tiers_b: Partial<Record<FairnessTier, number>>;
 };
 
 type SortMode = "recent" | "controversial" | "lopsided" | "popular";
@@ -141,22 +150,33 @@ export default async function JudgePage({
   if (tradeIds.length > 0) {
     const { data: voteRows } = await supabase
       .from("trade_votes")
-      .select("trade_id, winner")
+      .select("trade_id, winner, fairness_tier")
       .in("trade_id", tradeIds);
     for (const v of (voteRows ?? []) as {
       trade_id: string;
       winner: "A" | "B" | "EVEN";
+      fairness_tier: FairnessTier | null;
     }[]) {
       const s = summariesById.get(v.trade_id) ?? {
         total_votes: 0,
         votes_a: 0,
         votes_b: 0,
         votes_even: 0,
+        tiers_a: {},
+        tiers_b: {},
       };
       s.total_votes += 1;
-      if (v.winner === "A") s.votes_a += 1;
-      else if (v.winner === "B") s.votes_b += 1;
-      else if (v.winner === "EVEN") s.votes_even += 1;
+      if (v.winner === "A") {
+        s.votes_a += 1;
+        if (v.fairness_tier) {
+          s.tiers_a[v.fairness_tier] = (s.tiers_a[v.fairness_tier] ?? 0) + 1;
+        }
+      } else if (v.winner === "B") {
+        s.votes_b += 1;
+        if (v.fairness_tier) {
+          s.tiers_b[v.fairness_tier] = (s.tiers_b[v.fairness_tier] ?? 0) + 1;
+        }
+      } else if (v.winner === "EVEN") s.votes_even += 1;
       summariesById.set(v.trade_id, s);
     }
   }

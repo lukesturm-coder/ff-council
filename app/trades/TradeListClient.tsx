@@ -4,6 +4,12 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { Loader2, Scale, X } from "lucide-react";
 import { castVote } from "./[id]/actions";
+import {
+  verdictFromCounts,
+  scoreToPercent,
+  type FairnessTier,
+  type TradeVerdict,
+} from "@/lib/trade-verdict";
 
 type SidePlayer = {
   player_id: number | null;
@@ -19,6 +25,11 @@ type Summary = {
   votes_a: number;
   votes_b: number;
   votes_even: number;
+  // Optional per-side fairness-tier breakdown. Present when the list query
+  // selects fairness_tier (Judge docket does); lets the card show true
+  // severity. When absent the card falls back to direction + winnerPct.
+  tiers_a?: Partial<Record<FairnessTier, number>>;
+  tiers_b?: Partial<Record<FairnessTier, number>>;
 };
 
 export type TradeCardData = {
@@ -53,30 +64,27 @@ export function TradeListCardButton({
   onOpen: (t: TradeCardData) => void;
 }) {
   const total = trade.summary?.total_votes ?? 0;
-  const aPct =
-    total > 0 ? Math.round(((trade.summary?.votes_a ?? 0) / total) * 100) : 0;
-  const bPct =
-    total > 0 ? Math.round(((trade.summary?.votes_b ?? 0) / total) * 100) : 0;
-  const evenPct = total > 0 ? 100 - aPct - bPct : 0;
 
-  // Pick the leader of A / B / EVEN. Whatever wins drives the verdict
-  // chip and the subtle winner-side highlight on the preview.
+  // Signed direction + severity verdict for the banner. Uses per-side tier
+  // counts when the list query provides them (Judge docket), otherwise the
+  // counts-based builder degrades to direction-only severity.
+  const verdict = verdictFromCounts({
+    votes_a: trade.summary?.votes_a ?? 0,
+    votes_b: trade.summary?.votes_b ?? 0,
+    votes_even: trade.summary?.votes_even ?? 0,
+    tiers_a: trade.summary?.tiers_a,
+    tiers_b: trade.summary?.tiers_b,
+  });
+
+  // Leader drives the winner-side preview highlight + banner color.
   type Winner = "A" | "B" | "EVEN" | null;
-  const winner: Winner =
-    total === 0
-      ? null
-      : aPct >= bPct && aPct >= evenPct
-        ? "A"
-        : bPct >= aPct && bPct >= evenPct
-          ? "B"
-          : "EVEN";
-  const winnerPct =
-    winner === "A" ? aPct : winner === "B" ? bPct : winner === "EVEN" ? evenPct : 0;
+  const winner: Winner = total === 0 ? null : verdict.leader;
 
   // Verdict banner — the loudest signal on the card. Sits at the top so
   // scanning a long list reads as a sequence of outcomes, not a wall of
   // player names. Color tracks the winning side (rose/sky/zinc), or
-  // emerald when nobody's voted yet.
+  // emerald when nobody's voted yet. Now shows the severity zone
+  // ("Clear Advantage") instead of a bare percentage.
   const bannerClass =
     total === 0
       ? "bg-emerald-500/10 text-emerald-200 ring-emerald-500/30"
@@ -100,17 +108,26 @@ export function TradeListCardButton({
       onClick={() => onOpen(trade)}
       className="block w-full overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 text-left transition hover:border-zinc-700 hover:bg-zinc-900/60"
     >
-      {/* Verdict banner */}
+      {/* Verdict banner — compact severity readout. Direction + zone label
+          on the left, a tiny inline severity marker + vote count on the
+          right. The full meter lives on the trade detail page. */}
       <div
-        className={`flex items-baseline justify-between gap-3 px-3 py-2 ring-1 ring-inset ${bannerClass} sm:px-4`}
+        className={`flex items-center justify-between gap-3 px-3 py-2 ring-1 ring-inset ${bannerClass} sm:px-4`}
       >
-        <span className="text-sm font-semibold sm:text-base">{bannerLabel}</span>
-        {total > 0 && (
-          <span className="flex items-baseline gap-2 font-mono tabular-nums">
-            <span className="text-xl font-bold leading-none sm:text-2xl">
-              {winnerPct}%
+        <span className="flex min-w-0 items-baseline gap-1.5">
+          <span className="truncate text-sm font-semibold sm:text-base">
+            {bannerLabel}
+          </span>
+          {total > 0 && winner !== "EVEN" && (
+            <span className="shrink-0 text-xs font-medium text-zinc-300/90 sm:text-sm">
+              · {verdict.zoneLabel}
             </span>
-            <span className="text-xs text-zinc-400">
+          )}
+        </span>
+        {total > 0 && (
+          <span className="flex shrink-0 items-center gap-2">
+            <CompactSeverityBar verdict={verdict} />
+            <span className="font-mono text-xs tabular-nums text-zinc-400">
               {total} vote{total === 1 ? "" : "s"}
             </span>
           </span>
@@ -145,6 +162,33 @@ export function TradeListCardButton({
         </div>
       </div>
     </button>
+  );
+}
+
+// Tiny inline severity track for the list-card banner — a miniature of
+// the full TradeVerdictMeter. Just the gradient track + a marker at the
+// score position, no labels. Hidden on the narrowest screens.
+function CompactSeverityBar({ verdict }: { verdict: TradeVerdict }) {
+  const markerColor =
+    verdict.leader === "A"
+      ? "bg-rose-400"
+      : verdict.leader === "B"
+        ? "bg-sky-400"
+        : "bg-zinc-300";
+  return (
+    <span
+      className="relative hidden h-1.5 w-16 rounded-full bg-gradient-to-r from-rose-500/30 via-zinc-600/50 to-sky-500/30 sm:inline-block sm:w-20"
+      aria-hidden
+    >
+      <span
+        className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-1 ring-black/20 shadow-sm"
+        style={{ left: `${scoreToPercent(verdict.score)}%` }}
+      >
+        <span
+          className={`block h-full w-full rounded-full ${markerColor}`}
+        />
+      </span>
+    </span>
   );
 }
 
