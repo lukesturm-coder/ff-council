@@ -275,38 +275,40 @@ export default function RankClient({
       sliceLocalIndex: number,
       tierSlice: number[],
     ) => {
-      setStates((prev) => {
-        const cur = prev[scoring];
-        const nextTierOf = new Map(cur.tierOf);
-        nextTierOf.set(playerId, tier);
+      // Compute the next ordering from the latest committed state (closure),
+      // NOT inside the setStates updater — firing persistOrder (a transition)
+      // from within an updater runs a state update during render, which can
+      // wedge the transition queue and freeze the flow.
+      const cur = currentState;
+      const nextTierOf = new Map(cur.tierOf);
+      nextTierOf.set(playerId, tier);
 
-        // Compute the global insert index.
-        const globalIndex = computeGlobalInsertIndex(
-          cur.ordered,
-          cur.tierOf,
-          tier,
-          sliceLocalIndex,
-          tierSlice,
-        );
+      const globalIndex = computeGlobalInsertIndex(
+        cur.ordered,
+        cur.tierOf,
+        tier,
+        sliceLocalIndex,
+        tierSlice,
+      );
+      const nextOrdered = [
+        ...cur.ordered.slice(0, globalIndex),
+        playerId,
+        ...cur.ordered.slice(globalIndex),
+      ];
 
-        const nextOrdered = [
-          ...cur.ordered.slice(0, globalIndex),
-          playerId,
-          ...cur.ordered.slice(globalIndex),
-        ];
+      setStates((prev) => ({
+        ...prev,
+        [scoring]: { ordered: nextOrdered, tierOf: nextTierOf },
+      }));
+      // Persist AFTER the state update is queued, outside the updater.
+      persistOrder(nextOrdered, scoring);
 
-        // Persist asynchronously.
-        persistOrder(nextOrdered, scoring);
-
-        return { ...prev, [scoring]: { ordered: nextOrdered, tierOf: nextTierOf } };
-      });
-
-      // Compute the tier-local position (1-indexed) for the confirm flash.
+      // Tier-local position (1-indexed) for the confirm flash.
       const tierPosition = sliceLocalIndex + 1;
       const tierSize = tierSlice.length + 1;
       setFlow({ kind: "confirm", playerId, tier, tierPosition, tierSize });
     },
-    [scoring, persistOrder],
+    [scoring, persistOrder, currentState],
   );
 
   // -------------------------------------------------------------------------
@@ -423,21 +425,20 @@ export default function RankClient({
       setSearchQuery("");
       // If the player is already ranked, we still let the user re-rank — we
       // remove them from the ordered list (and their tier letter) first.
-      setStates((prev) => {
-        const cur = prev[scoring];
-        if (!cur.ordered.includes(playerId)) return prev;
+      const cur = currentState;
+      if (cur.ordered.includes(playerId)) {
         const nextOrdered = cur.ordered.filter((p) => p !== playerId);
         const nextTierOf = new Map(cur.tierOf);
         nextTierOf.delete(playerId);
-        persistOrder(nextOrdered, scoring);
-        return {
+        setStates((prev) => ({
           ...prev,
           [scoring]: { ordered: nextOrdered, tierOf: nextTierOf },
-        };
-      });
+        }));
+        persistOrder(nextOrdered, scoring);
+      }
       setFlow({ kind: "tier", playerId });
     },
-    [scoring, persistOrder],
+    [scoring, persistOrder, currentState],
   );
 
   const searchResults = useMemo(() => {

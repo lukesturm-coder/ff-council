@@ -91,9 +91,12 @@ export async function savePersonalRank(input: {
   );
   if (entriesErr) return { ok: false, error: entriesErr.message };
 
-  // The aggregated council_consensus view + the /council page both read from
-  // these tables, so revalidate both.
-  revalidatePath("/council/rank");
+  // Revalidate the OTHER surfaces that read these tables — but NOT
+  // /council/rank itself. The user is actively mid-flow on that page; calling
+  // revalidatePath for the current route inside the client's useTransition
+  // wedges the transition queue (the flow freezes after a couple of saves).
+  // The rank page holds its working state client-side, so it doesn't need a
+  // server refresh while the user is ranking.
   revalidatePath("/council/rankings");
   revalidatePath("/council");
   return { ok: true, submissionId: submission.id };
