@@ -32,7 +32,6 @@ const PRIORITY_NAV: NavItem[] = [
 // plain sight. Nothing is hidden behind a menu.
 const UTILITY_NAV: NavItem[] = [
   { href: "/draft", label: "Mock Draft" },
-  { href: "/trades", label: "Trade Calculator" },
   { href: "/council", label: "My Rankings" },
   { href: "/league", label: "League Analyzer" },
   { href: "/leaderboard", label: "Leaderboard" },

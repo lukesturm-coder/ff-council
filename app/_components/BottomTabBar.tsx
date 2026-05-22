@@ -29,7 +29,6 @@ const TABS: Tab[] = [
 // auth check.
 const TOOLS: NavItem[] = [
   { href: "/draft", label: "Mock Draft" },
-  { href: "/trades", label: "Trade Calculator" },
   { href: "/council", label: "My Rankings" },
   { href: "/league", label: "League Analyzer" },
   { href: "/leaderboard", label: "Leaderboard" },
