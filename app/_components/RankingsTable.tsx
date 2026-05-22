@@ -387,19 +387,17 @@ export default function RankingsTable({
 
     const sorted = [...rows].sort((a, b) => valueOf(a) - valueOf(b));
 
-    // Per-column tier break lines: each points-bearing source gets its OWN
-    // horizontal lines, drawn at that source's significant point gaps. We run
-    // Jenks (computeTiersForPosition) once per source over the sorted rows,
-    // using that source's PROJECTED POINTS (not ranks). A line is drawn under a
-    // cell when this row's tier differs from the NEXT row's tier for that
-    // source, so the line sits beneath the last player of each tier in that
-    // column. The lines come from points, so they show in both Ranks & Points
-    // view, and across every column regardless of which one we sort by.
+    // Tier break lines track ONLY the column you're sorting by. Drawing every
+    // source's breaks at once made the table look jumbled — each source's tiers
+    // fall at different rows. The sorted column's rows ARE in that source's
+    // order, so its breaks form clean horizontal lines; other columns aren't
+    // ordered, so their breaks would scatter. We cluster the active source's
+    // PROJECTED POINTS via Jenks (computeTiersForPosition) and draw a line under
+    // a cell when this row's tier differs from the next row's.
     //
     // Gating: only when a single position is selected — cross-position point
-    // tiers are misleading (QBs would dominate). Council and Yahoo have no
-    // points, so they get no lines. EXTRA_PLATFORMS order is sleeper, nfl,
-    // yahoo; we only tier sleeper + nfl.
+    // tiers are misleading (QBs would dominate). Council and Yahoo publish no
+    // points, so sorting by them shows no tier lines.
     const sleeperIdx = EXTRA_PLATFORMS.findIndex((pf) => pf.key === "sleeper");
     const nflIdx = EXTRA_PLATFORMS.findIndex((pf) => pf.key === "nfl");
     type TierBreaks = {
@@ -410,48 +408,61 @@ export default function RankingsTable({
       sleeper: boolean;
       nfl: boolean;
     };
+    // Map the active sort column → the source whose point-tiers we draw.
+    const activeSource: keyof TierBreaks | null =
+      sortKey === "AVG"
+        ? "avg"
+        : sortKey === "VEGAS"
+          ? "vegas"
+          : sortKey === "ESPN"
+            ? "espn"
+            : sortKey === "FP"
+              ? "fp"
+              : sortKey === "SLEEPER"
+                ? "sleeper"
+                : sortKey === "NFL"
+                  ? "nfl"
+                  : null; // COUNCIL / YAHOO have no points → no tiers
+    const pointsGetter: Record<keyof TierBreaks, (r: RowData) => number | null> =
+      {
+        avg: (r) => r.avgPoints,
+        vegas: (r) => r.vegasPoints,
+        espn: (r) => r.espnPoints,
+        fp: (r) => r.fpPoints,
+        sleeper: (r) => (sleeperIdx >= 0 ? r.extraPoints[sleeperIdx] : null),
+        nfl: (r) => (nflIdx >= 0 ? r.extraPoints[nflIdx] : null),
+      };
     const showTiers = position !== "ALL";
     let tierBreaksByPlayerId: Map<number, TierBreaks> | null = null;
-    if (showTiers && sorted.length > 0) {
-      // Build a playerId → tier map for one source, clustering on its points.
-      // Sources with no/sparse data simply yield few or no breaks — that's fine.
-      const tierMapFor = (
-        getPoints: (r: RowData) => number | null,
-      ): Map<number, number> => {
-        const input = sorted.map((r) => ({
-          playerId: r.player.playerId,
-          value: getPoints(r) ?? 0,
-        }));
-        const { tiers } = computeTiersForPosition(input, (p) => p.value);
-        return new Map(tiers.map((t) => [t.playerId, t.tier]));
+    if (showTiers && activeSource && sorted.length > 0) {
+      // Cluster the active source's points; sparse/no data yields few or no
+      // breaks — that's fine.
+      const input = sorted.map((r) => ({
+        playerId: r.player.playerId,
+        value: pointsGetter[activeSource](r) ?? 0,
+      }));
+      const { tiers } = computeTiersForPosition(input, (p) => p.value);
+      const map = new Map(tiers.map((t) => [t.playerId, t.tier]));
+
+      const noBreaks: TierBreaks = {
+        avg: false,
+        vegas: false,
+        espn: false,
+        fp: false,
+        sleeper: false,
+        nfl: false,
       };
-
-      const avgMap = tierMapFor((r) => r.avgPoints);
-      const vegasMap = tierMapFor((r) => r.vegasPoints);
-      const espnMap = tierMapFor((r) => r.espnPoints);
-      const fpMap = tierMapFor((r) => r.fpPoints);
-      const sleeperMap =
-        sleeperIdx >= 0 ? tierMapFor((r) => r.extraPoints[sleeperIdx]) : null;
-      const nflMap = nflIdx >= 0 ? tierMapFor((r) => r.extraPoints[nflIdx]) : null;
-
-      // For each source map, a row breaks (gets a bottom border) when its tier
-      // differs from the next row's tier. The last row never breaks.
-      const breaksFor = (map: Map<number, number> | null, idx: number) => {
-        if (!map || idx >= sorted.length - 1) return false;
-        const cur = map.get(sorted[idx].player.playerId);
-        const next = map.get(sorted[idx + 1].player.playerId);
-        return cur != null && next != null && cur !== next;
-      };
-
       tierBreaksByPlayerId = new Map();
       sorted.forEach((r, idx) => {
+        let broke = false;
+        if (idx < sorted.length - 1) {
+          const cur = map.get(r.player.playerId);
+          const next = map.get(sorted[idx + 1].player.playerId);
+          broke = cur != null && next != null && cur !== next;
+        }
         tierBreaksByPlayerId!.set(r.player.playerId, {
-          avg: breaksFor(avgMap, idx),
-          vegas: breaksFor(vegasMap, idx),
-          espn: breaksFor(espnMap, idx),
-          fp: breaksFor(fpMap, idx),
-          sleeper: breaksFor(sleeperMap, idx),
-          nfl: breaksFor(nflMap, idx),
+          ...noBreaks,
+          [activeSource]: broke,
         });
       });
     }
