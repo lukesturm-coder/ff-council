@@ -343,6 +343,18 @@ export default function TierBoardEditor({
   const activePlayer = activeId != null ? playerMap.get(activeId) : null;
   const rankedCount = TIERS.reduce((n, t) => n + board[t].length, 0);
 
+  // Each tiered player's overall rank = their position in the concatenated
+  // S→H order (the same artefact we persist). Pool players are unranked.
+  // Recomputed on every board change so the numbers update live as you drag.
+  const rankByPid = useMemo(() => {
+    const m = new Map<number, number>();
+    let r = 1;
+    for (const t of TIERS) {
+      for (const pid of board[t]) m.set(pid, r++);
+    }
+    return m;
+  }, [board]);
+
   return (
     <div className="space-y-4">
       {/* Controls */}
@@ -412,6 +424,7 @@ export default function TierBoardEditor({
               playerIds={board[t]}
               playerMap={playerMap}
               activeId={activeId}
+              rankByPid={rankByPid}
             />
           ))}
         </div>
@@ -468,7 +481,11 @@ export default function TierBoardEditor({
 
         <DragOverlay>
           {activePlayer ? (
-            <Chip player={activePlayer} overlay />
+            <Chip
+              player={activePlayer}
+              overlay
+              rank={rankByPid.get(activePlayer.playerId) ?? null}
+            />
           ) : null}
         </DragOverlay>
       </DndContext>
@@ -491,11 +508,13 @@ function TierRow({
   playerIds,
   playerMap,
   activeId,
+  rankByPid,
 }: {
   tier: TierLetter;
   playerIds: number[];
   playerMap: Map<number, PlayerProjection>;
   activeId: number | null;
+  rankByPid: Map<number, number>;
 }) {
   const meta = TIER_META[tier];
   const { setNodeRef, isOver } = useDroppable({ id: tier });
@@ -537,6 +556,7 @@ function TierRow({
                   key={pid}
                   player={p}
                   hidden={activeId === pid}
+                  rank={rankByPid.get(pid) ?? null}
                 />
               );
             })
@@ -587,7 +607,12 @@ function PoolZone({
             const p = playerMap.get(pid);
             if (!p) return null;
             return (
-              <SortableChip key={pid} player={p} hidden={activeId === pid} />
+              <SortableChip
+                key={pid}
+                player={p}
+                hidden={activeId === pid}
+                rank={null}
+              />
             );
           })
         )}
@@ -603,9 +628,11 @@ function PoolZone({
 function SortableChip({
   player,
   hidden,
+  rank,
 }: {
   player: PlayerProjection;
   hidden: boolean;
+  rank: number | null;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: player.playerId });
@@ -618,7 +645,7 @@ function SortableChip({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Chip player={player} />
+      <Chip player={player} rank={rank} />
     </div>
   );
 }
@@ -626,18 +653,26 @@ function SortableChip({
 function Chip({
   player,
   overlay = false,
+  rank = null,
 }: {
   player: PlayerProjection;
   overlay?: boolean;
+  // Overall rank (position in the S→H order). null for unranked pool players.
+  rank?: number | null;
 }) {
   return (
     <div
-      className={`flex max-w-[150px] cursor-grab touch-none select-none items-center gap-1.5 rounded-md border bg-zinc-800 px-1.5 py-1 text-xs transition active:cursor-grabbing sm:px-2 ${
+      className={`flex max-w-[160px] cursor-grab touch-none select-none items-center gap-1.5 rounded-md border bg-zinc-800 px-1.5 py-1 text-xs transition active:cursor-grabbing sm:px-2 ${
         overlay
           ? "border-emerald-500/50 shadow-2xl"
           : "border-zinc-700 hover:border-zinc-500"
       }`}
     >
+      {rank != null && (
+        <span className="shrink-0 font-mono text-[10px] font-semibold text-zinc-400 tabular-nums">
+          {rank}
+        </span>
+      )}
       <span
         className={`inline-flex shrink-0 items-center rounded px-1 py-0.5 text-[10px] font-bold ring-1 ring-inset ${POSITION_STYLES[player.position]}`}
       >
