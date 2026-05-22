@@ -93,6 +93,20 @@ const POSITION_STYLES: Record<FantasyPosition, string> = {
   TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
 };
 
+// Sources that publish projected points and therefore support point-tiers.
+type TierSource = "avg" | "vegas" | "espn" | "fp" | "sleeper" | "nfl";
+
+// Full-width tier-divider border color per source — each matches that column's
+// brand accent so the line is attributable to the column you're sorting by.
+const TIER_LINE_COLOR: Record<TierSource, string> = {
+  avg: "border-zinc-300/70",
+  vegas: "border-amber-400/70",
+  espn: "border-red-400/70",
+  fp: "border-teal-400/70",
+  sleeper: "border-cyan-400/70",
+  nfl: "border-blue-400/70",
+};
+
 function formatAmerican(odds: number): string {
   return odds > 0 ? `+${odds}` : String(odds);
 }
@@ -387,29 +401,21 @@ export default function RankingsTable({
 
     const sorted = [...rows].sort((a, b) => valueOf(a) - valueOf(b));
 
-    // Tier break lines track ONLY the column you're sorting by. Drawing every
-    // source's breaks at once made the table look jumbled — each source's tiers
-    // fall at different rows. The sorted column's rows ARE in that source's
-    // order, so its breaks form clean horizontal lines; other columns aren't
-    // ordered, so their breaks would scatter. We cluster the active source's
-    // PROJECTED POINTS via Jenks (computeTiersForPosition) and draw a line under
-    // a cell when this row's tier differs from the next row's.
+    // Tiers track ONLY the column you're sorting by, drawn as ONE clearly
+    // visible full-width divider per tier boundary in that column's brand color.
+    // Showing every source's breaks at once looked jumbled (each source's tiers
+    // fall at different rows); a faint per-cell underline was too subtle. The
+    // sorted column's rows ARE in that source's order, so its breaks form clean
+    // horizontal lines. We cluster the active source's PROJECTED POINTS via
+    // Jenks (computeTiersForPosition) and break where a row's tier differs from
+    // the next row's.
     //
     // Gating: only when a single position is selected — cross-position point
     // tiers are misleading (QBs would dominate). Council and Yahoo publish no
     // points, so sorting by them shows no tier lines.
     const sleeperIdx = EXTRA_PLATFORMS.findIndex((pf) => pf.key === "sleeper");
     const nflIdx = EXTRA_PLATFORMS.findIndex((pf) => pf.key === "nfl");
-    type TierBreaks = {
-      avg: boolean;
-      vegas: boolean;
-      espn: boolean;
-      fp: boolean;
-      sleeper: boolean;
-      nfl: boolean;
-    };
-    // Map the active sort column → the source whose point-tiers we draw.
-    const activeSource: keyof TierBreaks | null =
+    const activeSource: TierSource | null =
       sortKey === "AVG"
         ? "avg"
         : sortKey === "VEGAS"
@@ -423,20 +429,17 @@ export default function RankingsTable({
                 : sortKey === "NFL"
                   ? "nfl"
                   : null; // COUNCIL / YAHOO have no points → no tiers
-    const pointsGetter: Record<keyof TierBreaks, (r: RowData) => number | null> =
-      {
-        avg: (r) => r.avgPoints,
-        vegas: (r) => r.vegasPoints,
-        espn: (r) => r.espnPoints,
-        fp: (r) => r.fpPoints,
-        sleeper: (r) => (sleeperIdx >= 0 ? r.extraPoints[sleeperIdx] : null),
-        nfl: (r) => (nflIdx >= 0 ? r.extraPoints[nflIdx] : null),
-      };
+    const pointsGetter: Record<TierSource, (r: RowData) => number | null> = {
+      avg: (r) => r.avgPoints,
+      vegas: (r) => r.vegasPoints,
+      espn: (r) => r.espnPoints,
+      fp: (r) => r.fpPoints,
+      sleeper: (r) => (sleeperIdx >= 0 ? r.extraPoints[sleeperIdx] : null),
+      nfl: (r) => (nflIdx >= 0 ? r.extraPoints[nflIdx] : null),
+    };
     const showTiers = position !== "ALL";
-    let tierBreaksByPlayerId: Map<number, TierBreaks> | null = null;
+    let tierBreakByPlayerId: Map<number, boolean> | null = null;
     if (showTiers && activeSource && sorted.length > 0) {
-      // Cluster the active source's points; sparse/no data yields few or no
-      // breaks — that's fine.
       const input = sorted.map((r) => ({
         playerId: r.player.playerId,
         value: pointsGetter[activeSource](r) ?? 0,
@@ -444,15 +447,7 @@ export default function RankingsTable({
       const { tiers } = computeTiersForPosition(input, (p) => p.value);
       const map = new Map(tiers.map((t) => [t.playerId, t.tier]));
 
-      const noBreaks: TierBreaks = {
-        avg: false,
-        vegas: false,
-        espn: false,
-        fp: false,
-        sleeper: false,
-        nfl: false,
-      };
-      tierBreaksByPlayerId = new Map();
+      tierBreakByPlayerId = new Map();
       sorted.forEach((r, idx) => {
         let broke = false;
         if (idx < sorted.length - 1) {
@@ -460,14 +455,11 @@ export default function RankingsTable({
           const next = map.get(sorted[idx + 1].player.playerId);
           broke = cur != null && next != null && cur !== next;
         }
-        tierBreaksByPlayerId!.set(r.player.playerId, {
-          ...noBreaks,
-          [activeSource]: broke,
-        });
+        tierBreakByPlayerId!.set(r.player.playerId, broke);
       });
     }
 
-    return { sorted, tierBreaksByPlayerId };
+    return { sorted, tierBreakByPlayerId, activeSource };
   }, [
     projections,
     scoring,
@@ -587,8 +579,11 @@ export default function RankingsTable({
           <tbody>
             {tableData.sorted.map((row, idx) => {
               const isExpanded = expandedId === row.player.playerId;
-              const tierBreaks =
-                tableData.tierBreaksByPlayerId?.get(row.player.playerId) ?? null;
+              const tierBreak =
+                tableData.tierBreakByPlayerId?.get(row.player.playerId) ?? false;
+              const tierBreakColor = tableData.activeSource
+                ? TIER_LINE_COLOR[tableData.activeSource]
+                : "";
               return (
                 <RankRow
                   key={row.player.playerId}
@@ -616,7 +611,8 @@ export default function RankingsTable({
                   avgPoints={row.avgPoints}
                   vegasRank={row.vegasRank}
                   vegasPoints={row.vegasPoints}
-                  tierBreaks={tierBreaks}
+                  tierBreak={tierBreak}
+                  tierBreakColor={tierBreakColor}
                 />
               );
             })}
@@ -729,7 +725,8 @@ function RankRow({
   avgPoints,
   vegasRank,
   vegasPoints,
-  tierBreaks,
+  tierBreak,
+  tierBreakColor,
 }: {
   player: PlayerProjection;
   rank: number;
@@ -753,17 +750,11 @@ function RankRow({
   avgPoints: number | null;
   vegasRank: number | null;
   vegasPoints: number | null;
-  // Per-source tier-break flags: true = draw a bottom border under this cell
-  // for that source (last player of a tier in that column). null on the ALL
-  // view, where tier lines are gated off.
-  tierBreaks: {
-    avg: boolean;
-    vegas: boolean;
-    espn: boolean;
-    fp: boolean;
-    sleeper: boolean;
-    nfl: boolean;
-  } | null;
+  // true = this row is the last player of a tier in the sorted column, so we
+  // draw a full-width divider beneath it. `tierBreakColor` is that column's
+  // brand border color. false everywhere on the ALL view (tiers gated off).
+  tierBreak: boolean;
+  tierBreakColor: string;
 }) {
   const fpts = player.fantasyPoints[scoring];
   const vbd = player.vbd[scoring];
@@ -771,17 +762,15 @@ function RankRow({
   // Format points with one decimal, no padding. Rank stays integer.
   const fmtPts = (v: number | null) => (v != null ? v.toFixed(1) : "—");
   const fmtRank = (v: number | null) => (v != null ? v.toFixed(0) : "—");
-  // Per-source tier break line: a colored bottom border under the last player
-  // of each tier in that column. Each source uses its own brand color so the
-  // lines are visually attributable to the column they sit in.
-  const breakClass = (flag: boolean | undefined, color: string) =>
-    flag ? ` border-b-2 ${color}` : "";
+  // Full-width tier divider beneath this row when it's the last player of a
+  // tier in the sorted column (colored by that column's brand accent).
+  const tierDivider = tierBreak ? ` border-b-2 ${tierBreakColor}` : "";
 
   return (
     <>
       <tr
         onClick={onToggle}
-        className="group cursor-pointer border-t border-zinc-800/60 transition hover:bg-zinc-800/40"
+        className={`group cursor-pointer border-t border-zinc-800/60 transition hover:bg-zinc-800/40${tierDivider}`}
       >
         <td className="pl-3 align-middle">
           {isExpanded ? (
@@ -813,9 +802,7 @@ function RankRow({
         {/* AVG is the leftmost data column — the consensus across every
             source, sorted by default. Single-source columns follow. In Points
             mode each cell shows the source's projected season FPts. */}
-        <td
-          className={`min-w-[5rem] py-3 text-center font-mono text-sm font-semibold tabular-nums${breakClass(tierBreaks?.avg, "border-zinc-400/50")}`}
-        >
+        <td className="min-w-[5rem] py-3 text-center font-mono text-sm font-semibold tabular-nums">
           {showPoints ? (
             avgPoints != null ? (
               <span className="text-zinc-100">{avgPoints.toFixed(1)}</span>
@@ -850,45 +837,31 @@ function RankRow({
             </span>
           </td>
         )}
-        <td
-          className={`min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums${breakClass(tierBreaks?.vegas, "border-amber-400/60")}`}
-        >
+        <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
           <span className="text-amber-400">
             {showPoints ? fmtPts(vegasPoints) : fmtRank(vegasRank)}
           </span>
         </td>
         {hasEspn && (
-          <td
-            className={`min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums${breakClass(tierBreaks?.espn, "border-red-400/60")}`}
-          >
+          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
             <span className="text-red-400">
               {showPoints ? fmtPts(espnPoints) : fmtRank(espnRank)}
             </span>
           </td>
         )}
         {hasFp && (
-          <td
-            className={`min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums${breakClass(tierBreaks?.fp, "border-teal-400/60")}`}
-          >
+          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
             <span className="text-teal-400">
               {showPoints ? fmtPts(fpPoints) : fmtRank(fpRank)}
             </span>
           </td>
         )}
         {(showPoints ? extraPoints : extraRanks).map((r, idx) => {
-          // Sleeper (cyan) and NFL (blue) carry points → tier lines; Yahoo
-          // has no points, so it never breaks.
           const key = EXTRA_PLATFORMS[idx].key;
-          const extraBreak =
-            key === "sleeper"
-              ? breakClass(tierBreaks?.sleeper, "border-cyan-400/60")
-              : key === "nfl"
-                ? breakClass(tierBreaks?.nfl, "border-blue-400/60")
-                : "";
           return (
             <td
               key={key}
-              className={`min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums${extraBreak}`}
+              className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
             >
               <span className={EXTRA_PLATFORMS[idx].accent}>
                 {showPoints ? fmtPts(r) : fmtRank(r)}
