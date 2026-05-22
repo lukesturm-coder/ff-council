@@ -324,7 +324,12 @@ export default function RankingsTable({
       const displayExtras = withinFilter
         ? stored.extras.map((_, idx) => extraReranks![idx].get(p.playerId) ?? null)
         : stored.extras;
+      // Vegas counts in the consensus like every other source (and it's always
+      // present). When a position is selected, vegasRankById already holds the
+      // within-position rank, so it stays on the same scale as the reranked
+      // sources. Dashes (null) are filtered out and never count as zero.
       const ranksForAvg = [
+        vegasRankById.get(p.playerId) ?? null,
         displayCouncil,
         displayEspn,
         displayFp,
