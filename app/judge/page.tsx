@@ -81,6 +81,28 @@ const CASE_TYPE_FILTERS: { value: CaseTypeFilter; label: string }[] = [
   { value: "draft", label: "Draft Picks" },
 ];
 
+// PostgREST caps a single response at ~1000 rows. A trade or scenario can
+// easily accumulate thousands of votes, so a single `.in()` select silently
+// drops everything past row 1000 — which made freshly-cast votes vanish from
+// the counts (every card read "Cast the first vote"). Page through in 1000-row
+// chunks so every vote is counted.
+async function fetchAllRows<T>(
+  makeQuery: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null }>,
+): Promise<T[]> {
+  const SIZE = 1000;
+  const all: T[] = [];
+  for (let from = 0; ; from += SIZE) {
+    const { data } = await makeQuery(from, from + SIZE - 1);
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < SIZE) break;
+  }
+  return all;
+}
+
 export default async function JudgePage({
   searchParams,
 }: {
@@ -148,15 +170,18 @@ export default async function JudgePage({
   const tradeIds = (trades ?? []).map((t) => t.id);
   const summariesById = new Map<string, Summary>();
   if (tradeIds.length > 0) {
-    const { data: voteRows } = await supabase
-      .from("trade_votes")
-      .select("trade_id, winner, fairness_tier")
-      .in("trade_id", tradeIds);
-    for (const v of (voteRows ?? []) as {
+    const voteRows = await fetchAllRows<{
       trade_id: string;
       winner: "A" | "B" | "EVEN";
       fairness_tier: FairnessTier | null;
-    }[]) {
+    }>((from, to) =>
+      supabase
+        .from("trade_votes")
+        .select("trade_id, winner, fairness_tier")
+        .in("trade_id", tradeIds)
+        .range(from, to),
+    );
+    for (const v of voteRows) {
       const s = summariesById.get(v.trade_id) ?? {
         total_votes: 0,
         votes_a: 0,
@@ -196,11 +221,17 @@ export default async function JudgePage({
     { byPlayer: Record<number, number>; total: number }
   >();
   if (scenarioIds.length > 0) {
-    const { data: votes } = await supabase
-      .from("verdict_votes")
-      .select("scenario_id, pick_player_id")
-      .in("scenario_id", scenarioIds);
-    for (const v of votes ?? []) {
+    const votes = await fetchAllRows<{
+      scenario_id: string;
+      pick_player_id: number;
+    }>((from, to) =>
+      supabase
+        .from("verdict_votes")
+        .select("scenario_id, pick_player_id")
+        .in("scenario_id", scenarioIds)
+        .range(from, to),
+    );
+    for (const v of votes) {
       const sid = v.scenario_id as string;
       const pid = v.pick_player_id as number;
       const t = tallyByScenario.get(sid) ?? { byPlayer: {}, total: 0 };
