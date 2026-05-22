@@ -140,13 +140,25 @@ export default function RankListEditor({
       const { active, over } = e;
       if (!over || active.id === over.id) return;
       const cur = statesRef.current[scoring];
-      const oldIdx = cur.ordered.indexOf(Number(active.id));
+      const activePid = Number(active.id);
+      const oldIdx = cur.ordered.indexOf(activePid);
       const newIdx = cur.ordered.indexOf(Number(over.id));
       if (oldIdx < 0 || newIdx < 0) return;
-      const next: ListState = {
-        ordered: arrayMove(cur.ordered, oldIdx, newIdx),
-        tierOf: cur.tierOf,
-      };
+
+      const ordered = arrayMove(cur.ordered, oldIdx, newIdx);
+      // Adopt the tier of the player you landed next to — the one now directly
+      // above (or below, if dropped at the very top). So dragging a player up
+      // into the S block flips their badge to S. We only re-tier when that
+      // neighbor actually has a tier; dropping into untiered territory keeps the
+      // player's existing tier rather than clearing it.
+      const pos = ordered.indexOf(activePid);
+      const neighborPid = pos > 0 ? ordered[pos - 1] : ordered[pos + 1];
+      const neighborTier =
+        neighborPid != null ? cur.tierOf.get(neighborPid) : undefined;
+      const tierOf = new Map(cur.tierOf);
+      if (neighborTier) tierOf.set(activePid, neighborTier);
+
+      const next: ListState = { ordered, tierOf };
       setStates((prev) => ({ ...prev, [scoring]: next }));
       persist(next, scoring);
     },
@@ -218,12 +230,23 @@ export default function RankListEditor({
               {list.ordered.map((pid, idx) => {
                 const p = playerMap.get(pid);
                 if (!p) return null;
+                const tier = list.tierOf.get(pid) ?? null;
+                // Divider under the last player of each tier: true when the next
+                // player's tier differs from this one's.
+                const nextPid = list.ordered[idx + 1];
+                const nextTier =
+                  nextPid != null ? list.tierOf.get(nextPid) ?? null : null;
+                const tierEnds =
+                  idx < list.ordered.length - 1 &&
+                  tier != null &&
+                  tier !== nextTier;
                 return (
                   <SortableRow
                     key={pid}
                     rank={idx + 1}
                     player={p}
-                    tier={list.tierOf.get(pid) ?? null}
+                    tier={tier}
+                    tierEnds={tierEnds}
                   />
                 );
               })}
@@ -245,10 +268,13 @@ function SortableRow({
   rank,
   player,
   tier,
+  tierEnds,
 }: {
   rank: number;
   player: PlayerProjection;
   tier: TierLetter | null;
+  // true = last player of a tier → draw a colored divider beneath this row.
+  tierEnds: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: player.playerId });
@@ -257,6 +283,10 @@ function SortableRow({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
+    // Colored tier divider at the bottom of the last player in each tier.
+    ...(tierEnds && tier
+      ? { borderBottom: `3px solid ${TIER_HEX[tier]}` }
+      : null),
   };
 
   return (
