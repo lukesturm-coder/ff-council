@@ -14,6 +14,11 @@ import { createClient } from "@/lib/supabase/server";
 
 const MIN_VOTES = 5;
 
+// Which tough-call type the home page surfaces. Offseason = draft prep, so we
+// show "Who would you draft?" cards. Flip to "start_sit" once the season kicks
+// off and weekly start/sit calls become the live question.
+const HOME_VERDICT_TYPE: "draft" | "start_sit" = "draft";
+
 type SidePlayer = {
   player_id: number | null;
   name: string;
@@ -120,6 +125,7 @@ async function loadTopVerdicts(): Promise<VerdictCard[]> {
   const { data: scenarios } = await supabase
     .from("verdict_scenarios")
     .select("id, scenario_type, candidates, context")
+    .eq("scenario_type", HOME_VERDICT_TYPE)
     .order("created_at", { ascending: false })
     .limit(60);
   if (!scenarios || scenarios.length === 0) return [];
