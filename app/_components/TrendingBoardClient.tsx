@@ -4,11 +4,13 @@ import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, TrendingUp } from "lucide-react";
 import TrendingChart, { type TrendingSeries } from "./TrendingChart";
 
+// Muted position badges — softer fills + borders so the per-player trend colors
+// stay the primary visual emphasis (not neon arcade chips).
 const POSITION_STYLES: Record<string, string> = {
-  QB: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
-  RB: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-  WR: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
-  TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
+  QB: "bg-rose-500/10 text-rose-200/90 ring-rose-500/20",
+  RB: "bg-emerald-500/10 text-emerald-200/90 ring-emerald-500/20",
+  WR: "bg-sky-500/10 text-sky-200/90 ring-sky-500/20",
+  TE: "bg-amber-500/10 text-amber-200/90 ring-amber-500/20",
 };
 
 export type Mover = {
@@ -24,14 +26,16 @@ export type Mover = {
 function MoverRow({
   m,
   rising,
-  selected,
+  active,
   dimmed,
+  onHover,
   onSelect,
 }: {
   m: Mover;
   rising: boolean;
-  selected: boolean;
+  active: boolean;
   dimmed: boolean;
+  onHover: (id: number | null) => void;
   onSelect: () => void;
 }) {
   const Arrow = rising ? ArrowUpRight : ArrowDownRight;
@@ -39,26 +43,37 @@ function MoverRow({
     <button
       type="button"
       onClick={onSelect}
+      onMouseEnter={() => onHover(m.playerId)}
+      onMouseLeave={() => onHover(null)}
       className={`flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left transition ${
-        selected
-          ? "bg-zinc-800 ring-1 ring-inset ring-zinc-600"
-          : "hover:bg-zinc-800/50"
-      } ${dimmed ? "opacity-40" : ""}`}
+        active
+          ? "bg-emerald-500/[0.08] ring-1 ring-inset ring-emerald-500/30"
+          : dimmed
+            ? "opacity-45 hover:opacity-100"
+            : "hover:bg-zinc-800/50"
+      }`}
     >
       <span
-        className="h-2.5 w-2.5 shrink-0 rounded-full"
-        style={{ backgroundColor: m.color }}
+        className="h-2.5 w-2.5 shrink-0 rounded-full transition"
+        style={{
+          backgroundColor: m.color,
+          boxShadow: active ? `0 0 6px ${m.color}` : undefined,
+        }}
         aria-hidden
       />
       <span
         className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
           POSITION_STYLES[m.position] ??
-          "bg-zinc-500/10 text-zinc-300 ring-zinc-500/30"
+          "bg-zinc-500/10 text-zinc-300 ring-zinc-500/20"
         }`}
       >
         {m.position}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm text-zinc-100">
+      <span
+        className={`min-w-0 flex-1 truncate text-sm ${
+          active ? "font-semibold text-zinc-50" : "text-zinc-100"
+        }`}
+      >
         {m.name}
       </span>
       <span className="shrink-0 font-mono text-[11px] text-zinc-500">
@@ -90,6 +105,8 @@ export default function TrendingBoardClient({
   scoring: string;
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const activeId = hoveredId ?? selectedId;
   const toggle = (id: number) =>
     setSelectedId((cur) => (cur === id ? null : id));
 
@@ -99,8 +116,9 @@ export default function TrendingBoardClient({
         key={m.playerId}
         m={m}
         rising={rising}
-        selected={selectedId === m.playerId}
-        dimmed={selectedId != null && selectedId !== m.playerId}
+        active={activeId === m.playerId}
+        dimmed={activeId != null && activeId !== m.playerId}
+        onHover={setHoveredId}
         onSelect={() => toggle(m.playerId)}
       />
     ));
@@ -147,11 +165,12 @@ export default function TrendingBoardClient({
           <TrendingChart
             series={series}
             weeks={weeks}
-            selectedId={selectedId}
+            activeId={activeId}
+            onHover={setHoveredId}
             onSelect={toggle}
           />
           <p className="mt-1.5 text-center text-[10px] text-zinc-600">
-            Tap a line or a name to trace it · lower is better
+            Hover or tap a line to trace it · lower is better
           </p>
         </div>
       </div>

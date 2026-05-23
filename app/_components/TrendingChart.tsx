@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { TrendingPoint } from "@/lib/trending";
 
 // Inline-SVG multi-line chart. Y axis is rank, inverted so #1 sits at the top.
-// A line is "active" when hovered (desktop) or selected (click / from the
-// list). The active line goes bold + full-opacity while the rest dim, and a
-// click bubbles up so the matching player highlights in the side list.
+// Each player keeps its own palette color across the line, endpoint marker, and
+// side-list dot. The "active" player (hovered or selected, owned by the parent)
+// brightens + thickens + glows while the rest fade back — so the eye tracks one
+// trend at a time. Lines are smoothed (Catmull-Rom) for a premium feel.
 
 const VIEW_W = 800;
 const VIEW_H = 320;
 const PAD_LEFT = 30;
-const PAD_RIGHT = 14;
+const PAD_RIGHT = 22;
 const PAD_TOP = 14;
 const PAD_BOTTOM = 26;
 const PLOT_W = VIEW_W - PAD_LEFT - PAD_RIGHT;
@@ -24,20 +25,42 @@ export type TrendingSeries = {
   points: TrendingPoint[];
 };
 
+type Pt = { x: number; y: number };
+
+// Catmull-Rom → cubic-bezier smoothing. Keeps endpoints anchored.
+function smoothPath(pts: Pt[]): string {
+  if (pts.length === 0) return "";
+  if (pts.length < 3) {
+    return pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x} ${p.y}`).join(" ");
+  }
+  let d = `M${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C${cp1x.toFixed(2)} ${cp1y.toFixed(2)} ${cp2x.toFixed(2)} ${cp2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
+}
+
 export default function TrendingChart({
   series,
   weeks,
-  selectedId,
+  activeId,
+  onHover,
   onSelect,
 }: {
   series: TrendingSeries[];
   weeks: number;
-  selectedId: number | null;
+  activeId: number | null;
+  onHover: (playerId: number | null) => void;
   onSelect: (playerId: number) => void;
 }) {
-  const [hovered, setHovered] = useState<number | null>(null);
-  const active = hovered ?? selectedId;
-
   const { yMin, yMax } = useMemo(() => {
     let min = Infinity;
     let max = -Infinity;
@@ -69,14 +92,6 @@ export default function TrendingChart({
     return out;
   }, [yMin, yMax]);
 
-  const pathFor = (points: TrendingPoint[]) =>
-    points
-      .map(
-        (p, i) =>
-          `${i === 0 ? "M" : "L"}${xFor(p.week).toFixed(2)} ${yFor(p.rank).toFixed(2)}`,
-      )
-      .join(" ");
-
   if (series.length === 0) return null;
 
   return (
@@ -97,7 +112,7 @@ export default function TrendingChart({
                 x2={VIEW_W - PAD_RIGHT}
                 y1={y}
                 y2={y}
-                stroke="rgba(39,39,42,0.45)"
+                stroke="rgba(63,63,70,0.28)"
                 strokeWidth={1}
               />
               <text
@@ -117,44 +132,63 @@ export default function TrendingChart({
         {series
           .slice()
           .sort((a, b) => {
-            const ah = active === a.playerId ? 1 : 0;
-            const bh = active === b.playerId ? 1 : 0;
+            const ah = activeId === a.playerId ? 1 : 0;
+            const bh = activeId === b.playerId ? 1 : 0;
             return ah - bh;
           })
           .map((s) => {
-            const isActive = active === s.playerId;
-            const dim = active != null && !isActive;
-            const last = s.points[s.points.length - 1];
+            const isActive = activeId === s.playerId;
+            const dim = activeId != null && !isActive;
+            const pts = s.points.map((p) => ({
+              x: xFor(p.week),
+              y: yFor(p.rank),
+            }));
+            const last = pts[pts.length - 1];
             if (!last) return null;
+            const d = smoothPath(pts);
             return (
               <g key={s.playerId}>
-                {/* Fat invisible hit area so thin lines are easy to tap. */}
+                {/* Fat invisible hit area so thin lines are easy to hit/tap. */}
                 <path
-                  d={pathFor(s.points)}
+                  d={d}
                   fill="none"
                   stroke="transparent"
-                  strokeWidth={16}
-                  onMouseEnter={() => setHovered(s.playerId)}
-                  onMouseLeave={() => setHovered(null)}
+                  strokeWidth={18}
+                  onMouseEnter={() => onHover(s.playerId)}
+                  onMouseLeave={() => onHover(null)}
                   onClick={() => onSelect(s.playerId)}
                   style={{ cursor: "pointer" }}
                 />
                 <path
-                  d={pathFor(s.points)}
+                  d={d}
                   fill="none"
                   stroke={s.color}
-                  strokeWidth={isActive ? 3.5 : 2.25}
-                  strokeOpacity={dim ? 0.15 : 1}
+                  strokeWidth={isActive ? 3.5 : 2}
+                  strokeOpacity={dim ? 0.13 : isActive ? 1 : 0.92}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   pointerEvents="none"
+                  style={
+                    isActive
+                      ? { filter: `drop-shadow(0 0 5px ${s.color})` }
+                      : undefined
+                  }
+                />
+                {/* Endpoint marker — halo ring + dot, like a live market chart. */}
+                <circle
+                  cx={last.x}
+                  cy={last.y}
+                  r={isActive ? 7 : 5}
+                  fill={s.color}
+                  fillOpacity={dim ? 0.06 : 0.18}
+                  pointerEvents="none"
                 />
                 <circle
-                  cx={xFor(last.week)}
-                  cy={yFor(last.rank)}
-                  r={isActive ? 4.5 : 3}
+                  cx={last.x}
+                  cy={last.y}
+                  r={isActive ? 4 : 3}
                   fill={s.color}
-                  fillOpacity={dim ? 0.2 : 1}
+                  fillOpacity={dim ? 0.25 : 1}
                   pointerEvents="none"
                 />
               </g>
