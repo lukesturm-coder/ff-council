@@ -24,7 +24,6 @@ export type TradePlayer = {
   fantasyPoints: Record<ScoringSystem, number>;
   vbd: Record<ScoringSystem, number>;
   espnAdp: Partial<Record<ScoringSystem, number>>;
-  fpAdp: Partial<Record<ScoringSystem, number>>;
   sleeperAdp: Partial<Record<ScoringSystem, number>>;
   nflRank: Partial<Record<ScoringSystem, number>>;
   yahooRank: Partial<Record<ScoringSystem, number>>;
@@ -617,13 +616,11 @@ type SideMetrics = {
   vegasFpts: number;
   vegasVbd: number;
   espnAdpAvg: number | null;
-  fpAdpAvg: number | null;
   sleeperAdpAvg: number | null;
   nflRankAvg: number | null;
   yahooRankAvg: number | null;
   councilAvg: number | null;
   espnValue: number | null;
-  fpValue: number | null;
   councilValue: number | null;
 };
 
@@ -642,10 +639,6 @@ function computeMetrics(
 
   const espnAdpAvg = averageOrNull([
     ...players.map((p) => p.espnAdp[scoring] ?? p.espnAdp.PPR),
-    ...pickAdps,
-  ]);
-  const fpAdpAvg = averageOrNull([
-    ...players.map((p) => p.fpAdp[scoring]),
     ...pickAdps,
   ]);
   const sleeperAdpAvg = averageOrNull([
@@ -669,17 +662,12 @@ function computeMetrics(
     vegasFpts,
     vegasVbd,
     espnAdpAvg,
-    fpAdpAvg,
     sleeperAdpAvg,
     nflRankAvg,
     yahooRankAvg,
     councilAvg,
     espnValue: averageOrNull([
       ...players.map((p) => adpValue(p.espnAdp[scoring] ?? p.espnAdp.PPR)),
-      ...pickAdps.map((adp) => adpValue(adp)),
-    ]),
-    fpValue: averageOrNull([
-      ...players.map((p) => adpValue(p.fpAdp[scoring])),
       ...pickAdps.map((adp) => adpValue(adp)),
     ]),
     councilValue: averageOrNull([
@@ -736,15 +724,6 @@ function VerdictPanel({
       bDisplay: b.espnAdpAvg != null ? b.espnAdpAvg.toFixed(1) : "—",
       direction: "lower",
       color: "text-rose-300",
-    },
-    {
-      label: "FP ADP (avg, lower = better)",
-      aValue: a.fpAdpAvg,
-      bValue: b.fpAdpAvg,
-      aDisplay: a.fpAdpAvg != null ? a.fpAdpAvg.toFixed(1) : "—",
-      bDisplay: b.fpAdpAvg != null ? b.fpAdpAvg.toFixed(1) : "—",
-      direction: "lower",
-      color: "text-sky-300",
     },
     {
       label: "Sleeper ADP (avg, lower = better)",

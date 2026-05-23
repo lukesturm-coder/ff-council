@@ -181,7 +181,6 @@ const SOURCE_ORDER: Array<{ key: string; label: string }> = [
   { key: "council", label: "Council" },
   { key: "vegas", label: "Vegas" },
   { key: "espn", label: "ESPN" },
-  { key: "fantasypros", label: "FantasyPros" },
   { key: "sleeper", label: "Sleeper" },
   { key: "nfl", label: "NFL" },
   { key: "yahoo", label: "Yahoo" },
@@ -227,18 +226,6 @@ export function computeSourceVerdicts(
             const r = platformRank(platformRankings, p.player_id, "espn", scoring);
             return r == null ? null : rankToValue(r);
           })(),
-    fantasypros: (p) =>
-      p.player_id == null
-        ? null
-        : (() => {
-            const r = platformRank(
-              platformRankings,
-              p.player_id,
-              "fantasypros",
-              scoring,
-            );
-            return r == null ? null : rankToValue(r);
-          })(),
     sleeper: (p) =>
       p.player_id == null
         ? null
@@ -276,7 +263,6 @@ export function computeSourceVerdicts(
     council: "sourced from council_consensus",
     vegas: "sourced from Vegas-derived projections",
     espn: "sourced from platform_rankings",
-    fantasypros: "sourced from platform_rankings",
     sleeper: "sourced from platform_rankings",
     nfl: "sourced from platform_rankings",
     yahoo: "sourced from platform_rankings",

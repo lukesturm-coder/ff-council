@@ -64,19 +64,16 @@ async function loadLookups(scoring: ScoringSystem) {
   ]);
 
   const espnAdp = new Map<number, number>();
-  const fpAdp = new Map<number, number>();
   for (const r of (platform.data ?? []) as PlatformRow[]) {
     if (r.source === "espn" && r.ranking_type === "adp") {
       espnAdp.set(r.player_id, Number(r.rank_value));
-    } else if (r.source === "fantasypros" && r.ranking_type === "adp") {
-      fpAdp.set(r.player_id, Number(r.rank_value));
     }
   }
   const councilLookup = new Map<number, number>();
   for (const row of council.data ?? []) {
     councilLookup.set(row.player_id as number, Number(row.avg_rank));
   }
-  return { espnAdp, fpAdp, councilLookup };
+  return { espnAdp, councilLookup };
 }
 
 type EnrichedPlayer = {
@@ -87,7 +84,6 @@ type EnrichedPlayer = {
   fpts: number;
   vbd: number;
   espnAdp: number | null;
-  fpAdp: number | null;
   councilRank: number | null;
 };
 
@@ -100,7 +96,6 @@ type TeamData = {
   totalFpts: number;
   positionScores: Record<FantasyPosition, number>;
   avgEspnAdp: number | null;
-  avgFpAdp: number | null;
   avgCouncil: number | null;
 };
 
@@ -230,7 +225,6 @@ export default async function ComparePage({
           fpts: 0,
           vbd: 0,
           espnAdp: null,
-          fpAdp: null,
           councilRank: null,
         };
       }
@@ -251,7 +245,6 @@ export default async function ComparePage({
         fpts: projection?.fantasyPoints[scoring] ?? 0,
         vbd: projection?.vbd[scoring] ?? 0,
         espnAdp: pid != null ? (lookups.espnAdp.get(pid) ?? null) : null,
-        fpAdp: pid != null ? (lookups.fpAdp.get(pid) ?? null) : null,
         councilRank: pid != null ? (lookups.councilLookup.get(pid) ?? null) : null,
       };
     });
@@ -290,7 +283,6 @@ export default async function ComparePage({
         TE: positionScore("TE"),
       },
       avgEspnAdp: avgOrNull(starters.map((p) => p.espnAdp)),
-      avgFpAdp: avgOrNull(starters.map((p) => p.fpAdp)),
       avgCouncil: avgOrNull(starters.map((p) => p.councilRank)),
     });
   }
@@ -466,7 +458,7 @@ function TeamHeader({
         {team.teamName}
       </h3>
       <p className="text-xs text-zinc-500">{team.ownerName}</p>
-      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+      <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
         <div>
           <p className="text-zinc-500">Vegas FPts</p>
           <p className="font-mono text-lg font-semibold text-zinc-100">
@@ -477,12 +469,6 @@ function TeamHeader({
           <p className="text-zinc-500">Avg ESPN ADP</p>
           <p className="font-mono text-lg text-zinc-300">
             {team.avgEspnAdp != null ? team.avgEspnAdp.toFixed(1) : "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-zinc-500">Avg FP ADP</p>
-          <p className="font-mono text-lg text-zinc-300">
-            {team.avgFpAdp != null ? team.avgFpAdp.toFixed(1) : "—"}
           </p>
         </div>
         <div>

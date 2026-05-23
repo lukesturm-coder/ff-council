@@ -42,8 +42,7 @@ export default function TermsPage() {
             Third-party data
           </h2>
           <p>
-            Player rankings shown alongside our own (ESPN, Yahoo, Sleeper,
-            FantasyPros, sportsbook odds, etc.) are credited to their
+            Player rankings shown alongside our own (ESPN, Yahoo, Sleeper, sportsbook odds, etc.) are credited to their
             respective sources and are reproduced for the purpose of
             comparison and analysis. We do not claim ownership of third-party
             data. If you are a rights holder and have concerns, please contact

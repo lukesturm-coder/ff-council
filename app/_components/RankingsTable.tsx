@@ -752,11 +752,14 @@ const PROJECTED_FIELDS: Partial<Record<FantasyPosition, StatField[]>> = {
     { key: "rushingTouchdowns", label: "Rush TD", decimals: 1 },
     { key: "receptions", label: "Rec", decimals: 0 },
     { key: "receivingYards", label: "Rec Yds", decimals: 0 },
+    { key: "receivingTouchdowns", label: "Rec TD", decimals: 1 },
   ],
   WR: [
     { key: "receptions", label: "Rec", decimals: 0 },
     { key: "receivingYards", label: "Rec Yds", decimals: 0 },
     { key: "receivingTouchdowns", label: "Rec TD", decimals: 1 },
+    { key: "rushingYards", label: "Rush Yds", decimals: 0 },
+    { key: "rushingTouchdowns", label: "Rush TD", decimals: 1 },
   ],
   TE: [
     { key: "receptions", label: "Rec", decimals: 0 },

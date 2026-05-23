@@ -22,7 +22,7 @@ import TradeCalculator, {
 export const metadata: Metadata = {
   title: "Trade Court · FF Council",
   description:
-    "A quick trade analyzer. Build a trade, see whether it's fair across Vegas, ESPN, FantasyPros, Sleeper, NFL, Yahoo, and the Council Consensus.",
+    "A quick trade analyzer. Build a trade, see whether it's fair across Vegas, ESPN, Sleeper, NFL, Yahoo, and the Council Consensus.",
 };
 
 // =====================================================================
@@ -107,7 +107,6 @@ async function loadCalculatorPlayers(): Promise<TradePlayer[]> {
     fantasyPoints: p.fantasyPoints,
     vbd: p.vbd,
     espnAdp: pickRanks(p.playerId, "espn", "adp"),
-    fpAdp: pickRanks(p.playerId, "fantasypros", "adp"),
     sleeperAdp: pickRanks(p.playerId, "sleeper", "adp"),
     nflRank: pickRanks(p.playerId, "nfl", "editorial"),
     yahooRank: pickRanks(p.playerId, "yahoo", "editorial"),
@@ -131,7 +130,7 @@ export default async function TradesIndexPage() {
             <p className="text-xs text-zinc-400 sm:text-sm">
               A quick trade analyzer. Add players to each side and see whether
               the trade is fair across every source we track — Vegas season
-              points, ESPN, FantasyPros, Sleeper, NFL, Yahoo, and the Council
+              points, ESPN, Sleeper, NFL, Yahoo, and the Council
               Consensus.
             </p>
           </div>

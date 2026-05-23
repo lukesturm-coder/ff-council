@@ -130,9 +130,9 @@ export default async function PlayerDetailPage({
 
   // Group platform rankings by scoring for the chart
   const platformByScoring = {
-    PPR: { espnEditorial: null as number | null, espnAdp: null as number | null, fpAdp: null as number | null },
-    Half: { espnEditorial: null as number | null, espnAdp: null as number | null, fpAdp: null as number | null },
-    Standard: { espnEditorial: null as number | null, espnAdp: null as number | null, fpAdp: null as number | null },
+    PPR: { espnEditorial: null as number | null, espnAdp: null as number | null },
+    Half: { espnEditorial: null as number | null, espnAdp: null as number | null },
+    Standard: { espnEditorial: null as number | null, espnAdp: null as number | null },
   };
   for (const row of platformRows.data ?? []) {
     const scoring = row.scoring_system as ScoringSystem;
@@ -141,8 +141,6 @@ export default async function PlayerDetailPage({
       platformByScoring[scoring].espnEditorial = Number(row.rank_value);
     } else if (row.source === "espn" && row.ranking_type === "adp") {
       platformByScoring[scoring].espnAdp = Number(row.rank_value);
-    } else if (row.source === "fantasypros" && row.ranking_type === "adp") {
-      platformByScoring[scoring].fpAdp = Number(row.rank_value);
     }
   }
 
@@ -378,7 +376,6 @@ export default async function PlayerDetailPage({
             Council: "#34d399", // emerald-400
             Vegas: "#fbbf24", // amber-400
             ESPN: "#f87171", // red-400
-            FantasyPros: "#2dd4bf", // teal-400
             Sleeper: "#22d3ee", // cyan-400
             NFL: "#60a5fa", // blue-400
             Yahoo: "#c084fc", // purple-400
@@ -404,10 +401,6 @@ export default async function PlayerDetailPage({
             (platformByScoring.PPR.espnAdp != null
               ? Math.round(platformByScoring.PPR.espnAdp)
               : null);
-          const fpPpr =
-            platformByScoring.PPR.fpAdp != null
-              ? Math.round(platformByScoring.PPR.fpAdp)
-              : null;
           const sleeperPpr = pickFromPlatformRowsPPR("sleeper");
           const nflPpr = pickFromPlatformRowsPPR("nfl");
           const yahooPpr = pickFromPlatformRowsPPR("yahoo");
@@ -418,7 +411,6 @@ export default async function PlayerDetailPage({
             { source: "Council", rank: councilPpr ?? Number.NaN },
             { source: "Vegas", rank: vegasPpr },
             { source: "ESPN", rank: espnPpr ?? Number.NaN },
-            { source: "FantasyPros", rank: fpPpr ?? Number.NaN },
             { source: "Sleeper", rank: sleeperPpr ?? Number.NaN },
             { source: "NFL", rank: nflPpr ?? Number.NaN },
             { source: "Yahoo", rank: yahooPpr ?? Number.NaN },
@@ -897,10 +889,10 @@ export default async function PlayerDetailPage({
             }
           />
           <StatCard
-            label="FP ADP"
+            label="ESPN ADP"
             value={
-              platformByScoring.PPR.fpAdp != null
-                ? platformByScoring.PPR.fpAdp.toFixed(1)
+              platformByScoring.PPR.espnAdp != null
+                ? platformByScoring.PPR.espnAdp.toFixed(1)
                 : "—"
             }
           />
@@ -942,15 +934,6 @@ export default async function PlayerDetailPage({
                       source: "ESPN ADP",
                       rank: Math.round(platformByScoring.PPR.espnAdp),
                       color: "#f87171",
-                    },
-                  ]
-                : []),
-              ...(platformByScoring.PPR.fpAdp != null
-                ? [
-                    {
-                      source: "FP ADP",
-                      rank: Math.round(platformByScoring.PPR.fpAdp),
-                      color: "#38bdf8",
                     },
                   ]
                 : []),
@@ -997,10 +980,6 @@ export default async function PlayerDetailPage({
               (platformByScoring.PPR.espnAdp != null
                 ? Math.round(platformByScoring.PPR.espnAdp)
                 : null),
-            fantasypros:
-              platformByScoring.PPR.fpAdp != null
-                ? Math.round(platformByScoring.PPR.fpAdp)
-                : null,
             sleeper: pickFromPlatformRows("sleeper"),
             nfl: pickFromPlatformRows("nfl"),
             yahoo: pickFromPlatformRows("yahoo"),

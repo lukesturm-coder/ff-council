@@ -118,7 +118,7 @@ export default async function HotCalls() {
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 sm:p-5">
       <div className="mb-3 flex items-center gap-2">
         <Flame className="h-4 w-4 text-orange-400" aria-hidden />
-        <h2 className="text-base font-semibold text-zinc-100">Hot calls</h2>
+        <h2 className="text-base font-semibold text-zinc-100">Most debated</h2>
       </div>
 
       <ol className="space-y-0.5">

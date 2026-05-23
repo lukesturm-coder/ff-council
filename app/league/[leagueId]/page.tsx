@@ -71,7 +71,6 @@ type RankLookup = Map<number, number>;
 async function loadAdpLookups(scoring: ScoringSystem): Promise<{
   espnAdp: RankLookup;
   espnRank: RankLookup;
-  fpAdp: RankLookup;
 }> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -80,14 +79,11 @@ async function loadAdpLookups(scoring: ScoringSystem): Promise<{
     .eq("scoring_system", scoring);
   const espnAdp = new Map<number, number>();
   const espnRank = new Map<number, number>();
-  const fpAdp = new Map<number, number>();
   for (const r of (data ?? []) as PlatformRow[]) {
     const v = Number(r.rank_value);
     if (r.source === "espn") {
       if (r.ranking_type === "adp") espnAdp.set(r.player_id, v);
       else if (r.ranking_type === "editorial") espnRank.set(r.player_id, v);
-    } else if (r.source === "fantasypros" && r.ranking_type === "adp") {
-      fpAdp.set(r.player_id, v);
     }
   }
   // ESPN ADP is published only as PPR — fall back when scoring is Standard/Half
@@ -102,7 +98,7 @@ async function loadAdpLookups(scoring: ScoringSystem): Promise<{
       espnAdp.set(r.player_id as number, Number(r.rank_value));
     }
   }
-  return { espnAdp, espnRank, fpAdp };
+  return { espnAdp, espnRank };
 }
 
 async function loadCouncilLookup(
@@ -129,7 +125,6 @@ type EnrichedPlayer = {
   projection: PlayerProjection | null;
   espnAdp: number | null;
   espnRank: number | null;
-  fpAdp: number | null;
   councilRank: number | null;
 };
 
@@ -224,7 +219,6 @@ type TeamRow = {
   /** Average age of starters with known age (informational) */
   avgAge: number | null;
   avgEspnAdp: number | null;
-  avgFpAdp: number | null;
   avgCouncilRank: number | null;
   coverage: { matched: number; total: number };
 };
@@ -308,7 +302,6 @@ export default async function LeagueAnalysisPage({
           projection: null,
           espnAdp: null,
           espnRank: null,
-          fpAdp: null,
           councilRank: null,
         };
       }
@@ -333,7 +326,6 @@ export default async function LeagueAnalysisPage({
         projection,
         espnAdp: playerId != null ? (adp.espnAdp.get(playerId) ?? null) : null,
         espnRank: playerId != null ? (adp.espnRank.get(playerId) ?? null) : null,
-        fpAdp: playerId != null ? (adp.fpAdp.get(playerId) ?? null) : null,
         councilRank:
           playerId != null ? (councilLookup.get(playerId) ?? null) : null,
       };
@@ -379,7 +371,6 @@ export default async function LeagueAnalysisPage({
       vegasFptsPerWeek: vegasFpts / 17,
       avgAge,
       avgEspnAdp: avgOf(starters, (p) => p.espnAdp),
-      avgFpAdp: avgOf(starters, (p) => p.fpAdp),
       avgCouncilRank: avgOf(starters, (p) => p.councilRank),
       coverage: { matched, total: enriched.length },
     });
@@ -513,12 +504,6 @@ export default async function LeagueAnalysisPage({
                 </th>
                 <th
                   className="hidden py-3 pr-4 text-right sm:table-cell"
-                  title="Average FantasyPros ADP across starters"
-                >
-                  <span className="text-sky-300">FP</span> avg
-                </th>
-                <th
-                  className="hidden py-3 pr-4 text-right sm:table-cell"
                   title="Average Council Consensus rank across starters"
                 >
                   <span className="text-emerald-300">Council</span> avg
@@ -553,9 +538,6 @@ export default async function LeagueAnalysisPage({
                   </td>
                   <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-300 sm:table-cell">
                     {t.avgEspnAdp != null ? t.avgEspnAdp.toFixed(1) : "—"}
-                  </td>
-                  <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-300 sm:table-cell">
-                    {t.avgFpAdp != null ? t.avgFpAdp.toFixed(1) : "—"}
                   </td>
                   <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-zinc-300 sm:table-cell">
                     {t.avgCouncilRank != null
@@ -805,7 +787,6 @@ function PlayerTable({
             <th className="py-1 text-right">Vegas FPts</th>
             <th className="hidden py-1 text-right sm:table-cell">Edge</th>
             <th className="hidden py-1 text-right sm:table-cell">ESPN ADP</th>
-            <th className="hidden py-1 text-right sm:table-cell">FP ADP</th>
             <th className="py-1 text-right">Council</th>
           </tr>
         </thead>
@@ -864,9 +845,6 @@ function PlayerTable({
               </td>
               <td className="hidden py-1 text-right font-mono tabular-nums text-zinc-400 sm:table-cell">
                 {p.espnAdp != null ? p.espnAdp.toFixed(1) : "—"}
-              </td>
-              <td className="hidden py-1 text-right font-mono tabular-nums text-zinc-400 sm:table-cell">
-                {p.fpAdp != null ? p.fpAdp.toFixed(1) : "—"}
               </td>
               <td className="py-1 text-right font-mono tabular-nums text-zinc-400">
                 {p.councilRank != null ? p.councilRank.toFixed(1) : "—"}

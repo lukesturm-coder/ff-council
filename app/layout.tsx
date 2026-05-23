@@ -17,7 +17,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "FF Council — Council-derived fantasy football rankings",
   description:
-    "Crowdsourced fantasy football rankings from the FF Council, with Vegas, ESPN, and FantasyPros as supporting sources.",
+    "Crowdsourced fantasy football rankings from the FF Council, with Vegas and ESPN as supporting sources.",
 };
 
 // Next.js 14 pattern: viewport / themeColor / colorScheme live on the

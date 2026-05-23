@@ -47,8 +47,7 @@ export default async function LeagueEntryPage({
             <h2 className="text-2xl font-semibold">League Analyzer</h2>
             <p className="mt-2 text-sm text-zinc-400">
               Paste your Sleeper league ID and see your league through FF
-              Council&apos;s lens — Vegas projections, Council consensus, ESPN,
-              and FantasyPros consensus, applied to each team&apos;s roster.
+              Council&apos;s lens — Vegas projections, Council consensus, and ESPN consensus, applied to each team&apos;s roster.
             </p>
           </div>
 

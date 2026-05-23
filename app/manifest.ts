@@ -13,7 +13,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "FF Council",
     short_name: "FF Council",
     description:
-      "Crowdsourced fantasy football rankings from the FF Council, with Vegas, ESPN, and FantasyPros as supporting sources.",
+      "Crowdsourced fantasy football rankings from the FF Council, with Vegas and ESPN as supporting sources.",
     start_url: "/",
     display: "standalone",
     theme_color: "#09090b",
