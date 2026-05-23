@@ -770,6 +770,18 @@ function fmtStatValue(v: number | undefined, decimals: number): string {
   return decimals === 0 ? Math.round(v).toLocaleString() : v.toFixed(decimals);
 }
 
+// Projection sources shown in the expand matrix (the apps that publish
+// projections). Accents mirror the table's column colors. Our Vegas-derived
+// implied stats fill the Vegas column today; the others get scraped per-source
+// stat projections later (dashes until then).
+const PROJ_SOURCES: { key: string; label: string; accent: string }[] = [
+  { key: "vegas", label: "Vegas", accent: "text-amber-400/90" },
+  { key: "espn", label: "ESPN", accent: "text-rose-400/90" },
+  { key: "sleeper", label: "Sleeper", accent: "text-cyan-400/80" },
+  { key: "nfl", label: "NFL", accent: "text-blue-400/80" },
+  { key: "yahoo", label: "Yahoo", accent: "text-purple-400/80" },
+];
+
 function RankRow({
   player,
   rank,
@@ -830,13 +842,17 @@ function RankRow({
   const vbd = player.vbd[scoring];
   const showPoints = view === "Points";
 
-  // Projected stat line for the expand view — real Vegas implied stats win,
-  // mock projections fill the gaps so the line is never empty.
+  // Per-source projection matrix for the expand view. Points come from each
+  // source's projection; per-stat values are ours (Vegas/model) for now, with
+  // the other sources awaiting scraped stat projections.
   const projFields = PROJECTED_FIELDS[player.position] ?? [];
-  const projLine = projFields.map((f) => ({
-    label: f.label,
-    value: fmtStatValue(player.impliedStats[f.key] ?? statLine?.[f.key], f.decimals),
-  }));
+  const pointsBySource: Record<string, number | null> = {
+    vegas: vegasPoints,
+    espn: espnPoints,
+    sleeper: extraPoints[0] ?? null,
+    nfl: extraPoints[1] ?? null,
+    yahoo: extraPoints[2] ?? null,
+  };
   // Format points with one decimal, no padding. Rank stays integer.
   const fmtPts = (v: number | null) => (v != null ? v.toFixed(1) : "—");
   const fmtRank = (v: number | null) => (v != null ? v.toFixed(0) : "—");
@@ -969,28 +985,62 @@ function RankRow({
             }
             className="px-3 py-4 sm:px-12"
           >
-            {projLine.length > 0 && (
-              <div className="mb-4">
-                <div className="mb-2 text-xs uppercase tracking-wider text-zinc-500">
-                  Projected line · season
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {projLine.map((s) => (
-                    <div
-                      key={s.label}
-                      className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2"
-                    >
-                      <div className="text-[10px] uppercase tracking-wider text-zinc-500">
-                        {s.label}
-                      </div>
-                      <div className="font-mono text-sm tabular-nums text-zinc-100">
-                        {s.value}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="mb-4 overflow-x-auto">
+              <div className="mb-2 text-xs uppercase tracking-wider text-zinc-500">
+                Projection by source · season
               </div>
-            )}
+              <table className="w-full min-w-[34rem] text-sm">
+                <thead>
+                  <tr className="text-[10px] uppercase tracking-wider text-zinc-500">
+                    <th className="py-1 pr-3 text-left font-medium">Stat</th>
+                    {PROJ_SOURCES.map((s) => (
+                      <th
+                        key={s.key}
+                        className={`px-2 py-1 text-right font-semibold ${s.accent}`}
+                      >
+                        {s.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="font-mono tabular-nums">
+                  <tr className="border-t border-zinc-800/60">
+                    <td className="py-1.5 pr-3 font-sans font-medium text-zinc-200">
+                      Proj pts
+                    </td>
+                    {PROJ_SOURCES.map((s) => (
+                      <td
+                        key={s.key}
+                        className="px-2 py-1.5 text-right text-zinc-200"
+                      >
+                        {fmtPts(pointsBySource[s.key] ?? null)}
+                      </td>
+                    ))}
+                  </tr>
+                  {projFields.map((f) => {
+                    const ours = fmtStatValue(
+                      player.impliedStats[f.key] ?? statLine?.[f.key],
+                      f.decimals,
+                    );
+                    return (
+                      <tr key={f.key} className="border-t border-zinc-800/60">
+                        <td className="py-1.5 pr-3 font-sans text-zinc-300">
+                          {f.label}
+                        </td>
+                        {PROJ_SOURCES.map((s) => (
+                          <td
+                            key={s.key}
+                            className="px-2 py-1.5 text-right text-zinc-300"
+                          >
+                            {s.key === "vegas" ? ours : "—"}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
             <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
               <div className="text-xs uppercase tracking-wider text-zinc-500">
                 Markets feeding this projection
