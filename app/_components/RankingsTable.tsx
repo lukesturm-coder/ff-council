@@ -791,6 +791,42 @@ const PROJ_SOURCES: { key: string; label: string; accent: string }[] = [
   { key: "yahoo", label: "Yahoo", accent: "text-purple-400/80" },
 ];
 
+const STAT_KEYS: (keyof ImpliedStats)[] = [
+  "passingYards",
+  "passingTouchdowns",
+  "interceptions",
+  "rushingYards",
+  "rushingTouchdowns",
+  "receptions",
+  "receivingYards",
+  "receivingTouchdowns",
+];
+
+// Season fantasy points computed from a projected stat line, so the "Proj pts"
+// row is always consistent with the stats shown beneath it (and respects the
+// active scoring). Standard scoring: 0.04/pass yd, 4/pass TD, -2/INT, 0.1/rush
+// + rec yd, 6/rush + rec TD, plus the PPR/Half reception bonus.
+function pointsFromStats(
+  s: Partial<ImpliedStats>,
+  scoring: ScoringSystem,
+): number | null {
+  const has = STAT_KEYS.some(
+    (k) => typeof s[k] === "number" && Number.isFinite(s[k]),
+  );
+  if (!has) return null;
+  const recPt = scoring === "PPR" ? 1 : scoring === "Half" ? 0.5 : 0;
+  return (
+    0.04 * (s.passingYards ?? 0) +
+    4 * (s.passingTouchdowns ?? 0) -
+    2 * (s.interceptions ?? 0) +
+    0.1 * (s.rushingYards ?? 0) +
+    6 * (s.rushingTouchdowns ?? 0) +
+    0.1 * (s.receivingYards ?? 0) +
+    6 * (s.receivingTouchdowns ?? 0) +
+    recPt * (s.receptions ?? 0)
+  );
+}
+
 function RankRow({
   player,
   rank,
@@ -859,13 +895,16 @@ function RankRow({
   // source's projection; per-stat values are ours (Vegas/model) for now, with
   // the other sources awaiting scraped stat projections.
   const projFields = PROJECTED_FIELDS[player.position] ?? [];
-  const pointsBySource: Record<string, number | null> = {
-    vegas: vegasPoints,
-    espn: espnPoints,
-    sleeper: extraPoints[0] ?? null,
-    nfl: extraPoints[1] ?? null,
-    yahoo: extraPoints[2] ?? null,
-  };
+  // Vegas projected stat line = our implied stats (mock fallback). Other
+  // sources come from scraped per-source stats. Proj pts is computed from
+  // whichever line a source has.
+  const vegasStats: Partial<ImpliedStats> = {};
+  for (const k of STAT_KEYS) {
+    const v = player.impliedStats[k] ?? statLine?.[k];
+    if (typeof v === "number") vegasStats[k] = v;
+  }
+  const statsForSource = (key: string): Partial<ImpliedStats> =>
+    key === "vegas" ? vegasStats : sourceStats?.[key] ?? {};
   // Format points with one decimal, no padding. Rank stays integer.
   const fmtPts = (v: number | null) => (v != null ? v.toFixed(1) : "—");
   const fmtRank = (v: number | null) => (v != null ? v.toFixed(0) : "—");
@@ -1024,9 +1063,9 @@ function RankRow({
                     {PROJ_SOURCES.map((s) => (
                       <td
                         key={s.key}
-                        className="px-2 py-1.5 text-right text-zinc-200"
+                        className="px-2 py-1.5 text-right font-semibold text-emerald-300"
                       >
-                        {fmtPts(pointsBySource[s.key] ?? null)}
+                        {fmtPts(pointsFromStats(statsForSource(s.key), scoring))}
                       </td>
                     ))}
                   </tr>
@@ -1035,22 +1074,14 @@ function RankRow({
                       <td className="py-1.5 pr-3 font-sans text-zinc-300">
                         {f.label}
                       </td>
-                      {PROJ_SOURCES.map((s) => {
-                        // Vegas = our implied stats (with mock fallback); every
-                        // other source = scraped per-source projections.
-                        const v =
-                          s.key === "vegas"
-                            ? player.impliedStats[f.key] ?? statLine?.[f.key]
-                            : sourceStats?.[s.key]?.[f.key];
-                        return (
-                          <td
-                            key={s.key}
-                            className="px-2 py-1.5 text-right text-zinc-300"
-                          >
-                            {fmtStatValue(v, f.decimals)}
-                          </td>
-                        );
-                      })}
+                      {PROJ_SOURCES.map((s) => (
+                        <td
+                          key={s.key}
+                          className="px-2 py-1.5 text-right text-zinc-300"
+                        >
+                          {fmtStatValue(statsForSource(s.key)[f.key], f.decimals)}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>

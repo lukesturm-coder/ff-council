@@ -14,6 +14,7 @@
     "fetch:yahoo": "tsx scripts/fetch-yahoo.ts",
     "fetch:projections:sleeper": "tsx scripts/fetch-projections-sleeper.ts",
     "fetch:projections:espn": "tsx scripts/fetch-projections-espn.ts",
+    "fetch:projections:nfl": "tsx scripts/fetch-projections-nfl.ts",
     "expand:roster": "tsx scripts/expand-roster.ts",
     "scrape:vegas": "tsx scripts/scrape-vegas.ts",
     "fetch:vegas": "tsx scripts/fetch-vegas.ts"
