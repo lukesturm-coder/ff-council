@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { Check, Flame, Loader2, Scale, Sparkles } from "lucide-react";
-import { castVote } from "@/app/trades/[id]/actions";
+import { Check, Flame, Sparkles } from "lucide-react";
+import { castVote, type TradeConsensus } from "@/app/trades/[id]/actions";
 import { castVerdictVote } from "@/app/verdict/actions";
+import SentimentSelector, {
+  type SentimentTier,
+} from "@/app/trades/_components/SentimentSelector";
+import TradeConsensusReveal from "@/app/trades/_components/TradeConsensusReveal";
 
 // Streak milestones — each one gets a little celebratory toast in the
 // post-vote flash. Tiered so the dopamine keeps coming as you go deeper.
@@ -88,10 +92,18 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
   // Track which option the user just picked so we can ring-pulse it
   // before the card advances. Cleared on advance().
   const [justPicked, setJustPicked] = useState<string | null>(null);
+  // After a trade vote we hold the market consensus and show the reveal panel
+  // in place (no auto-advance) until the user taps "Next". Verdicts keep the
+  // fast auto-flash. Cleared on advance().
+  const [tradeReveal, setTradeReveal] = useState<{
+    consensus: TradeConsensus;
+    myWinner: "A" | "B" | "EVEN";
+  } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const current = feed[index];
   const remaining = feed.length - index;
+  const hasNext = index + 1 < feed.length;
 
   function advance() {
     // Drop focus from any just-tapped button so its :focus / :hover
@@ -102,6 +114,7 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
     }
     setIndex((i) => i + 1);
     setJustPicked(null);
+    setTradeReveal(null);
   }
 
   function skip() {
@@ -131,15 +144,6 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
     }, duration);
   }
 
-  // Short label for trade winners (Team A / Even / Team B). Used in both the
-  // user's pick line and the council line.
-  function tradeLabel(w: "A" | "B" | "EVEN" | null): string {
-    if (w === "A") return "Team A";
-    if (w === "B") return "Team B";
-    if (w === "EVEN") return "Even";
-    return "—";
-  }
-
   // Last name only for verdict candidates — keeps the flash compact.
   // Falls back to the full name when there's no whitespace to split on.
   function shortPlayerName(name: string): string {
@@ -147,20 +151,16 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
     return parts.length > 1 ? parts[parts.length - 1] : name;
   }
 
-  // Trade voting on /judge is true one-click: each cell in the 3-column grid
-  //   [ Team A wins + slight/clear/major/extreme ] [ Even ] [ Team B wins + … ]
-  // immediately submits with (winner, tier). One tap = a complete verdict.
+  // Trade voting is one-tap: a sentiment option submits (winner, tier)
+  // immediately, then we reveal the market consensus + comments in place and
+  // wait for the user to tap "Next" (Vote → See Consensus → Next).
   function submitTradeVote(
     tradeId: string,
     winner: "A" | "B" | "EVEN",
-    tier:
-      | "balanced"
-      | "slight_edge"
-      | "clear_advantage"
-      | "major_advantage"
-      | "extreme_imbalance",
+    tier: SentimentTier,
   ) {
     if (pending) return;
+    setJustPicked(`trade:${winner}:${tier}`);
     startTransition(async () => {
       const res = await castVote({
         tradeId,
@@ -169,23 +169,11 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
         fairnessLean: winner === "EVEN" ? null : winner,
       });
       if (res.ok) {
-        const c = res.consensus;
-        const userLabel = tradeLabel(winner);
-        const agreement =
-          c.total > 0
-            ? {
-                matched: c.topWinner === winner,
-                topLabel: tradeLabel(c.topWinner),
-                pct: c.topPct,
-              }
-            : null;
-        flashAndAdvance(
-          `You said ${userLabel}`,
-          `trade:${winner}:${tier}`,
-          agreement,
-        );
+        setJudged((j) => j + 1);
+        setTradeReveal({ consensus: res.consensus, myWinner: winner });
       } else {
         setFlashMsg(`Error: ${res.error}`);
+        setTimeout(() => setFlashMsg(null), 1600);
       }
     });
   }
@@ -353,6 +341,24 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
             onVote={(winner, tier) =>
               submitTradeVote(current.id, winner, tier)
             }
+            reveal={
+              tradeReveal ? (
+                <div className="mt-3 space-y-3">
+                  <TradeConsensusReveal
+                    tradeId={current.id}
+                    consensus={tradeReveal.consensus}
+                    myWinner={tradeReveal.myWinner}
+                  />
+                  <button
+                    type="button"
+                    onClick={advance}
+                    className="w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-bold text-zinc-950 transition hover:bg-emerald-400"
+                  >
+                    {hasNext ? "Next trade →" : "Finish →"}
+                  </button>
+                </div>
+              ) : undefined
+            }
           />
         ) : (
           <VerdictCard
@@ -364,60 +370,37 @@ export default function JudgeFeed({ feed }: { feed: JudgeItem[] }) {
           />
         )}
 
-        {/* Skip-only footer — the trade headline at the top of the card is
-            now itself a link to /trades/[id] or /verdict/[id], so the
-            "See full scenario" CTA was redundant. */}
-        <button
-          type="button"
-          onClick={skip}
-          disabled={pending}
-          className="mx-auto mt-4 block text-sm text-zinc-600 underline-offset-4 hover:text-zinc-400 hover:underline disabled:opacity-50"
-        >
-          Skip →
-        </button>
+        {/* Skip footer — hidden once the consensus reveal is up (its own
+            "Next" button drives the advance then). */}
+        {!tradeReveal && (
+          <button
+            type="button"
+            onClick={skip}
+            disabled={pending}
+            className="mx-auto mt-4 block text-sm text-zinc-600 underline-offset-4 hover:text-zinc-400 hover:underline disabled:opacity-50"
+          >
+            Skip →
+          </button>
+        )}
       </div>
     </div>
   );
 }
-
-const MAGNITUDE_TIERS: Array<{
-  value: "slight_edge" | "clear_advantage" | "major_advantage" | "extreme_imbalance";
-  label: string;
-  description: string;
-}> = [
-  { value: "slight_edge", label: "Slight edge", description: "Marginally ahead — close to fair." },
-  { value: "clear_advantage", label: "Clear advantage", description: "Noticeably better deal for the winning side." },
-  { value: "major_advantage", label: "Major advantage", description: "Strongly favors one side." },
-  { value: "extreme_imbalance", label: "Extreme imbalance", description: "Commissioner is corrupt." },
-];
-
-type TradeTier =
-  | "balanced"
-  | "slight_edge"
-  | "clear_advantage"
-  | "major_advantage"
-  | "extreme_imbalance";
 
 function TradeCard({
   item,
   pending,
   justPicked,
   onVote,
+  reveal,
 }: {
   item: JudgeTradeItem;
   pending: boolean;
   justPicked: string | null;
-  onVote: (winner: "A" | "B" | "EVEN", tier: TradeTier) => void;
+  onVote: (winner: "A" | "B" | "EVEN", tier: SentimentTier) => void;
+  // When set (post-vote), the consensus reveal replaces the selector.
+  reveal?: ReactNode;
 }) {
-  // One-click 3-column grid:
-  //   [ Team A wins · 4 magnitudes ]  [ Even ]  [ Team B wins · 4 magnitudes ]
-  // Each tier button submits the full (winner, tier) vote and advances.
-  // No second-step / staged state — keeps Judge truly one-tap.
-
-  function pickedKey(winner: "A" | "B" | "EVEN", tier: TradeTier): string {
-    return `trade:${winner}:${tier}`;
-  }
-
   return (
     <div>
       <div className="mb-3 flex items-baseline justify-between gap-2">
@@ -429,13 +412,10 @@ function TradeCard({
         </span>
       </div>
 
-      {/* THE TRADE — the headline. Big, scannable, anchored at the top so
-          the voter sees WHAT they're judging before they see the columns.
-          Wrapped in a Link so tapping the headline jumps to the full
-          /trades/[id] page (replaces the old "See full scenario" footer). */}
+      {/* THE TRADE — the headline. Tapping it jumps to the full /trades/[id]. */}
       <Link
         href={`/trades/${item.id}`}
-        className="mb-4 block rounded-xl transition hover:ring-1 hover:ring-emerald-500/20"
+        className="mb-3 block rounded-xl transition hover:ring-1 hover:ring-emerald-500/20"
       >
         <div className="grid grid-cols-1 items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
           <JudgeTradeHeadlineSide label="Team A" side={item.side_a} accent="rose" />
@@ -446,77 +426,20 @@ function TradeCard({
         </div>
       </Link>
 
-      <p className="mb-3 text-sm text-zinc-300">
-        <span className="font-semibold text-zinc-100">Who won?</span>{" "}
-        <span className="text-zinc-500">One tap — the council records your verdict.</span>
-      </p>
-
-      {/* 3-column voting grid. Each side column wears a faint team-color
-          wash + ring at rest so column identity reads before tap. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr]">
-        {/* Team A column */}
-        <div className="flex flex-col gap-2 rounded-xl bg-rose-500/[0.03] p-2 ring-1 ring-inset ring-rose-500/10">
-          <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-rose-300">
-            Team A wins by…
-          </div>
-          {MAGNITUDE_TIERS.map((t) => (
-            <JudgeMagnitudeButton
-              key={`A-${t.value}`}
-              tier={t}
-              team="A"
-              picked={justPicked === pickedKey("A", t.value)}
-              disabled={pending}
-              onClick={() => onVote("A", t.value)}
-            />
-          ))}
-        </div>
-
-        {/* Even column — quiet fulcrum between the towers */}
-        <div className="flex items-center sm:min-w-[112px]">
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => onVote("EVEN", "balanced")}
-            className={`group flex w-full min-h-[68px] sm:min-h-0 sm:w-28 items-center justify-center rounded-xl border px-3 py-4 text-sm font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
-              justPicked === pickedKey("EVEN", "balanced")
-                ? "animate-ring-pulse border-emerald-400/70 bg-emerald-500/10 text-emerald-100"
-                : "border-zinc-800 bg-zinc-950/60 text-zinc-200 hover:scale-[1.02] hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-100"
-            }`}
-          >
-            {pending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <span className="flex flex-col items-center gap-1">
-                <Scale
-                  className="h-4 w-4 text-zinc-500 transition group-hover:text-emerald-300"
-                  strokeWidth={2}
-                />
-                <span>Even</span>
-                <span className="text-[10px] font-normal text-zinc-500">
-                  Balanced
-                </span>
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Team B column */}
-        <div className="flex flex-col gap-2 rounded-xl bg-sky-500/[0.03] p-2 ring-1 ring-inset ring-sky-500/10">
-          <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-sky-300">
-            Team B wins by…
-          </div>
-          {MAGNITUDE_TIERS.map((t) => (
-            <JudgeMagnitudeButton
-              key={`B-${t.value}`}
-              tier={t}
-              team="B"
-              picked={justPicked === pickedKey("B", t.value)}
-              disabled={pending}
-              onClick={() => onVote("B", t.value)}
-            />
-          ))}
-        </div>
-      </div>
+      {reveal ? (
+        reveal
+      ) : (
+        <>
+          <p className="mb-2 text-center text-xs text-zinc-500">
+            Who got the better end? One tap.
+          </p>
+          <SentimentSelector
+            onVote={onVote}
+            pending={pending}
+            picked={justPicked}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -641,61 +564,6 @@ function VerdictCard({
         })}
       </div>
     </div>
-  );
-}
-
-// One magnitude button on the /judge feed. All four tiers render at the
-// same shade so visual weight doesn't bias the click — the label text is
-// the only differentiator between Slight edge and Extreme imbalance.
-// `picked` swaps to the emerald pulse for "just voted" feedback before
-// the card advances.
-function JudgeMagnitudeButton({
-  tier,
-  team,
-  picked,
-  disabled,
-  onClick,
-}: {
-  tier: { value: string; label: string; description: string };
-  team: "A" | "B";
-  picked: boolean;
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  const restClasses =
-    team === "A"
-      ? "border-rose-500/25 bg-rose-500/[0.06] hover:border-rose-400/60 hover:bg-rose-500/15"
-      : "border-sky-500/25 bg-sky-500/[0.06] hover:border-sky-400/60 hover:bg-sky-500/15";
-  const labelColor = team === "A" ? "text-rose-100" : "text-sky-100";
-
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`group/btn relative min-h-[56px] rounded-lg border p-2.5 text-left shadow-sm transition-all duration-150 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${
-        picked
-          ? "animate-ring-pulse border-emerald-400/70 bg-emerald-500/10"
-          : `${restClasses} hover:scale-[1.015] hover:shadow-md`
-      }`}
-    >
-      <div
-        className={`text-sm font-semibold ${
-          picked ? "text-emerald-100" : labelColor
-        }`}
-      >
-        {tier.label}
-      </div>
-      <div
-        className={`mt-0.5 text-[11px] ${
-          picked
-            ? "text-emerald-200/80"
-            : "text-zinc-400 group-hover/btn:text-zinc-300"
-        }`}
-      >
-        {tier.description}
-      </div>
-    </button>
   );
 }
 
