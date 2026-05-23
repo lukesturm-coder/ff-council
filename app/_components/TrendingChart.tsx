@@ -126,8 +126,8 @@ export default function TrendingChart({
                   d={pathFor(s.points)}
                   fill="none"
                   stroke={s.color}
-                  strokeWidth={isHovered ? 3 : 2}
-                  strokeOpacity={dim ? 0.2 : 1}
+                  strokeWidth={isHovered ? 3.5 : 2.5}
+                  strokeOpacity={dim ? 0.18 : 1}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   onMouseEnter={() => setHovered(s.playerId)}
@@ -137,7 +137,7 @@ export default function TrendingChart({
                 <circle
                   cx={xFor(last.week)}
                   cy={yFor(last.rank)}
-                  r={isHovered ? 4 : 3}
+                  r={isHovered ? 4.5 : 3.5}
                   fill={s.color}
                   fillOpacity={dim ? 0.25 : 1}
                   pointerEvents="none"

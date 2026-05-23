@@ -18,8 +18,11 @@ const POSITION_STYLES: Record<string, string> = {
   TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
 };
 
-const RISER_COLORS = ["#34d399", "#10b981", "#6ee7b7"];
-const FALLER_COLORS = ["#fb7185", "#f43f5e", "#fda4af"];
+// Vivid, well-separated hues (no pale tints) so each of the 6 lines is easy to
+// tell apart. Risers stay green-family, fallers warm-family — directional read
+// at a glance, like Polymarket's bold two-tone.
+const RISER_COLORS = ["#4ade80", "#10b981", "#a3e635"];
+const FALLER_COLORS = ["#f43f5e", "#fb923c", "#f472b6"];
 
 function MoverRow({
   player,
