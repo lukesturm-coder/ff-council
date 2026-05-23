@@ -53,7 +53,7 @@ export default function TrendingChart({
   const xFor = (week: number) =>
     PAD_LEFT + ((week - 1) / Math.max(1, weeks - 1)) * PLOT_W;
   const yFor = (rank: number) =>
-    PAD_TOP + ((rank - yMin) / (yMax - yMin)) * PLOT_H;
+    PAD_TOP + ((rank - yMin) / Math.max(1, yMax - yMin)) * PLOT_H;
 
   const yTicks = useMemo(() => {
     const steps = 4;
@@ -120,6 +120,7 @@ export default function TrendingChart({
             const isHovered = hovered === s.playerId;
             const dim = hovered != null && !isHovered;
             const last = s.points[s.points.length - 1];
+            if (!last) return null;
             return (
               <g key={s.playerId}>
                 <path

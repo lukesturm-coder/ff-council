@@ -282,6 +282,7 @@ export default function SearchBar({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={onInputKey}
+                aria-label="Search"
                 placeholder="Search players, trades, verdicts…"
                 className="flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-500 outline-none"
                 autoComplete="off"

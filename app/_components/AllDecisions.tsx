@@ -117,7 +117,7 @@ async function loadDecisions(): Promise<Decision[]> {
     const c = tradeTally.get(t.id) ?? { total: 0, a: 0, b: 0, even: 0 };
     const aPct = c.total > 0 ? Math.round((c.a / c.total) * 100) : 0;
     const bPct = c.total > 0 ? Math.round((c.b / c.total) * 100) : 0;
-    const evenPct = c.total > 0 ? 100 - aPct - bPct : 0;
+    const evenPct = c.total > 0 ? Math.round((c.even / c.total) * 100) : 0;
     const winner: "A" | "B" | "EVEN" =
       aPct >= bPct && aPct >= evenPct
         ? "A"

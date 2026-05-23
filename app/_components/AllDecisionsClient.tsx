@@ -180,6 +180,15 @@ export default function AllDecisionsClient({
 }) {
   const [filter, setFilter] = useState("all");
 
+  // Only show pills that actually have cards behind them — avoids landing the
+  // user on a confusing "Nothing here yet" empty state (e.g. Redraft in a
+  // draft-heavy offseason board).
+  const shownFilters = useMemo(() => {
+    const present = new Set<string>();
+    for (const d of decisions) for (const c of d.categories) present.add(c);
+    return FILTERS.filter((f) => f.key === "all" || present.has(f.key));
+  }, [decisions]);
+
   const visible = useMemo(
     () =>
       filter === "all"
@@ -203,7 +212,7 @@ export default function AllDecisionsClient({
       </div>
 
       <div className="mb-4 flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {FILTERS.map((f) => (
+        {shownFilters.map((f) => (
           <button
             key={f.key}
             type="button"
