@@ -293,11 +293,20 @@ function SortableRow({
     <li
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      className="flex touch-none select-none items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 transition active:cursor-grabbing hover:border-zinc-600 sm:gap-3 sm:px-3"
+      className="flex select-none items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 transition hover:border-zinc-600 sm:gap-3 sm:px-3"
     >
-      <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-zinc-600" />
+      {/* Drag handle — listeners live ONLY here (with touch-action: none) so a
+          touch anywhere else on the row scrolls the page normally. Only the
+          grip starts a reorder. */}
+      <button
+        type="button"
+        aria-label="Drag to reorder"
+        {...attributes}
+        {...listeners}
+        className="-ml-1 flex h-9 w-7 shrink-0 touch-none cursor-grab items-center justify-center text-zinc-600 active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
       <span className="w-7 shrink-0 text-right font-mono text-sm text-zinc-500 sm:w-8">
         {rank}
       </span>
