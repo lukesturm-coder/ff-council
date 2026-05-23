@@ -102,6 +102,15 @@ export async function castVote(input: VoteInput): Promise<VoteResult> {
   return { ok: true, consensus };
 }
 
+// Read-only consensus fetch for already-voted users landing on the full trade
+// page — lets the page render the post-vote reveal without a write.
+export async function getTradeConsensus(
+  tradeId: string,
+): Promise<TradeConsensus> {
+  const supabase = await createClient();
+  return summarizeTrade(supabase, tradeId);
+}
+
 type SummaryRow = {
   total_votes: number;
   votes_a: number;

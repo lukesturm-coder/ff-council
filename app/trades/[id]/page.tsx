@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ShareButton from "./ShareButton";
 import SourceVerdictsPanel from "./SourceVerdictsPanel";
-import VotingPanel from "./VotingPanel";
+import TradeVotePanel from "./TradeVotePanel";
+import { getTradeConsensus } from "./actions";
 import TradeVerdictMeter from "../_components/TradeVerdictMeter";
 import {
   computeTradeVerdict,
@@ -136,6 +137,10 @@ export default async function TradeDetailPage({
       .maybeSingle();
     myVote = myVoteRow as typeof myVote;
   }
+
+  // Full market consensus for the in-place reveal (same shape the feed/modal
+  // get back from castVote), so already-voted users land on the reveal.
+  const initialConsensus = await getTradeConsensus(id);
 
   // Build the same summary shape the JSX downstream expects from the view.
   type SummaryShape = {
@@ -340,7 +345,11 @@ export default async function TradeDetailPage({
 
         {/* Voting */}
         {user ? (
-          <VotingPanel tradeId={id} myVote={myVote} />
+          <TradeVotePanel
+            tradeId={id}
+            myVote={myVote}
+            initialConsensus={initialConsensus}
+          />
         ) : (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-5 text-sm text-amber-200">
             <Link
