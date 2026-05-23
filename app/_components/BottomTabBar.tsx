@@ -28,6 +28,7 @@ const TABS: Tab[] = [
 // `extraTools` prop because this client component can't run the server-side
 // auth check.
 const TOOLS: NavItem[] = [
+  { href: "/court", label: "Order in the Court" },
   { href: "/draft", label: "Mock Draft" },
   { href: "/council", label: "My Rankings" },
   { href: "/league", label: "League Analyzer" },

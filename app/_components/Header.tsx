@@ -32,6 +32,7 @@ const PRIORITY_NAV: NavItem[] = [
 // Sub-tools row — second visible tier. Every secondary surface lives here in
 // plain sight. Nothing is hidden behind a menu.
 const UTILITY_NAV: NavItem[] = [
+  { href: "/court", label: "Order in the Court", icon: "court" },
   { href: "/draft", label: "Mock Draft", icon: "draft" },
   { href: "/council", label: "My Rankings", icon: "council" },
   { href: "/league", label: "League Analyzer", icon: "league" },

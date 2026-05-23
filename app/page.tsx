@@ -4,6 +4,7 @@ import {
   BarChart3,
   ClipboardList,
   Gavel,
+  Landmark,
   Network,
   Scale,
   Trophy,
@@ -47,6 +48,13 @@ const TILES: Tile[] = [
     description:
       "Every case the council is weighing — trades, start/sit, draft picks. Browse, filter, and vote.",
     icon: Gavel,
+  },
+  {
+    href: "/court",
+    title: "Order in the Court",
+    description:
+      "The weekly start/sit accuracy contest. Make your 10 calls, climb The Standings, win the week.",
+    icon: Landmark,
   },
   {
     href: "/trades",
