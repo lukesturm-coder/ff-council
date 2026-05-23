@@ -24,18 +24,18 @@ import type {
 // Verdict folded into Judge (the community hub now holds every case), and
 // Trade Court is the pure analyzer.
 const PRIORITY_NAV: NavItem[] = [
-  { href: "/rankings", label: "Rankings" },
-  { href: "/judge", label: "Judge" },
-  { href: "/trades", label: "Trade Court" },
+  { href: "/rankings", label: "Rankings", icon: "rankings" },
+  { href: "/judge", label: "Judge", icon: "judge" },
+  { href: "/trades", label: "Trade Court", icon: "trade" },
 ];
 
 // Sub-tools row — second visible tier. Every secondary surface lives here in
 // plain sight. Nothing is hidden behind a menu.
 const UTILITY_NAV: NavItem[] = [
-  { href: "/draft", label: "Mock Draft" },
-  { href: "/council", label: "My Rankings" },
-  { href: "/league", label: "League Analyzer" },
-  { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/draft", label: "Mock Draft", icon: "draft" },
+  { href: "/council", label: "My Rankings", icon: "council" },
+  { href: "/league", label: "League Analyzer", icon: "league" },
+  { href: "/leaderboard", label: "Leaderboard", icon: "leaderboard" },
 ];
 
 // =====================================================================
@@ -169,7 +169,8 @@ export default async function Header() {
   // to the mobile bottom bar's Tools sheet via the extraTools prop (the bar is
   // a client component and can't run the server-side auth check itself).
   const extraTools: NavItem[] = [];
-  if (isAdmin) extraTools.push({ href: "/council/admin", label: "Admin" });
+  if (isAdmin)
+    extraTools.push({ href: "/council/admin", label: "Admin", icon: "admin" });
 
   // Desktop sub-tools row — every secondary surface, always visible.
   const subToolsNav: NavItem[] = [...UTILITY_NAV, ...extraTools];

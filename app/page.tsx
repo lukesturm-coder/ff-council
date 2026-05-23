@@ -120,17 +120,24 @@ export default async function Page() {
           <HotCalls />
         </section>
 
-        <section aria-label="Features" className="mt-6">
+        <div className="mt-4">
+          <ActivityTicker />
+        </div>
+
+        <AllDecisions />
+
+        {/* The multi-tool portal — full emoji tiles, kept below the live
+            content so trades + tough calls lead, like Polymarket. */}
+        <section aria-label="Explore the toolset" className="mt-10 border-t border-zinc-800 pt-8">
+          <h2 className="mb-4 text-lg font-semibold text-zinc-100 sm:text-xl">
+            Explore the toolset
+          </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {TILES.map((tile) => (
               <FeatureTile key={tile.href} tile={tile} />
             ))}
           </div>
         </section>
-
-        <ActivityTicker />
-
-        <AllDecisions />
 
         <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">
           <p>

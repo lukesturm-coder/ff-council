@@ -2,8 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  BarChart3,
+  ClipboardList,
+  Gavel,
+  Network,
+  Scale,
+  Shield,
+  Trophy,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
-export type NavItem = { href: string; label: string };
+// String keys (not the icon components themselves) so NavItem stays a plain
+// serializable object that a server component can hand to this client nav.
+const ICONS: Record<string, LucideIcon> = {
+  rankings: BarChart3,
+  judge: Gavel,
+  trade: Scale,
+  draft: ClipboardList,
+  council: Users,
+  league: Network,
+  leaderboard: Trophy,
+  admin: Shield,
+};
+
+export type NavItem = { href: string; label: string; icon?: string };
 
 // Longest-prefix match: /council/rankings highlights "My Rankings" not "Council",
 // /council/members highlights "Council" since that's the only prefix that matches.
@@ -62,12 +86,19 @@ export default function PrimaryNav({
             : isActive
               ? mobileActive
               : mobileInactive;
+        const Icon = item.icon ? ICONS[item.icon] : null;
         return (
           <Link
             key={item.href}
             href={item.href}
-            className={`whitespace-nowrap py-2 transition ${classes}`}
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap py-2 transition ${classes}`}
           >
+            {Icon && (
+              <Icon
+                className={size === "compact" ? "h-3.5 w-3.5" : "h-4 w-4"}
+                aria-hidden
+              />
+            )}
             {item.label}
           </Link>
         );
