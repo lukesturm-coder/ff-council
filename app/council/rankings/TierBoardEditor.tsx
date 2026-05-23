@@ -13,6 +13,7 @@ import {
   useSensors,
   useDroppable,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
@@ -254,15 +255,62 @@ export default function TierBoardEditor({
   );
 
   // ---- drag handlers -------------------------------------------------------
-  // Placement happens ONCE on drop (not live during drag). We deliberately do
-  // NOT move chips between containers in onDragOver: the pool only renders a
-  // filtered subset, so moving the active chip out of the pool mid-drag would
-  // unmount its node and remount it under a different SortableContext —
-  // dnd-kit then loses the active node and cancels the drop ("lifts but won't
-  // drop / snaps back"). Keeping the chip put until drop avoids that entirely.
-  // The hovered tier still highlights via useDroppable's `isOver`.
+  // Live reflow happens for TIER↔TIER moves only (handleDragOver), so dragging
+  // a player into a new tier visibly pushes that tier's chips around — like
+  // reordering within a tier. We deliberately skip live moves involving the
+  // POOL: it renders a filtered subset, so moving a chip into it mid-drag could
+  // unmount the active node and cancel the drop ("lifts but won't drop"). Pool
+  // ↔ tier placement is finalized on drop (handleDragEnd) instead.
   function handleDragStart(e: DragStartEvent) {
     setActiveId(Number(e.active.id));
+  }
+
+  // Live cross-tier reflow: as the active chip is dragged over another tier,
+  // move it there in state so the destination tier's chips reflow in real time.
+  // Tiers render every chip (no filter), so reparenting between them is safe.
+  function handleDragOver(e: DragOverEvent) {
+    const { active, over } = e;
+    if (!over) return;
+    const activePid = Number(active.id);
+    const overId = over.id;
+
+    setBoards((prev) => {
+      const cur = prev[scoring];
+      let from: ContainerId | null = null;
+      for (const c of [POOL_ID, ...TIERS] as ContainerId[]) {
+        if (cur[c].includes(activePid)) {
+          from = c;
+          break;
+        }
+      }
+      if (!from) return prev;
+
+      let to: ContainerId | null = null;
+      let overPid = Number(overId);
+      if (overId === POOL_ID || TIERS.includes(overId as TierLetter)) {
+        to = overId as ContainerId;
+        overPid = NaN;
+      } else {
+        for (const c of [POOL_ID, ...TIERS] as ContainerId[]) {
+          if (cur[c].includes(overPid)) {
+            to = c;
+            break;
+          }
+        }
+      }
+      if (!to || to === from) return prev;
+      // Tier↔tier only — never live-move with the pool involved.
+      if (from === POOL_ID || to === POOL_ID) return prev;
+
+      const fromArr = cur[from].filter((p) => p !== activePid);
+      const toArr = [...cur[to]];
+      const insertAt = Number.isNaN(overPid)
+        ? toArr.length
+        : toArr.indexOf(overPid);
+      if (insertAt >= 0) toArr.splice(insertAt, 0, activePid);
+      else toArr.push(activePid);
+      return { ...prev, [scoring]: { ...cur, [from]: fromArr, [to]: toArr } };
+    });
   }
 
   function handleDragEnd(e: DragEndEvent) {
@@ -412,6 +460,7 @@ export default function TierBoardEditor({
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
