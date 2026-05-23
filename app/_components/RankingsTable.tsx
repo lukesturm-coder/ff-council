@@ -78,8 +78,8 @@ type ViewMode = (typeof VIEW_OPTIONS)[number];
 
 /**
  * External platforms displayed as single rank columns, in display order
- * (Sleeper / Yahoo / NFL). ESPN is rendered as its own column AFTER these
- * (last/most de-emphasized), so it's not in this list.
+ * (Sleeper / NFL / Yahoo — Yahoo last). ESPN is rendered as its own column
+ * BEFORE these (right after Vegas), so it's not in this list.
  */
 const EXTRA_PLATFORMS: Array<{
   key: string;
@@ -91,8 +91,8 @@ const EXTRA_PLATFORMS: Array<{
   // Market). Brand-accurate but muted (/80) so the hierarchy reads. Order
   // matches the column spec: Sleeper, Yahoo, NFL (ESPN renders last, separately).
   { key: "sleeper", type: "adp", label: "Sleeper", accent: "text-cyan-400/80" },
-  { key: "yahoo", type: "editorial", label: "Yahoo", accent: "text-purple-400/80" },
   { key: "nfl", type: "editorial", label: "NFL", accent: "text-blue-400/80" },
+  { key: "yahoo", type: "editorial", label: "Yahoo", accent: "text-purple-400/80" },
 ];
 
 const POSITION_STYLES: Record<FantasyPosition, string> = {
@@ -581,6 +581,16 @@ export default function RankingsTable({
                 active={sortKey}
                 onClick={toggleSort}
               />
+              {hasEspn && (
+                <SortHeader
+                  label="ESPN"
+                  sortKey="ESPN"
+                  color="text-red-400/80"
+                  title="ESPN editorial preseason rank"
+                  active={sortKey}
+                  onClick={toggleSort}
+                />
+              )}
               {EXTRA_PLATFORMS.map((pf) => (
                 <SortHeader
                   key={pf.key}
@@ -592,16 +602,6 @@ export default function RankingsTable({
                   onClick={toggleSort}
                 />
               ))}
-              {hasEspn && (
-                <SortHeader
-                  label="ESPN"
-                  sortKey="ESPN"
-                  color="text-red-400/80"
-                  title="ESPN editorial preseason rank"
-                  active={sortKey}
-                  onClick={toggleSort}
-                />
-              )}
               <th className="w-3 sm:w-4" aria-hidden="true" />
             </tr>
           </thead>
@@ -884,6 +884,13 @@ function RankRow({
             {showPoints ? fmtPts(vegasPoints) : fmtRank(vegasRank)}
           </span>
         </td>
+        {hasEspn && (
+          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
+            <span className="text-red-400/80">
+              {showPoints ? fmtPts(espnPoints) : fmtRank(espnRank)}
+            </span>
+          </td>
+        )}
         {(showPoints ? extraPoints : extraRanks).map((r, idx) => {
           const key = EXTRA_PLATFORMS[idx].key;
           return (
@@ -897,13 +904,6 @@ function RankRow({
             </td>
           );
         })}
-        {hasEspn && (
-          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
-            <span className="text-red-400/80">
-              {showPoints ? fmtPts(espnPoints) : fmtRank(espnRank)}
-            </span>
-          </td>
-        )}
         <td aria-hidden="true" />
       </tr>
       {isExpanded && (
