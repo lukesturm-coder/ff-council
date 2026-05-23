@@ -481,6 +481,19 @@ export default function RankingsTable({
     hasMine,
   ]);
 
+  // Lock the table layout so sorting can never reflow columns. Every data
+  // column is a fixed 80px (w-20); the fixed non-data columns sum to ~136px
+  // (chevron 32 + # 40 + Pos 48 + trailing 16) and Player takes the rest at a
+  // 200px floor. `table-fixed` + this min-width means widths come from the
+  // header once and never recalc from cell content. Mobile overflows → scroll.
+  const dataColCount =
+    2 + // Market + Vegas (always present)
+    EXTRA_PLATFORMS.length +
+    (hasCouncil ? 1 : 0) +
+    (hasMine ? 1 : 0) +
+    (hasEspn ? 1 : 0);
+  const minTableWidth = 136 + 200 + dataColCount * 80;
+
   return (
     <div className="space-y-4">
       {/* Controls */}
@@ -513,7 +526,10 @@ export default function RankingsTable({
         ref={scrollRef}
         className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900"
       >
-        <table className="w-full text-sm">
+        <table
+          className="w-full table-fixed text-sm"
+          style={{ minWidth: minTableWidth }}
+        >
           <thead className="border-b border-zinc-800 bg-zinc-900/50 text-left text-sm uppercase tracking-wider text-zinc-500">
             <tr>
               <th className="w-8 py-3 pl-3"></th>
