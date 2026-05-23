@@ -3,10 +3,10 @@
 import { useMemo, useState } from "react";
 import type { TrendingPoint } from "@/lib/trending";
 
-// Inline-SVG multi-line chart (same approach as the player ADP chart). Y axis
-// is rank, inverted so #1 sits at the top. Each series is a player's recent
-// rank trajectory; risers are drawn emerald, fallers rose (color decided by the
-// caller so the side list can show matching swatches).
+// Inline-SVG multi-line chart. Y axis is rank, inverted so #1 sits at the top.
+// A line is "active" when hovered (desktop) or selected (click / from the
+// list). The active line goes bold + full-opacity while the rest dim, and a
+// click bubbles up so the matching player highlights in the side list.
 
 const VIEW_W = 800;
 const VIEW_H = 320;
@@ -27,11 +27,16 @@ export type TrendingSeries = {
 export default function TrendingChart({
   series,
   weeks,
+  selectedId,
+  onSelect,
 }: {
   series: TrendingSeries[];
   weeks: number;
+  selectedId: number | null;
+  onSelect: (playerId: number) => void;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const active = hovered ?? selectedId;
 
   const { yMin, yMax } = useMemo(() => {
     let min = Infinity;
@@ -112,35 +117,44 @@ export default function TrendingChart({
         {series
           .slice()
           .sort((a, b) => {
-            const ah = hovered === a.playerId ? 1 : 0;
-            const bh = hovered === b.playerId ? 1 : 0;
+            const ah = active === a.playerId ? 1 : 0;
+            const bh = active === b.playerId ? 1 : 0;
             return ah - bh;
           })
           .map((s) => {
-            const isHovered = hovered === s.playerId;
-            const dim = hovered != null && !isHovered;
+            const isActive = active === s.playerId;
+            const dim = active != null && !isActive;
             const last = s.points[s.points.length - 1];
             if (!last) return null;
             return (
               <g key={s.playerId}>
+                {/* Fat invisible hit area so thin lines are easy to tap. */}
+                <path
+                  d={pathFor(s.points)}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={16}
+                  onMouseEnter={() => setHovered(s.playerId)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => onSelect(s.playerId)}
+                  style={{ cursor: "pointer" }}
+                />
                 <path
                   d={pathFor(s.points)}
                   fill="none"
                   stroke={s.color}
-                  strokeWidth={isHovered ? 3.5 : 2.5}
-                  strokeOpacity={dim ? 0.18 : 1}
+                  strokeWidth={isActive ? 3.5 : 2.25}
+                  strokeOpacity={dim ? 0.15 : 1}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  onMouseEnter={() => setHovered(s.playerId)}
-                  onMouseLeave={() => setHovered(null)}
-                  style={{ cursor: "pointer" }}
+                  pointerEvents="none"
                 />
                 <circle
                   cx={xFor(last.week)}
                   cy={yFor(last.rank)}
-                  r={isHovered ? 4.5 : 3.5}
+                  r={isActive ? 4.5 : 3}
                   fill={s.color}
-                  fillOpacity={dim ? 0.25 : 1}
+                  fillOpacity={dim ? 0.2 : 1}
                   pointerEvents="none"
                 />
               </g>
