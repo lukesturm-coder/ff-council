@@ -174,6 +174,7 @@ export default async function Header() {
   const subToolsNav: NavItem[] = [...UTILITY_NAV, ...extraTools];
 
   return (
+    <>
     <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60">
       <div className="mx-auto max-w-7xl px-3 pb-2 pt-3 sm:px-6">
         <div className="flex items-center gap-3 sm:gap-4">
@@ -235,9 +236,14 @@ export default async function Header() {
         </div>
       </div>
 
-      {/* Mobile-only fixed bottom tab bar. Auth-gated tools are threaded in
-          via extraTools since the bar is a client component. */}
+      </header>
+
+      {/* Mobile-only fixed bottom tab bar — rendered OUTSIDE <header> on
+          purpose. The header's backdrop-filter establishes a containing block
+          for fixed descendants, so a bar nested inside it anchored its
+          `fixed bottom-0` to the header (landing at the TOP, over the logo).
+          Outside the header, `fixed` is relative to the viewport as intended. */}
       <BottomTabBar extraTools={extraTools} />
-    </header>
+    </>
   );
 }
