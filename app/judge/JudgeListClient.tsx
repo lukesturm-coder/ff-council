@@ -31,8 +31,13 @@ import {
 const VOTED_STORAGE_KEY = "ffc-verdict-voted-scenarios";
 
 export type CourtCase =
-  | { kind: "trade"; created_at: string; data: TradeCardData }
-  | { kind: "verdict"; created_at: string; data: VerdictCardData };
+  | { kind: "trade"; created_at: string; closed: boolean; data: TradeCardData }
+  | {
+      kind: "verdict";
+      created_at: string;
+      closed: boolean;
+      data: VerdictCardData;
+    };
 
 function readVotedSet(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -65,9 +70,17 @@ const VOTE_FILTERS: Array<{ value: VoteFilter; label: string }> = [
   { value: "voted", label: "Voted" },
 ];
 
+type StatusFilter = "all" | "open" | "closed";
+const STATUS_FILTERS: Array<{ value: StatusFilter; label: string }> = [
+  { value: "all", label: "Any" },
+  { value: "open", label: "Open" },
+  { value: "closed", label: "Resolved" },
+];
+
 export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
   const [votedIds, setVotedIds] = useState<Set<string>>(() => new Set());
   const [voteFilter, setVoteFilter] = useState<VoteFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   // A frozen nav snapshot for the open modal: voting can move a card out of the
   // active filter, so we freeze the list + index when a card opens. That keeps
   // "Next" walking a stable sequence (and keeps the just-voted card on screen
@@ -94,13 +107,14 @@ export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
   }
 
   const visibleCases = useMemo(() => {
-    if (voteFilter === "all") return cases;
-    return cases.filter((c) =>
-      voteFilter === "voted"
-        ? votedIds.has(c.data.id)
-        : !votedIds.has(c.data.id),
-    );
-  }, [cases, voteFilter, votedIds]);
+    return cases.filter((c) => {
+      if (statusFilter === "open" && c.closed) return false;
+      if (statusFilter === "closed" && !c.closed) return false;
+      if (voteFilter === "voted" && !votedIds.has(c.data.id)) return false;
+      if (voteFilter === "unvoted" && votedIds.has(c.data.id)) return false;
+      return true;
+    });
+  }, [cases, voteFilter, statusFilter, votedIds]);
 
   function openByCase(c: CourtCase) {
     const idx = visibleCases.findIndex(
@@ -118,32 +132,52 @@ export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
 
   return (
     <>
-      {/* Voted filter */}
-      <div className="mb-3 flex items-center gap-1.5 text-xs">
-        {VOTE_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setVoteFilter(f.value)}
-            className={`rounded-full px-3 py-1 font-medium transition ${
-              voteFilter === f.value
-                ? "bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
-                : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Filters: voted state + open/resolved */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+        <div className="flex items-center gap-1.5">
+          {VOTE_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setVoteFilter(f.value)}
+              className={`rounded-full px-3 py-1 font-medium transition ${
+                voteFilter === f.value
+                  ? "bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
+                  : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5">
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setStatusFilter(f.value)}
+              className={`rounded-full px-3 py-1 font-medium transition ${
+                statusFilter === f.value
+                  ? "bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
+                  : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
         <span className="ml-auto text-zinc-600">{visibleCases.length}</span>
       </div>
 
       {visibleCases.length === 0 ? (
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-8 text-center text-sm text-zinc-400">
-          {voteFilter === "voted"
-            ? "You haven't voted on any of these yet."
-            : voteFilter === "unvoted"
-              ? "You've weighed in on all of these. Nice."
-              : "No cases."}
+          {statusFilter === "closed"
+            ? "No resolved cases match yet."
+            : voteFilter === "voted"
+              ? "You haven't voted on any of these yet."
+              : voteFilter === "unvoted"
+                ? "You've weighed in on all of these. Nice."
+                : "No cases."}
         </div>
       ) : (
         <div className="space-y-3">

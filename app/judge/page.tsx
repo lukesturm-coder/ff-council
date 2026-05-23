@@ -147,7 +147,7 @@ export default async function JudgePage({
   let verdictsQuery = supabase
     .from("verdict_scenarios")
     .select(
-      "id, asker_id, scenario_type, candidates, roster, context, notes, image_url, created_at",
+      "id, asker_id, scenario_type, candidates, roster, context, notes, image_url, created_at, resolved_at",
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -215,6 +215,17 @@ export default async function JudgePage({
     return ctx.scoring === scoringFilter;
   });
 
+  // A case is "closed" once its real outcome is recorded. Verdicts resolve via
+  // verdict_scenarios.resolved_at (migration 014); trades never resolve, so
+  // they're always open.
+  const closedScenarioIds = new Set(
+    filteredScenarios
+      .filter(
+        (s) => (s as { resolved_at?: string | null }).resolved_at != null,
+      )
+      .map((s) => s.id as string),
+  );
+
   const scenarioIds = filteredScenarios.map((s) => s.id as string);
   const tallyByScenario = new Map<
     string,
@@ -270,6 +281,7 @@ export default async function JudgePage({
       (t): CourtCase => ({
         kind: "trade",
         created_at: t.created_at,
+        closed: false,
         data: t,
       }),
     ),
@@ -277,6 +289,7 @@ export default async function JudgePage({
       (v): CourtCase => ({
         kind: "verdict",
         created_at: v.created_at,
+        closed: closedScenarioIds.has(v.id),
         data: v,
       }),
     ),
