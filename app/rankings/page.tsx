@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ScoringSystem } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import { loadRankingProjections } from "@/lib/projections-data";
+import { loadRankingProjections, loadProjectedStats } from "@/lib/projections-data";
 import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
 import RankingsTable, {
   type CouncilConsensusMap,
@@ -123,13 +123,19 @@ export default async function RankingsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [projections, realPlatformRankings, councilConsensus, myRanks] =
-    await Promise.all([
-      loadRankingProjections(),
-      loadPlatformRankings(),
-      loadCouncilConsensus(),
-      user ? loadMyRanks(user.id) : Promise.resolve({} as MyRanksMap),
-    ]);
+  const [
+    projections,
+    realPlatformRankings,
+    councilConsensus,
+    myRanks,
+    projectedStats,
+  ] = await Promise.all([
+    loadRankingProjections(),
+    loadPlatformRankings(),
+    loadCouncilConsensus(),
+    user ? loadMyRanks(user.id) : Promise.resolve({} as MyRanksMap),
+    loadProjectedStats(),
+  ]);
 
   // Real platform data is sparse pre-season. Layer mock Sleeper / NFL / Yahoo
   // ranks on top so the multi-source table stays populated while we wait for
@@ -149,6 +155,7 @@ export default async function RankingsPage() {
           platformRankings={platformRankings}
           councilConsensus={councilConsensus}
           myRanks={myRanks}
+          projectedStats={projectedStats}
         />
 
         <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">

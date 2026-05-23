@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type {
   FantasyPosition,
+  ImpliedStats,
   PlayerProjection,
   ScoringSystem,
 } from "@/lib/types";
@@ -171,11 +172,15 @@ export default function RankingsTable({
   platformRankings,
   councilConsensus,
   myRanks = {},
+  projectedStats = {},
 }: {
   projections: PlayerProjection[];
   platformRankings: PlatformRankingsMap;
   councilConsensus: CouncilConsensusMap;
   myRanks?: MyRanksMap;
+  /** Mock-derived projected stat means by playerId — fallback for the
+   *  expand-on-click stat line when a player has no live Vegas markets. */
+  projectedStats?: Record<number, ImpliedStats>;
 }) {
   const [scoring, setScoring] = useState<ScoringSystem>("PPR");
   const [position, setPosition] = useState<PositionFilter>("ALL");
@@ -641,6 +646,7 @@ export default function RankingsTable({
                   vegasPoints={row.vegasPoints}
                   tierBreak={tierBreak}
                   tierBreakColor={tierBreakColor}
+                  statLine={projectedStats[row.player.playerId]}
                 />
               );
             })}
@@ -731,6 +737,39 @@ function SortHeader({
   );
 }
 
+type StatField = { key: keyof ImpliedStats; label: string; decimals: number };
+
+// Which projected stat means to surface per position in the expand view.
+const PROJECTED_FIELDS: Partial<Record<FantasyPosition, StatField[]>> = {
+  QB: [
+    { key: "passingYards", label: "Pass Yds", decimals: 0 },
+    { key: "passingTouchdowns", label: "Pass TD", decimals: 1 },
+    { key: "interceptions", label: "INT", decimals: 1 },
+    { key: "rushingYards", label: "Rush Yds", decimals: 0 },
+  ],
+  RB: [
+    { key: "rushingYards", label: "Rush Yds", decimals: 0 },
+    { key: "rushingTouchdowns", label: "Rush TD", decimals: 1 },
+    { key: "receptions", label: "Rec", decimals: 0 },
+    { key: "receivingYards", label: "Rec Yds", decimals: 0 },
+  ],
+  WR: [
+    { key: "receptions", label: "Rec", decimals: 0 },
+    { key: "receivingYards", label: "Rec Yds", decimals: 0 },
+    { key: "receivingTouchdowns", label: "Rec TD", decimals: 1 },
+  ],
+  TE: [
+    { key: "receptions", label: "Rec", decimals: 0 },
+    { key: "receivingYards", label: "Rec Yds", decimals: 0 },
+    { key: "receivingTouchdowns", label: "Rec TD", decimals: 1 },
+  ],
+};
+
+function fmtStatValue(v: number | undefined, decimals: number): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return decimals === 0 ? Math.round(v).toLocaleString() : v.toFixed(decimals);
+}
+
 function RankRow({
   player,
   rank,
@@ -755,6 +794,7 @@ function RankRow({
   vegasPoints,
   tierBreak,
   tierBreakColor,
+  statLine,
 }: {
   player: PlayerProjection;
   rank: number;
@@ -782,10 +822,21 @@ function RankRow({
   // brand border color. false everywhere on the ALL view (tiers gated off).
   tierBreak: boolean;
   tierBreakColor: string;
+  // Mock-derived projected stat means — fallback when the player has no live
+  // Vegas implied stats yet (offseason). Real stats take precedence.
+  statLine?: ImpliedStats;
 }) {
   const fpts = player.fantasyPoints[scoring];
   const vbd = player.vbd[scoring];
   const showPoints = view === "Points";
+
+  // Projected stat line for the expand view — real Vegas implied stats win,
+  // mock projections fill the gaps so the line is never empty.
+  const projFields = PROJECTED_FIELDS[player.position] ?? [];
+  const projLine = projFields.map((f) => ({
+    label: f.label,
+    value: fmtStatValue(player.impliedStats[f.key] ?? statLine?.[f.key], f.decimals),
+  }));
   // Format points with one decimal, no padding. Rank stays integer.
   const fmtPts = (v: number | null) => (v != null ? v.toFixed(1) : "—");
   const fmtRank = (v: number | null) => (v != null ? v.toFixed(0) : "—");
@@ -918,6 +969,28 @@ function RankRow({
             }
             className="px-3 py-4 sm:px-12"
           >
+            {projLine.length > 0 && (
+              <div className="mb-4">
+                <div className="mb-2 text-xs uppercase tracking-wider text-zinc-500">
+                  Projected line · season
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {projLine.map((s) => (
+                    <div
+                      key={s.label}
+                      className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2"
+                    >
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-500">
+                        {s.label}
+                      </div>
+                      <div className="font-mono text-sm tabular-nums text-zinc-100">
+                        {s.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
               <div className="text-xs uppercase tracking-wider text-zinc-500">
                 Markets feeding this projection

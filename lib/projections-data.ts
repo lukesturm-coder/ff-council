@@ -4,7 +4,7 @@ import {
   projectionsFromFutures,
   type PlayerRosterEntry,
 } from "@/lib/projections";
-import type { FuturesResponse, PlayerProjection } from "@/lib/types";
+import type { FuturesResponse, ImpliedStats, PlayerProjection } from "@/lib/types";
 
 /**
  * Canonical ranking projections — every roster player, with their Vegas-derived
@@ -67,4 +67,27 @@ export async function loadRankingProjections(): Promise<PlayerProjection[]> {
       vbd: { PPR: 0, Half: 0, Standard: 0 },
     };
   });
+}
+
+/**
+ * Projected per-player stat means (receptions, yards, TDs, …) keyed by the same
+ * mock PlayerID the rankings table uses. Built from the full mock futures set so
+ * every player has a projected stat line for the expand-on-click view, even when
+ * the sparse offseason Vegas markets don't yet cover them. Real Vegas implied
+ * stats (on the player's own projection) take precedence in the UI; this is the
+ * fallback so the line is never empty.
+ */
+export async function loadProjectedStats(): Promise<Record<number, ImpliedStats>> {
+  const dataDir = path.join(process.cwd(), "data");
+  const [futuresRaw, rosterRaw] = await Promise.all([
+    fs.readFile(path.join(dataDir, "futures-mock.json"), "utf8"),
+    fs.readFile(path.join(dataDir, "players-mock.json"), "utf8"),
+  ]);
+  const futures: FuturesResponse = JSON.parse(futuresRaw);
+  const roster: PlayerRosterEntry[] = JSON.parse(rosterRaw);
+  const out: Record<number, ImpliedStats> = {};
+  for (const p of projectionsFromFutures(futures, roster)) {
+    out[p.playerId] = p.impliedStats;
+  }
+  return out;
 }
