@@ -77,7 +77,14 @@ async function fetchPlayers(season: number): Promise<EspnPlayer[]> {
   const res = await fetch(url, {
     headers: {
       Accept: "application/json",
-      "x-fantasy-filter": JSON.stringify({ players: { limit: 1500 } }),
+      // ESPN rejects a bare limit ("Limit request must be accompanied by a
+      // sort"), so page by percent-owned descending.
+      "x-fantasy-filter": JSON.stringify({
+        players: {
+          limit: 1500,
+          sortPercOwned: { sortPriority: 4, sortAsc: false },
+        },
+      }),
       "User-Agent":
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
     },
