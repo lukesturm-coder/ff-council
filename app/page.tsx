@@ -13,6 +13,8 @@ import {
 import HomeHero, { loadHeroStats } from "./_components/HomeHero";
 import ActivityTicker from "./_components/ActivityTicker";
 import CouncilActivity from "./_components/CouncilActivity";
+import TrendingBoard from "./_components/TrendingBoard";
+import HotCalls from "./_components/HotCalls";
 
 export const metadata: Metadata = {
   title: "FF Council — Crowdsourced fantasy verdicts",
@@ -109,7 +111,16 @@ export default async function Page() {
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
         <HomeHero stats={heroStats} />
 
-        <section aria-label="Features" className="mt-2">
+        {/* Polymarket-style hero: featured trending board + hot-calls rail. */}
+        <section
+          aria-label="Trending"
+          className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+        >
+          <TrendingBoard />
+          <HotCalls />
+        </section>
+
+        <section aria-label="Features" className="mt-6">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {TILES.map((tile) => (
               <FeatureTile key={tile.href} tile={tile} />
