@@ -16,7 +16,6 @@ type SortKey =
   | "VEGAS"
   | "COUNCIL"
   | "ESPN"
-  | "FP"
   | "SLEEPER"
   | "NFL"
   | "YAHOO"
@@ -78,9 +77,9 @@ const VIEW_OPTIONS = ["Ranks", "Points"] as const;
 type ViewMode = (typeof VIEW_OPTIONS)[number];
 
 /**
- * Platforms displayed as a single rank column (Sleeper / NFL / Yahoo).
- * ESPN and FantasyPros are rendered explicitly above because ESPN has two
- * sub-columns (editorial + ADP) and FP has the "consensus" framing.
+ * External platforms displayed as single rank columns, in display order
+ * (Sleeper / Yahoo / NFL). ESPN is rendered as its own column AFTER these
+ * (last/most de-emphasized), so it's not in this list.
  */
 const EXTRA_PLATFORMS: Array<{
   key: string;
@@ -88,11 +87,12 @@ const EXTRA_PLATFORMS: Array<{
   label: string;
   accent: string;
 }> = [
-  // Brand-accurate colors (closest Tailwind shades to each platform's logo).
-  // All blues are distinct shades so columns don't visually merge.
-  { key: "sleeper", type: "adp", label: "Sleeper", accent: "text-cyan-400" },
-  { key: "nfl", type: "editorial", label: "NFL", accent: "text-blue-400" },
-  { key: "yahoo", type: "editorial", label: "Yahoo", accent: "text-purple-400" },
+  // External sources, de-emphasized vs the house columns (Council / Mine /
+  // Market). Brand-accurate but muted (/80) so the hierarchy reads. Order
+  // matches the column spec: Sleeper, Yahoo, NFL (ESPN renders last, separately).
+  { key: "sleeper", type: "adp", label: "Sleeper", accent: "text-cyan-400/80" },
+  { key: "yahoo", type: "editorial", label: "Yahoo", accent: "text-purple-400/80" },
+  { key: "nfl", type: "editorial", label: "NFL", accent: "text-blue-400/80" },
 ];
 
 const POSITION_STYLES: Record<FantasyPosition, string> = {
@@ -103,7 +103,7 @@ const POSITION_STYLES: Record<FantasyPosition, string> = {
 };
 
 // Sources that publish projected points and therefore support point-tiers.
-type TierSource = "avg" | "vegas" | "espn" | "fp" | "sleeper" | "nfl";
+type TierSource = "avg" | "vegas" | "espn" | "sleeper" | "nfl";
 
 // Full-width tier-divider border color per source — each matches that column's
 // brand accent so the line is attributable to the column you're sorting by.
@@ -111,7 +111,6 @@ const TIER_LINE_COLOR: Record<TierSource, string> = {
   avg: "border-zinc-300/70",
   vegas: "border-amber-400/70",
   espn: "border-red-400/70",
-  fp: "border-teal-400/70",
   sleeper: "border-cyan-400/70",
   nfl: "border-blue-400/70",
 };
@@ -196,7 +195,11 @@ export default function RankingsTable({
   // AVG (the consensus across every source) is the default sort — it's the
   // integrated verdict that this multi-source comparison page is for. Single
   // sources stay clickable for users who want to see one perspective.
-  const initialSortKey: SortKey = "AVG";
+  // Council is the primary FF Council market authority, so it's the default
+  // sort when present. Falls back to the Market (overall consensus) column
+  // before any council votes exist.
+  const initialSortKey: SortKey =
+    Object.keys(councilConsensus).length > 0 ? "COUNCIL" : "AVG";
   const [sortKey, setSortKey] = useState<SortKey>(initialSortKey);
 
   function toggleSort(key: SortKey) {
@@ -210,11 +213,6 @@ export default function RankingsTable({
       Object.values(platformRankings).some(
         (p) => p.espn?.editorial || p.espn?.adp,
       ),
-    [platformRankings],
-  );
-
-  const hasFp = useMemo(
-    () => Object.values(platformRankings).some((p) => p.fantasypros?.adp),
     [platformRankings],
   );
 
@@ -256,8 +254,6 @@ export default function RankingsTable({
       mineRank: number | null;
       espnRank: number | null;
       espnPoints: number | null;
-      fpRank: number | null;
-      fpPoints: number | null;
       extraRanks: Array<number | null>;
       extraPoints: Array<number | null>;
       avgRank: number | null;
@@ -270,8 +266,6 @@ export default function RankingsTable({
       mine: number | null;
       espn: number | null;
       espnPts: number | null;
-      fp: number | null;
-      fpPts: number | null;
       extras: Array<number | null>;
       extraPts: Array<number | null>;
     };
@@ -289,12 +283,6 @@ export default function RankingsTable({
           : null,
         espnPts: hasEspn
           ? lookupPlatformPoints(platformRankings, p.playerId, "espn", "editorial", scoring)
-          : null,
-        fp: hasFp
-          ? lookupPlatformRank(platformRankings, p.playerId, "fantasypros", "adp", scoring)
-          : null,
-        fpPts: hasFp
-          ? lookupPlatformPoints(platformRankings, p.playerId, "fantasypros", "adp", scoring)
           : null,
         extras: EXTRA_PLATFORMS.map((pf) =>
           lookupPlatformRank(platformRankings, p.playerId, pf.key, pf.type, scoring),
@@ -326,7 +314,6 @@ export default function RankingsTable({
     const councilRerank = withinFilter ? rerank((s) => s.council) : null;
     const mineRerank = withinFilter ? rerank((s) => s.mine) : null;
     const espnRerank = withinFilter ? rerank((s) => s.espn) : null;
-    const fpRerank = withinFilter ? rerank((s) => s.fp) : null;
     const extraReranks = withinFilter
       ? EXTRA_PLATFORMS.map((_, idx) => rerank((s) => s.extras[idx]))
       : null;
@@ -342,9 +329,6 @@ export default function RankingsTable({
       const displayEspn = withinFilter
         ? espnRerank!.get(p.playerId) ?? null
         : stored.espn;
-      const displayFp = withinFilter
-        ? fpRerank!.get(p.playerId) ?? null
-        : stored.fp;
       const displayExtras = withinFilter
         ? stored.extras.map((_, idx) => extraReranks![idx].get(p.playerId) ?? null)
         : stored.extras;
@@ -356,7 +340,6 @@ export default function RankingsTable({
         vegasRankById.get(p.playerId) ?? null,
         displayCouncil,
         displayEspn,
-        displayFp,
         ...displayExtras,
       ].filter((r): r is number => r != null);
       const avgRank =
@@ -370,7 +353,6 @@ export default function RankingsTable({
       const pointsForAvg = [
         vegasPoints,
         stored.espnPts,
-        stored.fpPts,
         ...stored.extraPts,
       ].filter((v): v is number => v != null && v > 0);
       const avgPoints =
@@ -386,8 +368,6 @@ export default function RankingsTable({
         mineRank: displayMine,
         espnRank: displayEspn,
         espnPoints: stored.espnPts,
-        fpRank: displayFp,
-        fpPoints: stored.fpPts,
         extraRanks: displayExtras,
         extraPoints: stored.extraPts,
         avgRank,
@@ -406,7 +386,6 @@ export default function RankingsTable({
         else if (sortKey === "COUNCIL") v = null; // Council has no points
         else if (sortKey === "MINE") v = null; // Mine is a rank, no points
         else if (sortKey === "ESPN") v = row.espnPoints;
-        else if (sortKey === "FP") v = row.fpPoints;
         else if (sortKey === "AVG") v = row.avgPoints;
         else {
           const idx = EXTRA_PLATFORMS.findIndex(
@@ -420,7 +399,6 @@ export default function RankingsTable({
       else if (sortKey === "COUNCIL") v = row.councilAvgRank;
       else if (sortKey === "MINE") v = row.mineRank;
       else if (sortKey === "ESPN") v = row.espnRank;
-      else if (sortKey === "FP") v = row.fpRank;
       else if (sortKey === "AVG") v = row.avgRank;
       else {
         const idx = EXTRA_PLATFORMS.findIndex(
@@ -454,18 +432,15 @@ export default function RankingsTable({
           ? "vegas"
           : sortKey === "ESPN"
             ? "espn"
-            : sortKey === "FP"
-              ? "fp"
-              : sortKey === "SLEEPER"
-                ? "sleeper"
-                : sortKey === "NFL"
-                  ? "nfl"
-                  : null; // COUNCIL / YAHOO have no points → no tiers
+            : sortKey === "SLEEPER"
+              ? "sleeper"
+              : sortKey === "NFL"
+                ? "nfl"
+                : null; // COUNCIL / MINE / YAHOO have no points → no tiers
     const pointsGetter: Record<TierSource, (r: RowData) => number | null> = {
       avg: (r) => r.avgPoints,
       vegas: (r) => r.vegasPoints,
       espn: (r) => r.espnPoints,
-      fp: (r) => r.fpPoints,
       sleeper: (r) => (sleeperIdx >= 0 ? r.extraPoints[sleeperIdx] : null),
       nfl: (r) => (nflIdx >= 0 ? r.extraPoints[nflIdx] : null),
     };
@@ -502,7 +477,6 @@ export default function RankingsTable({
     councilConsensus,
     myRanks,
     hasEspn,
-    hasFp,
     hasCouncil,
     hasMine,
   ]);
@@ -546,66 +520,51 @@ export default function RankingsTable({
               <th className="w-10 py-3 pr-2 text-right">#</th>
               <th className="sticky left-0 z-20 min-w-[140px] bg-zinc-900 py-3 pl-2 whitespace-nowrap sm:min-w-[200px] sm:pl-4">Player</th>
               <th className="w-12 py-3 text-center">Pos</th>
-              <SortHeader
-                label="AVG"
-                sortKey="AVG"
-                color="text-zinc-100"
-                title={
-                  view === "Points"
-                    ? "Average projected points across every source that publishes a projection (Vegas, ESPN, FP, Sleeper, NFL). Higher = better. Default sort."
-                    : "Average rank across every available source — the consensus across Council, Vegas, ESPN, FP, Sleeper, NFL, Yahoo. Default sort."
-                }
-                active={sortKey}
-                onClick={toggleSort}
-              />
-              {hasMine && (
-                <SortHeader
-                  label="Mine"
-                  sortKey="MINE"
-                  color="text-fuchsia-400"
-                  title="Your personal ranking (from My Rankings). Not counted in the AVG consensus."
-                  active={sortKey}
-                  onClick={toggleSort}
-                />
-              )}
+              {/* Council — primary FF Council authority. Emphasized column:
+                  bold + faint emerald wash. Default sort. */}
               {hasCouncil && (
                 <SortHeader
                   label="Council"
                   sortKey="COUNCIL"
-                  color="text-emerald-400"
-                  title="Council Consensus — average rank across approved council members' current submissions"
+                  color="text-emerald-200 font-bold"
+                  extraClass="bg-emerald-500/[0.07]"
+                  title="Council Consensus — the primary FF Council market. Average rank across approved members' current submissions. Default sort."
                   active={sortKey}
                   onClick={toggleSort}
                 />
               )}
+              {/* Mine — your personal identity layer, neon-green accent. */}
+              {hasMine && (
+                <SortHeader
+                  label="Mine"
+                  sortKey="MINE"
+                  color="text-emerald-400 font-semibold"
+                  title="Your personal ranking (from My Rankings). Not counted in the Market consensus."
+                  active={sortKey}
+                  onClick={toggleSort}
+                />
+              )}
+              {/* Market — overall consensus across every source. */}
+              <SortHeader
+                label="Market"
+                sortKey="AVG"
+                color="text-zinc-100 font-semibold"
+                title={
+                  view === "Points"
+                    ? "Market — average projected points across every source that publishes one (Vegas, ESPN, Sleeper, NFL). Higher = better."
+                    : "Market — overall consensus rank across every source (Council, Vegas, Sleeper, Yahoo, NFL, ESPN)."
+                }
+                active={sortKey}
+                onClick={toggleSort}
+              />
               <SortHeader
                 label="Vegas"
                 sortKey="VEGAS"
-                color="text-amber-400"
+                color="text-amber-400/90"
                 title="FF Council Vegas-derived rank"
                 active={sortKey}
                 onClick={toggleSort}
               />
-              {hasEspn && (
-                <SortHeader
-                  label="ESPN"
-                  sortKey="ESPN"
-                  color="text-red-400"
-                  title="ESPN editorial preseason rank"
-                  active={sortKey}
-                  onClick={toggleSort}
-                />
-              )}
-              {hasFp && (
-                <SortHeader
-                  label="FP"
-                  sortKey="FP"
-                  color="text-teal-400"
-                  title="FantasyPros consensus ADP — aggregated across multiple platforms"
-                  active={sortKey}
-                  onClick={toggleSort}
-                />
-              )}
               {EXTRA_PLATFORMS.map((pf) => (
                 <SortHeader
                   key={pf.key}
@@ -617,6 +576,16 @@ export default function RankingsTable({
                   onClick={toggleSort}
                 />
               ))}
+              {hasEspn && (
+                <SortHeader
+                  label="ESPN"
+                  sortKey="ESPN"
+                  color="text-red-400/80"
+                  title="ESPN editorial preseason rank"
+                  active={sortKey}
+                  onClick={toggleSort}
+                />
+              )}
               <th className="w-3 sm:w-4" aria-hidden="true" />
             </tr>
           </thead>
@@ -643,9 +612,6 @@ export default function RankingsTable({
                   hasEspn={hasEspn}
                   espnRank={row.espnRank}
                   espnPoints={row.espnPoints}
-                  hasFp={hasFp}
-                  fpRank={row.fpRank}
-                  fpPoints={row.fpPoints}
                   hasCouncil={hasCouncil}
                   councilAvgRank={row.councilAvgRank}
                   councilRankerCount={row.councilRankerCount}
@@ -668,11 +634,12 @@ export default function RankingsTable({
 
       <p className="text-xs text-zinc-500">
         <span className="text-zinc-300">#</span> is the player&apos;s rank in
-        the current sort — average across all sources by default. Other columns show
-        each source&apos;s {view === "Points" ? "projected fantasy points" : "rank"}
-        {" "}for comparison; sort by any column to find disagreements.
+        the current sort — the <span className="text-emerald-300">Council</span>{" "}
+        market by default. <span className="text-emerald-400">Mine</span> is your
+        personal ranking; <span className="text-zinc-300">Market</span> is the
+        overall consensus. Sort by any column to find disagreements.
         {view === "Points"
-          ? " Council and Yahoo don't publish point projections — those cells read —."
+          ? " Council, Mine and Yahoo don't publish point projections — those cells read —."
           : " Sleeper / NFL / Yahoo gaps are filled with mock numbers until their fetches reach full coverage."}
       </p>
     </div>
@@ -759,9 +726,6 @@ function RankRow({
   hasEspn,
   espnRank,
   espnPoints,
-  hasFp,
-  fpRank,
-  fpPoints,
   hasCouncil,
   councilAvgRank,
   councilRankerCount,
@@ -786,9 +750,6 @@ function RankRow({
   hasEspn: boolean;
   espnRank: number | null;
   espnPoints: number | null;
-  hasFp: boolean;
-  fpRank: number | null;
-  fpPoints: number | null;
   hasCouncil: boolean;
   councilAvgRank: number | null;
   councilRankerCount: number;
@@ -849,9 +810,46 @@ function RankRow({
             {player.position}
           </span>
         </td>
-        {/* AVG is the leftmost data column — the consensus across every
-            source, sorted by default. Single-source columns follow. In Points
-            mode each cell shows the source's projected season FPts. */}
+        {/* Column hierarchy: Council (primary authority) → Mine (you) →
+            Market (consensus) → external sources → ESPN. Council wears a faint
+            emerald wash + bold bright text so it reads as the core market. */}
+        {hasCouncil && (
+          <td
+            className="min-w-[5rem] bg-emerald-500/[0.05] py-3 text-center font-mono text-sm font-semibold tabular-nums"
+            title={
+              showPoints
+                ? "Council is a rank, not a projection — no points to show"
+                : councilRankerCount
+                  ? `${councilRankerCount} ranker${councilRankerCount === 1 ? "" : "s"}`
+                  : "No council ranking"
+            }
+          >
+            <span className="text-emerald-100">
+              {showPoints
+                ? "—"
+                : councilAvgRank != null
+                  ? Number.isInteger(councilAvgRank)
+                    ? councilAvgRank.toFixed(0)
+                    : councilAvgRank.toFixed(1)
+                  : "—"}
+            </span>
+          </td>
+        )}
+        {hasMine && (
+          <td
+            className="min-w-[5rem] py-3 text-center font-mono text-sm font-medium tabular-nums"
+            title={
+              showPoints
+                ? "Your ranking is a rank, not a projection — no points to show"
+                : "Your personal ranking"
+            }
+          >
+            <span className="text-emerald-400">
+              {showPoints ? "—" : fmtRank(mineRank)}
+            </span>
+          </td>
+        )}
+        {/* Market — overall consensus. Neutral but important. */}
         <td className="min-w-[5rem] py-3 text-center font-mono text-sm font-semibold tabular-nums">
           {showPoints ? (
             avgPoints != null ? (
@@ -865,61 +863,11 @@ function RankRow({
             <span className="text-zinc-600">—</span>
           )}
         </td>
-        {hasMine && (
-          <td
-            className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
-            title={
-              showPoints
-                ? "Your ranking is a rank, not a projection — no points to show"
-                : "Your personal ranking"
-            }
-          >
-            <span className="text-fuchsia-400">
-              {showPoints ? "—" : fmtRank(mineRank)}
-            </span>
-          </td>
-        )}
-        {hasCouncil && (
-          <td
-            className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
-            title={
-              showPoints
-                ? "Council is a rank, not a projection — no points to show"
-                : councilRankerCount
-                  ? `${councilRankerCount} ranker${councilRankerCount === 1 ? "" : "s"}`
-                  : "No council ranking"
-            }
-          >
-            <span className="text-emerald-400">
-              {showPoints
-                ? "—"
-                : councilAvgRank != null
-                  ? Number.isInteger(councilAvgRank)
-                    ? councilAvgRank.toFixed(0)
-                    : councilAvgRank.toFixed(1)
-                  : "—"}
-            </span>
-          </td>
-        )}
         <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
-          <span className="text-amber-400">
+          <span className="text-amber-400/90">
             {showPoints ? fmtPts(vegasPoints) : fmtRank(vegasRank)}
           </span>
         </td>
-        {hasEspn && (
-          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
-            <span className="text-red-400">
-              {showPoints ? fmtPts(espnPoints) : fmtRank(espnRank)}
-            </span>
-          </td>
-        )}
-        {hasFp && (
-          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
-            <span className="text-teal-400">
-              {showPoints ? fmtPts(fpPoints) : fmtRank(fpRank)}
-            </span>
-          </td>
-        )}
         {(showPoints ? extraPoints : extraRanks).map((r, idx) => {
           const key = EXTRA_PLATFORMS[idx].key;
           return (
@@ -933,6 +881,13 @@ function RankRow({
             </td>
           );
         })}
+        {hasEspn && (
+          <td className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums">
+            <span className="text-red-400/80">
+              {showPoints ? fmtPts(espnPoints) : fmtRank(espnRank)}
+            </span>
+          </td>
+        )}
         <td aria-hidden="true" />
       </tr>
       {isExpanded && (
@@ -943,7 +898,6 @@ function RankRow({
               (hasEspn ? 1 : 0) +
               (hasCouncil ? 1 : 0) +
               (hasMine ? 1 : 0) +
-              (hasFp ? 1 : 0) +
               EXTRA_PLATFORMS.length
             }
             className="px-3 py-4 sm:px-12"

@@ -21,7 +21,7 @@ import RankingsTable, {
 export const metadata: Metadata = {
   title: "Rankings · FF Council",
   description:
-    "Council-derived fantasy football rankings with Vegas, ESPN, and FantasyPros side by side.",
+    "Council-derived fantasy football rankings — Council, your own, Vegas, and platforms side by side.",
 };
 
 /**
@@ -203,9 +203,10 @@ export default async function RankingsPage() {
       user ? loadMyRanks(user.id) : Promise.resolve({} as MyRanksMap),
     ]);
 
-  // Real platforms only have ESPN + FantasyPros so far. Layer mock Sleeper /
-  // NFL / Yahoo ranks on top so we can design the multi-source table
-  // UX while we wait for those platforms to publish 2026 preseason data.
+  // Real platform data is sparse pre-season. Layer mock Sleeper / NFL / Yahoo
+  // ranks on top so the multi-source table stays populated while we wait for
+  // those platforms to publish 2026 preseason data. (FantasyPros is no longer
+  // surfaced as a column.)
   const platformRankings = withMockPlatformRankings(realPlatformRankings, projections);
 
   const hasEspn = Object.values(platformRankings).some((p) => p.espn);
