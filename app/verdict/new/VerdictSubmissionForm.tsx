@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
-import { ImagePlus, Loader2, Plus, Send, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Send, X } from "lucide-react";
 import type { FantasyPosition } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
 import { submitVerdict } from "../actions";
 import type { VerdictScenarioType } from "../types";
+import TradeSubmissionForm from "../../trades/new/TradeSubmissionForm";
 
 export type PickablePlayer = {
   player_id: number;
@@ -15,10 +15,15 @@ export type PickablePlayer = {
   vegasFptsPPR: number;
 };
 
-const SCENARIO_OPTIONS = [
-  { value: "draft", label: "Draft" },
-  { value: "start_sit", label: "Start / Sit" },
-] as const;
+// The big "what kind of call?" picker. Start/Sit + Draft post a verdict
+// scenario; Trade posts a trade for council review (reuses the Trade Court
+// submission form). Trade Court (/trades/new) still works standalone too.
+type CallType = VerdictScenarioType | "trade";
+const CALL_TYPES: Array<{ value: CallType; label: string; sub: string }> = [
+  { value: "start_sit", label: "Start / Sit", sub: "Who do I start?" },
+  { value: "draft", label: "Draft", sub: "Who do I draft?" },
+  { value: "trade", label: "Trade", sub: "Is this deal fair?" },
+];
 
 const SCORING_OPTIONS = [
   { value: "PPR", label: "PPR" },
@@ -67,7 +72,7 @@ export default function VerdictSubmissionForm({
   initialScenarioType?: VerdictScenarioType;
 }) {
   const [scenarioType, setScenarioType] =
-    useState<VerdictScenarioType>(initialScenarioType);
+    useState<CallType>(initialScenarioType);
 
   // Context (mode-dependent)
   const [scoring, setScoring] = useState<string>("PPR");
@@ -82,43 +87,6 @@ export default function VerdictSubmissionForm({
   const [rosterIds, setRosterIds] = useState<number[]>([]);
 
   const [notes, setNotes] = useState("");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [imageUploading, startImageUpload] = useTransition();
-  const [imageError, setImageError] = useState<string | null>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setImageError("Image too large (5MB max).");
-      e.target.value = "";
-      return;
-    }
-    setImageError(null);
-    startImageUpload(async () => {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-      const path = `${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage
-        .from("verdict-images")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (error) {
-        setImageError(error.message);
-        return;
-      }
-      const { data } = supabase.storage
-        .from("verdict-images")
-        .getPublicUrl(path);
-      setImageUrl(data.publicUrl);
-    });
-    e.target.value = "";
-  }
-
-  function clearImage() {
-    setImageUrl(null);
-    setImageError(null);
-  }
 
   const playerById = useMemo(() => {
     const m = new Map<number, PickablePlayer>();
@@ -185,79 +153,45 @@ export default function VerdictSubmissionForm({
   const canSubmit = candidateCount >= 2 && candidateCount <= MAX_CANDIDATES;
 
   return (
-    <form action={submitVerdict} className="space-y-6">
-      {/* Optional screenshot — the "wyd here" anchor. */}
-      <fieldset className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
-        <legend className="px-2 text-xs uppercase tracking-wider text-zinc-500">
-          Screenshot (optional)
-        </legend>
-
-        {imageUrl ? (
-          <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageUrl}
-              alt="Scenario screenshot"
-              className="w-full rounded-md border border-zinc-800 object-contain"
-            />
-            <button
-              type="button"
-              onClick={clearImage}
-              className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-zinc-900/80 px-2 py-1 text-xs text-zinc-200 ring-1 ring-zinc-700 backdrop-blur hover:bg-zinc-800"
-            >
-              <X className="h-3.5 w-3.5" />
-              Remove
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => imageInputRef.current?.click()}
-            disabled={imageUploading}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-zinc-700 bg-zinc-950 px-4 py-6 text-sm text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {imageUploading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Uploading…
-              </>
-            ) : (
-              <>
-                <ImagePlus className="h-4 w-4" />
-                Add screenshot
-              </>
-            )}
-          </button>
-        )}
-
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/gif,image/webp"
-          onChange={handleImageChange}
-          className="hidden"
-        />
-        {imageError && (
-          <p className="text-xs text-rose-300">{imageError}</p>
-        )}
-        <p className="text-xs text-zinc-600">
-          PNG / JPG / GIF / WebP up to 5MB. Helps the council see exactly
-          what you&apos;re looking at.
-        </p>
-      </fieldset>
-
-      {/* Mode toggle */}
+    <div className="space-y-6">
+      {/* What kind of call? — big top-level picker, OUTSIDE the forms so we can
+          swap between the verdict form and the trade form (no nested forms). */}
       <fieldset className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
         <legend className="px-2 text-xs uppercase tracking-wider text-zinc-500">
           What kind of call?
         </legend>
-        <RadioGroup
-          name="scenario_type_visible"
-          value={scenarioType}
-          options={SCENARIO_OPTIONS}
-          onChange={(v) => setScenarioType(v)}
-        />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {CALL_TYPES.map((t) => {
+            const active = scenarioType === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setScenarioType(t.value)}
+                className={`flex flex-col items-start gap-0.5 rounded-xl border p-4 text-left transition sm:p-5 ${
+                  active
+                    ? "border-emerald-500/60 bg-emerald-500/10 ring-1 ring-inset ring-emerald-500/40"
+                    : "border-zinc-800 bg-zinc-950 hover:border-zinc-600"
+                }`}
+              >
+                <span
+                  className={`text-base font-bold sm:text-lg ${
+                    active ? "text-emerald-200" : "text-zinc-100"
+                  }`}
+                >
+                  {t.label}
+                </span>
+                <span className="text-xs text-zinc-500">{t.sub}</span>
+              </button>
+            );
+          })}
+        </div>
       </fieldset>
+
+      {scenarioType === "trade" ? (
+        <TradeSubmissionForm players={players} prefillA={[]} prefillB={[]} />
+      ) : (
+        <form action={submitVerdict} className="space-y-6">
 
       {/* Context */}
       <fieldset className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
@@ -455,7 +389,7 @@ export default function VerdictSubmissionForm({
       />
       <input type="hidden" name="context" value={JSON.stringify(context)} />
       <input type="hidden" name="notes" value={notes} />
-      <input type="hidden" name="image_url" value={imageUrl ?? ""} />
+      <input type="hidden" name="image_url" value="" />
 
       <div className="flex items-center justify-end gap-3">
         <p className="text-xs text-zinc-500">
@@ -472,7 +406,9 @@ export default function VerdictSubmissionForm({
           Submit for community vote
         </button>
       </div>
-    </form>
+        </form>
+      )}
+    </div>
   );
 }
 
