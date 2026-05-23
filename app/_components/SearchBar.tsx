@@ -63,7 +63,14 @@ function bestScore(needle: string, ...fields: string[]): number | null {
   return best;
 }
 
-export default function SearchBar({ index }: { index: SearchIndex }) {
+export default function SearchBar({
+  index,
+  prominent = false,
+}: {
+  index: SearchIndex;
+  // prominent = wide, taller, flex-fill bar (Polymarket-style toolbar search).
+  prominent?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -234,7 +241,11 @@ export default function SearchBar({ index }: { index: SearchIndex }) {
         type="button"
         onClick={openModal}
         aria-label="Open search"
-        className="hidden h-9 w-56 items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/70 px-2.5 text-left text-sm text-zinc-500 transition hover:border-zinc-700 hover:text-zinc-300 sm:flex lg:w-72"
+        className={
+          prominent
+            ? "hidden h-10 w-full items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900/70 px-3.5 text-left text-sm text-zinc-500 transition hover:border-zinc-700 hover:text-zinc-300 sm:flex"
+            : "hidden h-9 w-56 items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/70 px-2.5 text-left text-sm text-zinc-500 transition hover:border-zinc-700 hover:text-zinc-300 sm:flex lg:w-72"
+        }
       >
         <Search className="h-4 w-4 shrink-0" />
         <span className="flex-1 truncate">Search players, trades, verdicts…</span>

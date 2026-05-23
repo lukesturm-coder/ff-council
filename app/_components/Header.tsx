@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TrendingUp } from "lucide-react";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createClient } from "@/lib/supabase/server";
@@ -177,23 +178,23 @@ export default async function Header() {
     <>
     <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60">
       <div className="mx-auto max-w-7xl px-3 pb-2 pt-3 sm:px-6">
-        <div className="flex items-center gap-3 sm:gap-4">
+        {/* Top row: logo · prominent search · account — Polymarket layout. */}
+        <div className="flex items-center gap-3 sm:gap-5">
           <Link href="/" className="shrink-0">
             <h1 className="whitespace-nowrap font-mono text-xl font-bold tracking-tight text-emerald-400 sm:text-2xl md:text-[1.625rem]">
               FF COUNCIL
             </h1>
           </Link>
 
-          {/* Priority nav: 4 tabs. Desktop only (md+) — on mobile the fixed
-              bottom tab bar covers these surfaces. */}
-          <PrimaryNav
-            items={PRIORITY_NAV}
-            variant="desktop"
-            className="hidden min-w-0 flex-1 items-center gap-x-4 overflow-x-auto text-sm sm:gap-x-5 md:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          />
+          {/* Search fills the middle (sm+); collapses to an icon on mobile,
+              pinned to the right edge just before the account cluster. */}
+          <div className="flex min-w-0 flex-1 justify-end sm:justify-center">
+            <div className="w-auto sm:w-full sm:max-w-2xl">
+              <SearchBar index={searchIndex} prominent />
+            </div>
+          </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap text-sm">
-            <SearchBar index={searchIndex} />
+          <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm">
             {user ? (
               <>
                 <Link
@@ -223,16 +224,32 @@ export default async function Header() {
           </div>
         </div>
 
-        {/* Sub-tools — second tier, desktop only (md+): a full visible row,
-            every surface exposed. On mobile these live in the bottom bar's
-            Tools sheet instead. */}
-        <div className="mt-2 hidden border-t border-zinc-800/60 pt-2 md:block">
-          <PrimaryNav
-            items={subToolsNav}
-            variant="desktop"
-            size="compact"
-            className="hidden items-center gap-x-4 text-xs md:flex"
-          />
+        {/* Category toolbar — one horizontal row, every surface in plain sight
+            (no dropdown/overflow). Priority surfaces lead; utility surfaces
+            follow a divider, smaller + muted. Desktop only (md+); mobile uses
+            the fixed bottom tab bar. Scrolls horizontally if it overflows. */}
+        <div className="mt-2.5 hidden border-t border-zinc-800/60 pt-2 md:block">
+          <div className="flex items-center gap-x-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <span className="flex shrink-0 items-center gap-1.5 pr-1 text-sm font-semibold text-emerald-300">
+              <TrendingUp className="h-4 w-4" aria-hidden />
+              <Link href="/" className="transition hover:text-emerald-200">
+                Trending
+              </Link>
+            </span>
+            <span className="h-4 w-px shrink-0 bg-zinc-700/70" aria-hidden />
+            <PrimaryNav
+              items={PRIORITY_NAV}
+              variant="desktop"
+              className="flex shrink-0 items-center gap-x-4 text-sm"
+            />
+            <span className="h-4 w-px shrink-0 bg-zinc-700/70" aria-hidden />
+            <PrimaryNav
+              items={subToolsNav}
+              variant="desktop"
+              size="compact"
+              className="flex shrink-0 items-center gap-x-4 text-xs"
+            />
+          </div>
         </div>
       </div>
 
