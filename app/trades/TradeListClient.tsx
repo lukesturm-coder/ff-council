@@ -406,26 +406,19 @@ export function TradeModal({
               consensus={reveal.consensus}
               myWinner={reveal.winner}
             />
-            <div className="flex items-center justify-between gap-3 text-xs text-zinc-500">
-              {onNext ? (
-                <button
-                  type="button"
-                  onClick={onNext}
-                  className="rounded-md bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/30"
-                >
-                  Next trade →
-                </button>
-              ) : (
-                <span className="text-zinc-400">Caught up — last one.</span>
-              )}
+            {onNext ? (
               <button
                 type="button"
-                onClick={onClose}
-                className="underline-offset-4 hover:text-zinc-300 hover:underline"
+                onClick={onNext}
+                className="w-full rounded-md bg-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/30"
               >
-                Done
+                Next trade →
               </button>
-            </div>
+            ) : (
+              <p className="text-center text-xs text-zinc-500">
+                Caught up — that was the last one.
+              </p>
+            )}
           </div>
         ) : (
           <>
