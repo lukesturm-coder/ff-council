@@ -299,6 +299,10 @@ function TradeMiniCard({ trade }: { trade: TradeCard }) {
   const aPct = total > 0 ? Math.round((trade.votesA / total) * 100) : 0;
   const bPct = total > 0 ? Math.round((trade.votesB / total) * 100) : 0;
   const evenPct = total > 0 ? 100 - aPct - bPct : 0;
+
+  const sideA = sideHeadline(trade.side_a);
+  const sideB = sideHeadline(trade.side_b);
+
   type Winner = "A" | "B" | "EVEN";
   const winner: Winner =
     aPct >= bPct && aPct >= evenPct
@@ -306,32 +310,47 @@ function TradeMiniCard({ trade }: { trade: TradeCard }) {
       : bPct >= aPct && bPct >= evenPct
         ? "B"
         : "EVEN";
-  const winnerPct =
-    winner === "A" ? aPct : winner === "B" ? bPct : evenPct;
-  const verdictLabel =
-    winner === "A"
-      ? `Team A ${winnerPct}%`
-      : winner === "B"
-        ? `Team B ${winnerPct}%`
-        : `Even ${winnerPct}%`;
+  const winnerPct = winner === "A" ? aPct : winner === "B" ? bPct : evenPct;
+  const winnerName = winner === "A" ? sideA : winner === "B" ? sideB : null;
+  const aWins = winner === "A";
+  const bWins = winner === "B";
 
   return (
     <Link
       href={`/trades/${trade.id}`}
       className="block rounded-lg border border-zinc-800 bg-zinc-900 p-3 transition hover:border-emerald-500/40 hover:bg-zinc-900/60"
     >
+      {/* Matchup: the favored side is bold emerald, the other muted, so it
+          reads at a glance as "this side picked over that side." */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm">
-        <span className="truncate text-zinc-100">
-          {sideHeadline(trade.side_a)}
+        <span
+          className={`truncate ${aWins ? "font-semibold text-emerald-300" : "text-zinc-400"}`}
+        >
+          {sideA}
         </span>
-        <span className="text-xs text-zinc-500">↔</span>
-        <span className="truncate text-right text-zinc-100">
-          {sideHeadline(trade.side_b)}
+        <span className="text-xs text-zinc-600">↔</span>
+        <span
+          className={`truncate text-right ${bWins ? "font-semibold text-emerald-300" : "text-zinc-400"}`}
+        >
+          {sideB}
         </span>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-2 text-xs">
-        <span className="font-semibold text-emerald-300">{verdictLabel}</span>
-        <span className="text-zinc-500">
+
+      {/* Polymarket-style share bar filled toward the favored side. */}
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+        <div
+          className="h-full rounded-full bg-emerald-500"
+          style={{ width: `${winnerPct}%` }}
+        />
+      </div>
+
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-xs">
+        <span className="min-w-0 truncate font-semibold text-emerald-300">
+          {winner === "EVEN"
+            ? `Too close · ${winnerPct}% call it even`
+            : `${winnerPct}% pick ${winnerName}`}
+        </span>
+        <span className="shrink-0 text-zinc-500">
           {total} vote{total === 1 ? "" : "s"} · tap to vote
         </span>
       </div>
@@ -382,6 +401,14 @@ function VerdictMiniCard({ verdict }: { verdict: VerdictCard }) {
         </div>
       ) : (
         <p className="mt-2 text-xs text-zinc-500">No leading candidate yet.</p>
+      )}
+      {verdict.topPick && (
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+          <div
+            className="h-full rounded-full bg-emerald-500"
+            style={{ width: `${verdict.topPickPct}%` }}
+          />
+        </div>
       )}
       <div className="mt-2 flex items-center justify-between gap-2 text-xs">
         <span className="text-zinc-500">
