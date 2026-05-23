@@ -117,10 +117,6 @@ const TIER_LINE_COLOR: Record<TierSource, string> = {
   nfl: "border-blue-400/70",
 };
 
-function formatAmerican(odds: number): string {
-  return odds > 0 ? `+${odds}` : String(odds);
-}
-
 // "Jared Goff" → "J. Goff". Used in the sticky Player column once the table
 // is scrolled sideways on mobile, to free horizontal room for data columns.
 function condenseName(name: string): string {
@@ -1087,35 +1083,7 @@ function RankRow({
                 </tbody>
               </table>
             </div>
-            <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
-              <div className="text-xs uppercase tracking-wider text-zinc-500">
-                Markets feeding this projection
-              </div>
-              <div className="text-right text-xs uppercase tracking-wider text-zinc-500">
-                Per-week implied
-              </div>
-              {player.markets.map((m) => (
-                <div key={m.betType} className="contents text-zinc-300">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-medium text-zinc-200">
-                      {m.betType}
-                    </span>
-                    <span className="font-mono text-zinc-400">
-                      O/U {m.line}
-                    </span>
-                    <span className="font-mono text-xs text-zinc-500">
-                      ({formatAmerican(m.overPayout)} /{" "}
-                      {formatAmerican(m.underPayout)})
-                    </span>
-                  </div>
-                  <div className="text-right font-mono tabular-nums text-zinc-400">
-                    {(m.line / 17).toFixed(1)}
-                    <span className="ml-1 text-xs text-zinc-600">/wk</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 border-t border-zinc-800 pt-3 text-xs text-zinc-500">
+            <div className="border-t border-zinc-800 pt-3 text-xs text-zinc-500">
               <span className="text-zinc-300">{scoring}</span> · Season FPts:{" "}
               <span className="font-mono text-zinc-200">{fpts.toFixed(1)}</span>{" "}
               · Per game:{" "}
