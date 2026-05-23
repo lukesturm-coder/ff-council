@@ -2,14 +2,16 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { Loader2, Scale, X } from "lucide-react";
-import { castVote } from "./[id]/actions";
+import { X } from "lucide-react";
+import { castVote, type TradeConsensus } from "./[id]/actions";
 import {
   verdictFromCounts,
   scoreToPercent,
   type FairnessTier,
   type TradeVerdict,
 } from "@/lib/trade-verdict";
+import SentimentSelector from "./_components/SentimentSelector";
+import TradeConsensusReveal from "./_components/TradeConsensusReveal";
 
 type SidePlayer = {
   player_id: number | null;
@@ -302,7 +304,10 @@ export function TradeModal({
   onClose: () => void;
   onNext: (() => void) | null;
 }) {
-  const [voted, setVoted] = useState(false);
+  const [reveal, setReveal] = useState<{
+    consensus: TradeConsensus;
+    winner: "A" | "B" | "EVEN";
+  } | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -324,7 +329,7 @@ export function TradeModal({
         fairnessTier: tier,
         fairnessLean: winner === "EVEN" ? null : winner,
       });
-      if (res.ok) setVoted(true);
+      if (res.ok) setReveal({ consensus: res.consensus, winner });
       else setError(res.error);
     });
   }
@@ -363,142 +368,67 @@ export function TradeModal({
           <X className="h-5 w-5" />
         </button>
 
-        {voted ? (
-          <div className="py-10 text-center">
-            <h3 className="text-2xl font-bold text-emerald-300">Thanks!</h3>
-            <p className="mt-2 text-sm text-zinc-400">
-              Verdict {position} of {total} recorded.
-            </p>
-            <div className="mt-6 flex flex-col items-center gap-2">
+        <div className="mb-4 pr-8">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="text-xl font-bold text-zinc-100 sm:text-2xl">
+              {reveal ? "Council verdict" : "Your verdict?"}
+            </h3>
+            <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+              {position} / {total}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            {trade.league_type} · {trade.scoring}
+          </p>
+        </div>
+
+        {/* THE TRADE — always anchored at the top so the voter sees what's
+            being judged, before (selector) and after (reveal) voting. */}
+        <div className="mb-4 grid grid-cols-1 items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
+          <TradeHeadlineSide label="Team A" side={trade.side_a} accent="rose" />
+          <div className="flex items-center justify-center text-2xl text-zinc-600 sm:text-3xl">
+            ↔
+          </div>
+          <TradeHeadlineSide label="Team B" side={trade.side_b} accent="sky" />
+        </div>
+
+        {reveal ? (
+          <div className="space-y-4">
+            <TradeConsensusReveal
+              tradeId={trade.id}
+              consensus={reveal.consensus}
+              myWinner={reveal.winner}
+            />
+            <div className="flex items-center justify-between gap-3 text-xs text-zinc-500">
               {onNext ? (
                 <button
                   type="button"
                   onClick={onNext}
-                  className="rounded-md bg-emerald-500/20 px-5 py-2.5 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/30"
+                  className="rounded-md bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/30"
                 >
-                  Vote on the next one →
+                  Next trade →
                 </button>
               ) : (
-                <p className="text-sm text-zinc-400">
-                  You&apos;re caught up — that was the last one.
-                </p>
+                <span className="text-zinc-400">Caught up — last one.</span>
               )}
               <button
                 type="button"
                 onClick={onClose}
-                className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+                className="underline-offset-4 hover:text-zinc-300 hover:underline"
               >
-                Done for now
+                Done
               </button>
             </div>
           </div>
         ) : (
           <>
-            <div className="mb-4 pr-8">
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-xl font-bold text-zinc-100 sm:text-2xl">
-                  Your verdict?
-                </h3>
-                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-                  {position} / {total}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-zinc-500">
-                {trade.league_type} · {trade.scoring}
-              </p>
-            </div>
-
-            {/* THE TRADE — the headline. Big, scannable, anchored at the
-                top of the modal so the user sees what's being voted on
-                before they see the voting columns. Faint team-color washes
-                tie each side back to its column below. */}
-            <div className="mb-4 grid grid-cols-1 items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
-              <TradeHeadlineSide
-                label="Team A"
-                side={trade.side_a}
-                accent="rose"
-              />
-              <div className="flex items-center justify-center text-2xl text-zinc-600 sm:text-3xl">
-                ↔
-              </div>
-              <TradeHeadlineSide
-                label="Team B"
-                side={trade.side_b}
-                accent="sky"
-              />
-            </div>
-
-            <p className="mb-3 text-xs text-zinc-500">
-              One tap on a magnitude under either team — your full verdict in
-              a single click.
+            <p className="mb-2 text-center text-xs text-zinc-500">
+              Who got the better end? One tap.
             </p>
-
-            {/* 3-column one-click grid:
-                  [ Team A label + 4 magnitudes ] [ Even ] [ Team B label + 4 magnitudes ]
-                Each magnitude submits (winner, tier) directly. Stacks on
-                mobile. Columns get a faint team-color wash at rest so
-                identity reads before tap. */}
-            <div className="mb-3 grid grid-cols-1 items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
-              {/* Team A column */}
-              <div className="flex flex-col gap-2 rounded-xl bg-rose-500/[0.03] p-2 ring-1 ring-inset ring-rose-500/10">
-                <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-rose-300">
-                  Team A wins by…
-                </div>
-                {MAGNITUDE_TIERS.map((t) => (
-                  <MagnitudeButton
-                    key={`A-${t.value}`}
-                    tier={t}
-                    team="A"
-                    disabled={pending}
-                    onClick={() => submitVote("A", t.value)}
-                  />
-                ))}
-              </div>
-
-              {/* Even column — quiet fulcrum between the towers */}
-              <div className="flex items-center sm:min-w-[112px]">
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => submitVote("EVEN", "balanced")}
-                  className="group flex w-full min-h-[68px] sm:min-h-0 sm:w-28 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-4 text-sm font-semibold text-zinc-200 transition hover:scale-[1.02] hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {pending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <span className="flex flex-col items-center gap-1">
-                      <Scale
-                        className="h-4 w-4 text-zinc-500 transition group-hover:text-emerald-300"
-                        strokeWidth={2}
-                      />
-                      <span>Even</span>
-                      <span className="text-[10px] font-normal text-zinc-500">
-                        Balanced
-                      </span>
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              {/* Team B column */}
-              <div className="flex flex-col gap-2 rounded-xl bg-sky-500/[0.03] p-2 ring-1 ring-inset ring-sky-500/10">
-                <div className="px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-sky-300">
-                  Team B wins by…
-                </div>
-                {MAGNITUDE_TIERS.map((t) => (
-                  <MagnitudeButton
-                    key={`B-${t.value}`}
-                    tier={t}
-                    team="B"
-                    disabled={pending}
-                    onClick={() => submitVote("B", t.value)}
-                  />
-                ))}
-              </div>
-            </div>
+            <SentimentSelector onVote={submitVote} pending={pending} />
 
             {error && (
-              <p className="mb-3 text-xs text-rose-300">Error: {error}</p>
+              <p className="mt-3 text-xs text-rose-300">Error: {error}</p>
             )}
 
             <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-500">
@@ -527,19 +457,6 @@ export function TradeModal({
     </div>
   );
 }
-
-// Magnitude tiers shown under each team column in the modal.
-// Mirrors the same constants used in /judge JudgeFeed.tsx.
-const MAGNITUDE_TIERS: Array<{
-  value: "slight_edge" | "clear_advantage" | "major_advantage" | "extreme_imbalance";
-  label: string;
-  description: string;
-}> = [
-  { value: "slight_edge", label: "Slight edge", description: "Marginally ahead — close to fair." },
-  { value: "clear_advantage", label: "Clear advantage", description: "Noticeably better deal for the winning side." },
-  { value: "major_advantage", label: "Major advantage", description: "Strongly favors one side." },
-  { value: "extreme_imbalance", label: "Extreme imbalance", description: "Commissioner is corrupt." },
-];
 
 // Read-only preview of one side's players + picks. Sits at the top of each
 // team column in the modal as a "quiet header" — borderless, just a divider
@@ -611,40 +528,3 @@ function TradeHeadlineSide({
   );
 }
 
-// One magnitude button. All four tiers (slight / clear / major / extreme)
-// render at the SAME shade so visual weight doesn't bias the click —
-// the user's choice should be driven by the label text, not by which
-// button looks loudest. Team color (rose for A, sky for B) is the only
-// hue applied, and equally across all four.
-function MagnitudeButton({
-  tier,
-  team,
-  disabled,
-  onClick,
-}: {
-  tier: { value: string; label: string; description: string };
-  team: "A" | "B";
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  const restClasses =
-    team === "A"
-      ? "border-rose-500/25 bg-rose-500/[0.06] hover:border-rose-400/60 hover:bg-rose-500/15"
-      : "border-sky-500/25 bg-sky-500/[0.06] hover:border-sky-400/60 hover:bg-sky-500/15";
-  const labelColor =
-    team === "A" ? "text-rose-100" : "text-sky-100";
-
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`group/btn relative min-h-[56px] rounded-lg border p-2.5 text-left shadow-sm transition-all duration-150 hover:scale-[1.015] hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${restClasses}`}
-    >
-      <div className={`text-sm font-semibold ${labelColor}`}>{tier.label}</div>
-      <div className="mt-0.5 text-[11px] text-zinc-400 group-hover/btn:text-zinc-300">
-        {tier.description}
-      </div>
-    </button>
-  );
-}
