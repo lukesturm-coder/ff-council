@@ -52,10 +52,13 @@ type VerdictRow = {
   context: { scoring?: string; week?: number | null; round?: number | null } | null;
 };
 
+type RankedCandidate = VerdictPlayerMini & { voteCount: number; pct: number };
+
 type VerdictCard = VerdictRow & {
   totalVotes: number;
-  topPick: VerdictPlayerMini | null;
-  topPickPct: number;
+  // Every candidate with its share, highest first (so the card lists the full
+  // field, not just the leader).
+  ranked: RankedCandidate[];
 };
 
 async function loadTopTrades(): Promise<TradeCard[]> {
@@ -144,27 +147,23 @@ async function loadTopVerdicts(): Promise<VerdictCard[]> {
   const cards: VerdictCard[] = scenarios.map((s) => {
     const t = tally.get(s.id as string) ?? { total: 0, byPlayer: {} };
     const candidates = (s.candidates as VerdictPlayerMini[]) ?? [];
-    let topPick: VerdictPlayerMini | null = null;
-    let topCount = -1;
-    for (const c of candidates) {
-      const ct = t.byPlayer[c.player_id] ?? 0;
-      if (ct > topCount) {
-        topCount = ct;
-        topPick = c;
-      }
-    }
-    const topPickPct =
-      topPick && t.total > 0
-        ? Math.round(((t.byPlayer[topPick.player_id] ?? 0) / t.total) * 100)
-        : 0;
+    const ranked: RankedCandidate[] = candidates
+      .map((c) => {
+        const voteCount = t.byPlayer[c.player_id] ?? 0;
+        return {
+          ...c,
+          voteCount,
+          pct: t.total > 0 ? Math.round((voteCount / t.total) * 100) : 0,
+        };
+      })
+      .sort((a, b) => b.voteCount - a.voteCount);
     return {
       id: s.id as string,
       scenario_type: s.scenario_type as "draft" | "start_sit",
       candidates,
       context: (s.context as VerdictCard["context"]) ?? null,
       totalVotes: t.total,
-      topPick,
-      topPickPct,
+      ranked,
     };
   });
 
@@ -361,6 +360,8 @@ function TradeMiniCard({ trade }: { trade: TradeCard }) {
   );
 }
 
+const MAX_VERDICT_ROWS = 5;
+
 function VerdictMiniCard({ verdict }: { verdict: VerdictCard }) {
   const question =
     verdict.scenario_type === "draft"
@@ -376,40 +377,76 @@ function VerdictMiniCard({ verdict }: { verdict: VerdictCard }) {
     meta.push(`Round ${ctx.round}`);
   }
 
+  const shown = verdict.ranked.slice(0, MAX_VERDICT_ROWS);
+  const hiddenCount = verdict.ranked.length - shown.length;
+
   return (
     <Link
       href={`/verdict/${verdict.id}`}
       className="block rounded-lg border border-zinc-800 bg-zinc-900 p-3 transition hover:border-emerald-500/40 hover:bg-zinc-900/60"
     >
       <p className="text-sm font-medium text-zinc-100">{question}</p>
-      {verdict.topPick ? (
-        <div className="mt-2 flex items-center gap-2">
-          <span
-            className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
-              POSITION_STYLES[verdict.topPick.position] ??
-              "bg-zinc-500/10 text-zinc-300 ring-zinc-500/30"
-            }`}
-          >
-            {verdict.topPick.position}
-          </span>
-          <span className="text-sm font-semibold text-emerald-200">
-            Council says {verdict.topPick.name}
-          </span>
-          <span className="font-mono text-xs text-emerald-300">
-            · {verdict.topPickPct}%
-          </span>
-        </div>
-      ) : (
+
+      {shown.length === 0 ? (
         <p className="mt-2 text-xs text-zinc-500">No leading candidate yet.</p>
-      )}
-      {verdict.topPick && (
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
-          <div
-            className="h-full rounded-full bg-emerald-500"
-            style={{ width: `${verdict.topPickPct}%` }}
-          />
+      ) : (
+        <div className="mt-2 space-y-1.5">
+          {/* One row per option, highest share first — the leader is bold
+              emerald, the rest muted, so the whole field is visible. */}
+          {shown.map((c, i) => {
+            const isLeader = i === 0;
+            return (
+              <div
+                key={c.player_id}
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-2"
+              >
+                <span
+                  className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
+                    POSITION_STYLES[c.position] ??
+                    "bg-zinc-500/10 text-zinc-300 ring-zinc-500/30"
+                  }`}
+                >
+                  {c.position}
+                </span>
+                <div className="min-w-0">
+                  <span
+                    className={`block truncate text-sm ${
+                      isLeader
+                        ? "font-semibold text-emerald-200"
+                        : "text-zinc-300"
+                    }`}
+                  >
+                    {c.name}
+                  </span>
+                  <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className={`h-full rounded-full ${
+                        isLeader ? "bg-emerald-500" : "bg-zinc-600"
+                      }`}
+                      style={{ width: `${c.pct}%` }}
+                    />
+                  </div>
+                </div>
+                <span
+                  className={`shrink-0 font-mono text-xs tabular-nums ${
+                    isLeader
+                      ? "font-semibold text-emerald-300"
+                      : "text-zinc-400"
+                  }`}
+                >
+                  {c.pct}%
+                </span>
+              </div>
+            );
+          })}
+          {hiddenCount > 0 && (
+            <span className="block pt-0.5 text-[10px] uppercase tracking-wider text-zinc-600">
+              +{hiddenCount} more →
+            </span>
+          )}
         </div>
       )}
+
       <div className="mt-2 flex items-center justify-between gap-2 text-xs">
         <span className="text-zinc-500">
           {verdict.totalVotes} vote
