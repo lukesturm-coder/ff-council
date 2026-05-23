@@ -247,8 +247,7 @@ export default async function Header() {
             <PrimaryNav
               items={subToolsNav}
               variant="desktop"
-              size="compact"
-              className="flex shrink-0 items-center gap-x-4 text-xs"
+              className="flex shrink-0 items-center gap-x-4 text-sm"
             />
           </div>
         </div>
