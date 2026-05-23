@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import HomeHero, { loadHeroStats } from "./_components/HomeHero";
 import ActivityTicker from "./_components/ActivityTicker";
-import CouncilActivity from "./_components/CouncilActivity";
+import AllDecisions from "./_components/AllDecisions";
 import TrendingBoard from "./_components/TrendingBoard";
 import HotCalls from "./_components/HotCalls";
 
@@ -130,7 +130,7 @@ export default async function Page() {
 
         <ActivityTicker />
 
-        <CouncilActivity />
+        <AllDecisions />
 
         <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">
           <p>
