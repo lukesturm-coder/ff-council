@@ -272,6 +272,11 @@ export default async function MePage() {
   let councilAccuracyPct: number | null = null;
   let resolvedCount = 0;
   let councilCorrect = 0;
+  // The user's OWN credibility: of resolved calls they voted on, how often did
+  // their pick match the actual winner? This is the personal track record.
+  let myAccuracyPct: number | null = null;
+  let myCallCorrect = 0;
+  let myCallTotal = 0;
   {
     const { data: resolvedScenarios } = await supabase
       .from("verdict_scenarios")
@@ -282,6 +287,19 @@ export default async function MePage() {
       id: string;
       actual_winner_player_id: number;
     }[];
+    // Personal accuracy: did MY pick match the actual winner on resolved calls?
+    const resolvedWinnerById = new Map(
+      resolvedRows.map((r) => [r.id, r.actual_winner_player_id]),
+    );
+    for (const v of myVerdictVotes) {
+      const winner = resolvedWinnerById.get(v.scenario_id);
+      if (winner == null) continue;
+      myCallTotal += 1;
+      if (v.pick_player_id === winner) myCallCorrect += 1;
+    }
+    if (myCallTotal > 0) {
+      myAccuracyPct = Math.round((myCallCorrect / myCallTotal) * 100);
+    }
     if (resolvedRows.length > 0) {
       const resolvedIds = resolvedRows.map((r) => r.id);
       const { data: allVotes } = await supabase
@@ -436,8 +454,8 @@ export default async function MePage() {
            hook, vote vs. reality is the long-term trust. */}
         <section
           className={`mb-6 grid grid-cols-2 gap-2 sm:gap-3 ${
-            councilAccuracyPct != null
-              ? "sm:grid-cols-3 lg:grid-cols-5"
+            councilAccuracyPct != null || myAccuracyPct != null
+              ? "sm:grid-cols-3 lg:grid-cols-6"
               : "sm:grid-cols-4"
           }`}
         >
@@ -450,6 +468,13 @@ export default async function MePage() {
                 : "Cast your first vote"
             }
           />
+          {myAccuracyPct != null && (
+            <StatCard
+              label="Your accuracy"
+              value={`${myAccuracyPct}%`}
+              sub={`${myCallCorrect}/${myCallTotal} of your calls hit`}
+            />
+          )}
           <StatCard
             label="Agreement rate"
             value={agreementPct == null ? "—" : `${agreementPct}%`}
