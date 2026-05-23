@@ -17,23 +17,32 @@ export async function loadPlatformStats(
   season = 2026,
 ): Promise<PlatformStatsMap> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("platform_player_stats")
-    .select("source, player_id, stat, value")
-    .eq("season", season)
-    .is("week", null);
-  if (error) return {};
-
   const map: PlatformStatsMap = {};
-  for (const row of (data ?? []) as Array<{
-    source: string;
-    player_id: number;
-    stat: string;
-    value: number;
-  }>) {
-    const bySource = map[row.player_id] ?? (map[row.player_id] = {});
-    const stats = bySource[row.source] ?? (bySource[row.source] = {});
-    (stats as Record<string, number>)[row.stat] = Number(row.value);
+  const pageSize = 1000;
+
+  // Paginate past PostgREST's ~1000-row response cap — with multiple sources
+  // this table easily exceeds 1000 rows, and an unpaginated read would drop
+  // whole sources (showing dashes for ESPN/Sleeper even though data exists).
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("platform_player_stats")
+      .select("source, player_id, stat, value")
+      .eq("season", season)
+      .is("week", null)
+      .range(from, from + pageSize - 1);
+    if (error) return map; // table missing (migration not run) or read error
+    const rows = (data ?? []) as Array<{
+      source: string;
+      player_id: number;
+      stat: string;
+      value: number;
+    }>;
+    for (const row of rows) {
+      const bySource = map[row.player_id] ?? (map[row.player_id] = {});
+      const stats = bySource[row.source] ?? (bySource[row.source] = {});
+      (stats as Record<string, number>)[row.stat] = Number(row.value);
+    }
+    if (rows.length < pageSize) break;
   }
   return map;
 }
