@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ScoringSystem } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 import { loadRankingProjections, loadProjectedStats } from "@/lib/projections-data";
+import { loadPlatformStats } from "@/lib/platform-stats";
 import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
 import RankingsTable, {
   type CouncilConsensusMap,
@@ -129,12 +130,14 @@ export default async function RankingsPage() {
     councilConsensus,
     myRanks,
     projectedStats,
+    platformStats,
   ] = await Promise.all([
     loadRankingProjections(),
     loadPlatformRankings(),
     loadCouncilConsensus(),
     user ? loadMyRanks(user.id) : Promise.resolve({} as MyRanksMap),
     loadProjectedStats(),
+    loadPlatformStats(),
   ]);
 
   // Real platform data is sparse pre-season. Layer mock Sleeper / NFL / Yahoo
@@ -156,6 +159,7 @@ export default async function RankingsPage() {
           councilConsensus={councilConsensus}
           myRanks={myRanks}
           projectedStats={projectedStats}
+          platformStats={platformStats}
         />
 
         <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">

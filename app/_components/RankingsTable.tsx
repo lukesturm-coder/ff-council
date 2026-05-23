@@ -10,6 +10,7 @@ import type {
   ScoringSystem,
 } from "@/lib/types";
 import { computeTiersForPosition } from "@/lib/tiers";
+import type { PlatformStatsMap } from "@/lib/platform-stats";
 
 type PositionFilter = "ALL" | FantasyPosition;
 type SortKey =
@@ -173,6 +174,7 @@ export default function RankingsTable({
   councilConsensus,
   myRanks = {},
   projectedStats = {},
+  platformStats = {},
 }: {
   projections: PlayerProjection[];
   platformRankings: PlatformRankingsMap;
@@ -181,6 +183,9 @@ export default function RankingsTable({
   /** Mock-derived projected stat means by playerId — fallback for the
    *  expand-on-click stat line when a player has no live Vegas markets. */
   projectedStats?: Record<number, ImpliedStats>;
+  /** Real per-source projected stats (playerId → source → stat values) from
+   *  platform_player_stats — fills the expand matrix's ESPN/Sleeper/etc. cells. */
+  platformStats?: PlatformStatsMap;
 }) {
   const [scoring, setScoring] = useState<ScoringSystem>("PPR");
   const [position, setPosition] = useState<PositionFilter>("ALL");
@@ -647,6 +652,7 @@ export default function RankingsTable({
                   tierBreak={tierBreak}
                   tierBreakColor={tierBreakColor}
                   statLine={projectedStats[row.player.playerId]}
+                  sourceStats={platformStats[row.player.playerId]}
                 />
               );
             })}
@@ -810,6 +816,7 @@ function RankRow({
   tierBreak,
   tierBreakColor,
   statLine,
+  sourceStats,
 }: {
   player: PlayerProjection;
   rank: number;
@@ -840,6 +847,9 @@ function RankRow({
   // Mock-derived projected stat means — fallback when the player has no live
   // Vegas implied stats yet (offseason). Real stats take precedence.
   statLine?: ImpliedStats;
+  // Real per-source projected stats (source → stat values) from
+  // platform_player_stats — fills the matrix's ESPN/Sleeper/etc. cells.
+  sourceStats?: Record<string, Partial<ImpliedStats>>;
 }) {
   const fpts = player.fantasyPoints[scoring];
   const vbd = player.vbd[scoring];
@@ -1020,27 +1030,29 @@ function RankRow({
                       </td>
                     ))}
                   </tr>
-                  {projFields.map((f) => {
-                    const ours = fmtStatValue(
-                      player.impliedStats[f.key] ?? statLine?.[f.key],
-                      f.decimals,
-                    );
-                    return (
-                      <tr key={f.key} className="border-t border-zinc-800/60">
-                        <td className="py-1.5 pr-3 font-sans text-zinc-300">
-                          {f.label}
-                        </td>
-                        {PROJ_SOURCES.map((s) => (
+                  {projFields.map((f) => (
+                    <tr key={f.key} className="border-t border-zinc-800/60">
+                      <td className="py-1.5 pr-3 font-sans text-zinc-300">
+                        {f.label}
+                      </td>
+                      {PROJ_SOURCES.map((s) => {
+                        // Vegas = our implied stats (with mock fallback); every
+                        // other source = scraped per-source projections.
+                        const v =
+                          s.key === "vegas"
+                            ? player.impliedStats[f.key] ?? statLine?.[f.key]
+                            : sourceStats?.[s.key]?.[f.key];
+                        return (
                           <td
                             key={s.key}
                             className="px-2 py-1.5 text-right text-zinc-300"
                           >
-                            {s.key === "vegas" ? ours : "—"}
+                            {fmtStatValue(v, f.decimals)}
                           </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
+                        );
+                      })}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
