@@ -12,6 +12,7 @@ import { computeTiersForPosition } from "@/lib/tiers";
 
 type PositionFilter = "ALL" | FantasyPosition;
 type SortKey =
+  | "MINE"
   | "VEGAS"
   | "COUNCIL"
   | "ESPN"
@@ -61,6 +62,14 @@ export type PlatformRankingsMap = Record<
 export type CouncilConsensusMap = Record<
   number,
   Partial<Record<ScoringSystem, { avgRank: number; rankerCount: number }>>
+>;
+
+/**
+ * The signed-in member's own ranking: scoring_system → player_id → rank (their
+ * position in their personal ranking). Empty when logged out or no ranking yet.
+ */
+export type MyRanksMap = Partial<
+  Record<ScoringSystem, Record<number, number>>
 >;
 
 const SCORING_OPTIONS: ScoringSystem[] = ["PPR", "Half", "Standard"];
@@ -162,10 +171,12 @@ export default function RankingsTable({
   projections,
   platformRankings,
   councilConsensus,
+  myRanks = {},
 }: {
   projections: PlayerProjection[];
   platformRankings: PlatformRankingsMap;
   councilConsensus: CouncilConsensusMap;
+  myRanks?: MyRanksMap;
 }) {
   const [scoring, setScoring] = useState<ScoringSystem>("PPR");
   const [position, setPosition] = useState<PositionFilter>("ALL");
@@ -212,6 +223,12 @@ export default function RankingsTable({
     [councilConsensus],
   );
 
+  const hasMine = useMemo(
+    () =>
+      Object.values(myRanks).some((m) => m && Object.keys(m).length > 0),
+    [myRanks],
+  );
+
   const tableData = useMemo(() => {
     const filtered =
       position === "ALL"
@@ -235,7 +252,8 @@ export default function RankingsTable({
       vegasPoints: number | null;
       councilAvgRank: number | null;
       councilRankerCount: number;
-      // Council is a pure rank — no projection.
+      // Council and "Mine" are pure ranks — no projection.
+      mineRank: number | null;
       espnRank: number | null;
       espnPoints: number | null;
       fpRank: number | null;
@@ -249,6 +267,7 @@ export default function RankingsTable({
     type StoredRanks = {
       council: number | null;
       councilRankerCount: number;
+      mine: number | null;
       espn: number | null;
       espnPts: number | null;
       fp: number | null;
@@ -264,6 +283,7 @@ export default function RankingsTable({
       storedByPid.set(p.playerId, {
         council: councilEntry?.avgRank ?? null,
         councilRankerCount: councilEntry?.rankerCount ?? 0,
+        mine: hasMine ? myRanks[scoring]?.[p.playerId] ?? null : null,
         espn: hasEspn
           ? lookupPlatformRank(platformRankings, p.playerId, "espn", "editorial", scoring)
           : null,
@@ -304,6 +324,7 @@ export default function RankingsTable({
       return m;
     };
     const councilRerank = withinFilter ? rerank((s) => s.council) : null;
+    const mineRerank = withinFilter ? rerank((s) => s.mine) : null;
     const espnRerank = withinFilter ? rerank((s) => s.espn) : null;
     const fpRerank = withinFilter ? rerank((s) => s.fp) : null;
     const extraReranks = withinFilter
@@ -315,6 +336,9 @@ export default function RankingsTable({
       const displayCouncil = withinFilter
         ? councilRerank!.get(p.playerId) ?? null
         : stored.council;
+      const displayMine = withinFilter
+        ? mineRerank!.get(p.playerId) ?? null
+        : stored.mine;
       const displayEspn = withinFilter
         ? espnRerank!.get(p.playerId) ?? null
         : stored.espn;
@@ -359,6 +383,7 @@ export default function RankingsTable({
         vegasPoints: vegasPoints > 0 ? vegasPoints : null,
         councilAvgRank: displayCouncil,
         councilRankerCount: stored.councilRankerCount,
+        mineRank: displayMine,
         espnRank: displayEspn,
         espnPoints: stored.espnPts,
         fpRank: displayFp,
@@ -379,6 +404,7 @@ export default function RankingsTable({
       if (view === "Points") {
         if (sortKey === "VEGAS") v = row.vegasPoints;
         else if (sortKey === "COUNCIL") v = null; // Council has no points
+        else if (sortKey === "MINE") v = null; // Mine is a rank, no points
         else if (sortKey === "ESPN") v = row.espnPoints;
         else if (sortKey === "FP") v = row.fpPoints;
         else if (sortKey === "AVG") v = row.avgPoints;
@@ -392,6 +418,7 @@ export default function RankingsTable({
       }
       if (sortKey === "VEGAS") v = row.vegasRank;
       else if (sortKey === "COUNCIL") v = row.councilAvgRank;
+      else if (sortKey === "MINE") v = row.mineRank;
       else if (sortKey === "ESPN") v = row.espnRank;
       else if (sortKey === "FP") v = row.fpRank;
       else if (sortKey === "AVG") v = row.avgRank;
@@ -473,9 +500,11 @@ export default function RankingsTable({
     sortKey,
     platformRankings,
     councilConsensus,
+    myRanks,
     hasEspn,
     hasFp,
     hasCouncil,
+    hasMine,
   ]);
 
   return (
@@ -529,6 +558,16 @@ export default function RankingsTable({
                 active={sortKey}
                 onClick={toggleSort}
               />
+              {hasMine && (
+                <SortHeader
+                  label="Mine"
+                  sortKey="MINE"
+                  color="text-fuchsia-400"
+                  title="Your personal ranking (from My Rankings). Not counted in the AVG consensus."
+                  active={sortKey}
+                  onClick={toggleSort}
+                />
+              )}
               {hasCouncil && (
                 <SortHeader
                   label="Council"
@@ -610,6 +649,8 @@ export default function RankingsTable({
                   hasCouncil={hasCouncil}
                   councilAvgRank={row.councilAvgRank}
                   councilRankerCount={row.councilRankerCount}
+                  hasMine={hasMine}
+                  mineRank={row.mineRank}
                   extraRanks={row.extraRanks}
                   extraPoints={row.extraPoints}
                   avgRank={row.avgRank}
@@ -724,6 +765,8 @@ function RankRow({
   hasCouncil,
   councilAvgRank,
   councilRankerCount,
+  hasMine,
+  mineRank,
   extraRanks,
   extraPoints,
   avgRank,
@@ -749,6 +792,8 @@ function RankRow({
   hasCouncil: boolean;
   councilAvgRank: number | null;
   councilRankerCount: number;
+  hasMine: boolean;
+  mineRank: number | null;
   extraRanks: Array<number | null>;
   extraPoints: Array<number | null>;
   avgRank: number | null;
@@ -820,6 +865,20 @@ function RankRow({
             <span className="text-zinc-600">—</span>
           )}
         </td>
+        {hasMine && (
+          <td
+            className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
+            title={
+              showPoints
+                ? "Your ranking is a rank, not a projection — no points to show"
+                : "Your personal ranking"
+            }
+          >
+            <span className="text-fuchsia-400">
+              {showPoints ? "—" : fmtRank(mineRank)}
+            </span>
+          </td>
+        )}
         {hasCouncil && (
           <td
             className="min-w-[5rem] py-3 text-center font-mono text-sm tabular-nums"
@@ -883,6 +942,7 @@ function RankRow({
               7 +
               (hasEspn ? 1 : 0) +
               (hasCouncil ? 1 : 0) +
+              (hasMine ? 1 : 0) +
               (hasFp ? 1 : 0) +
               EXTRA_PLATFORMS.length
             }

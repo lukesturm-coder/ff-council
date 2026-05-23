@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
 import RankingsTable, {
   type CouncilConsensusMap,
+  type MyRanksMap,
   type PlatformRankingsMap,
 } from "../_components/RankingsTable";
 
@@ -162,12 +163,44 @@ async function loadCouncilConsensus(): Promise<CouncilConsensusMap> {
   return map;
 }
 
+/**
+ * The signed-in member's own ranking, as scoring_system → player_id → rank,
+ * pulled from their current submission. Feeds the "Mine" column so users can
+ * compare their own ranking against every source. Empty when logged out.
+ */
+async function loadMyRanks(userId: string): Promise<MyRanksMap> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ranking_submissions")
+    .select("scoring_system, ranking_entries(player_id, rank)")
+    .eq("member_id", userId)
+    .eq("is_current", true);
+
+  const out: MyRanksMap = {};
+  for (const row of (data ?? []) as Array<{
+    scoring_system: string;
+    ranking_entries: Array<{ player_id: number; rank: number }>;
+  }>) {
+    const scoring = row.scoring_system as ScoringSystem;
+    const dict: Record<number, number> = {};
+    for (const e of row.ranking_entries) dict[e.player_id] = e.rank;
+    out[scoring] = dict;
+  }
+  return out;
+}
+
 export default async function RankingsPage() {
-  const [projections, realPlatformRankings, councilConsensus] =
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [projections, realPlatformRankings, councilConsensus, myRanks] =
     await Promise.all([
       loadProjections(),
       loadPlatformRankings(),
       loadCouncilConsensus(),
+      user ? loadMyRanks(user.id) : Promise.resolve({} as MyRanksMap),
     ]);
 
   // Real platforms only have ESPN + FantasyPros so far. Layer mock Sleeper /
@@ -186,6 +219,7 @@ export default async function RankingsPage() {
           projections={projections}
           platformRankings={platformRankings}
           councilConsensus={councilConsensus}
+          myRanks={myRanks}
         />
 
         <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">
