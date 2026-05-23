@@ -170,24 +170,25 @@ export function VerdictCardButton({
   }
   meta.push(new Date(scenario.created_at).toLocaleDateString());
 
-  // Highlight the winning candidate's chip and pull it to the front of
-  // the list so the council's pick reads at a glance.
+  // Only reveal the council's pick once the user has voted — seeing it first
+  // would anchor their vote. The vote COUNT still shows (social proof).
+  const showResult = voted && total > 0;
+
+  // When revealed, pull the winning candidate to the front; otherwise keep
+  // natural order so the pick isn't given away.
   const orderedCandidates = (() => {
-    if (!topPick || total === 0) return scenario.candidates.slice(0, 4);
+    if (!showResult || !topPick) return scenario.candidates.slice(0, 4);
     const winnerId = topPick.player.player_id;
     const winner = scenario.candidates.find((c) => c.player_id === winnerId);
     const rest = scenario.candidates.filter((c) => c.player_id !== winnerId);
     return winner ? [winner, ...rest].slice(0, 4) : scenario.candidates.slice(0, 4);
   })();
 
-  // Verdict banner — loud council pick at the top of every card so
-  // scanning a list reads as a sequence of verdicts, not raw scenarios.
-  // Always emerald (single-winner outcome, unlike trades which can lean
-  // rose/sky). Pre-vote shows the CTA.
-  const bannerLabel =
-    total === 0
+  const bannerLabel = !showResult
+    ? total === 0
       ? "Cast the first vote →"
-      : `Pick: ${topPick?.player.name ?? "—"}`;
+      : "Tap to weigh in →"
+    : `Pick: ${topPick?.player.name ?? "—"}`;
 
   return (
     <button
@@ -202,9 +203,11 @@ export function VerdictCardButton({
         </span>
         {total > 0 && (
           <span className="flex items-baseline gap-2 font-mono tabular-nums">
-            <span className="text-xl font-bold leading-none sm:text-2xl">
-              {topPct}%
-            </span>
+            {showResult && (
+              <span className="text-xl font-bold leading-none sm:text-2xl">
+                {topPct}%
+              </span>
+            )}
             <span className="text-xs text-zinc-400">
               {total} vote{total === 1 ? "" : "s"}
             </span>
@@ -231,7 +234,7 @@ export function VerdictCardButton({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           {orderedCandidates.map((c) => {
             const isWinner =
-              total > 0 &&
+              showResult &&
               topPick != null &&
               c.player_id === topPick.player.player_id;
             return (

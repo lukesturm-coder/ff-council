@@ -61,9 +61,13 @@ function pickLabel(p: SidePick): string {
 export function TradeListCardButton({
   trade,
   onOpen,
+  voted = true,
 }: {
   trade: TradeCardData;
   onOpen: (t: TradeCardData) => void;
+  // Until the user has voted on this trade, we hide the council's call so the
+  // result can't anchor their vote. Defaults to true for non-gated callers.
+  voted?: boolean;
 }) {
   const total = trade.summary?.total_votes ?? 0;
 
@@ -78,31 +82,29 @@ export function TradeListCardButton({
     tiers_b: trade.summary?.tiers_b,
   });
 
-  // Leader drives the winner-side preview highlight + banner color.
+  // Only reveal the verdict (direction / zone / severity / winner highlight)
+  // once the user has voted. The vote COUNT still shows (social proof, not a
+  // result that biases the pick).
+  const showResult = voted && total > 0;
   type Winner = "A" | "B" | "EVEN" | null;
-  const winner: Winner = total === 0 ? null : verdict.leader;
+  const winner: Winner = showResult ? verdict.leader : null;
 
-  // Verdict banner — the loudest signal on the card. Sits at the top so
-  // scanning a long list reads as a sequence of outcomes, not a wall of
-  // player names. Color tracks the winning side (rose/sky/zinc), or
-  // emerald when nobody's voted yet. Now shows the severity zone
-  // ("Clear Advantage") instead of a bare percentage.
-  const bannerClass =
-    total === 0
-      ? "bg-emerald-500/10 text-emerald-200 ring-emerald-500/30"
-      : winner === "A"
-        ? "bg-rose-500/15 text-rose-100 ring-rose-500/40"
-        : winner === "B"
-          ? "bg-sky-500/15 text-sky-100 ring-sky-500/40"
-          : "bg-zinc-700/30 text-zinc-100 ring-zinc-500/40";
-  const bannerLabel =
-    total === 0
+  const bannerClass = !showResult
+    ? "bg-emerald-500/10 text-emerald-200 ring-emerald-500/30"
+    : winner === "A"
+      ? "bg-rose-500/15 text-rose-100 ring-rose-500/40"
+      : winner === "B"
+        ? "bg-sky-500/15 text-sky-100 ring-sky-500/40"
+        : "bg-zinc-700/30 text-zinc-100 ring-zinc-500/40";
+  const bannerLabel = !showResult
+    ? total === 0
       ? "Cast the first vote →"
-      : winner === "A"
-        ? "Team A wins"
-        : winner === "B"
-          ? "Team B wins"
-          : "Council called it even";
+      : "Tap to weigh in →"
+    : winner === "A"
+      ? "Team A wins"
+      : winner === "B"
+        ? "Team B wins"
+        : "Council called it even";
 
   return (
     <button
@@ -120,7 +122,7 @@ export function TradeListCardButton({
           <span className="truncate text-sm font-semibold sm:text-base">
             {bannerLabel}
           </span>
-          {total > 0 && winner !== "EVEN" && (
+          {showResult && winner !== "EVEN" && (
             <span className="shrink-0 text-xs font-medium text-zinc-300/90 sm:text-sm">
               · {verdict.zoneLabel}
             </span>
@@ -128,7 +130,7 @@ export function TradeListCardButton({
         </span>
         {total > 0 && (
           <span className="flex shrink-0 items-center gap-2">
-            <CompactSeverityBar verdict={verdict} />
+            {showResult && <CompactSeverityBar verdict={verdict} />}
             <span className="font-mono text-xs tabular-nums text-zinc-400">
               {total} vote{total === 1 ? "" : "s"}
             </span>
@@ -297,12 +299,15 @@ export function TradeModal({
   total,
   onClose,
   onNext,
+  onVoted,
 }: {
   trade: TradeCardData;
   position: number;
   total: number;
   onClose: () => void;
   onNext: (() => void) | null;
+  /** Fires once on a successful vote so the list can reveal this card. */
+  onVoted?: () => void;
 }) {
   const [reveal, setReveal] = useState<{
     consensus: TradeConsensus;
@@ -329,8 +334,10 @@ export function TradeModal({
         fairnessTier: tier,
         fairnessLean: winner === "EVEN" ? null : winner,
       });
-      if (res.ok) setReveal({ consensus: res.consensus, winner });
-      else setError(res.error);
+      if (res.ok) {
+        setReveal({ consensus: res.consensus, winner });
+        onVoted?.();
+      } else setError(res.error);
     });
   }
 

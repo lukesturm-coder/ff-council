@@ -62,17 +62,18 @@ export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [votedIds, setVotedIds] = useState<Set<string>>(() => new Set());
 
-  // Hydrate the verdict-vote localStorage set after mount so SSR + client
-  // markup match. Trade votes are tracked DB-side only.
+  // Hydrate the voted-id localStorage set after mount so SSR + client markup
+  // match. Holds both trade and verdict ids (unique uuids, no collision) — a
+  // card's council result stays hidden until its id is in here.
   useEffect(() => {
     setVotedIds(readVotedSet());
   }, []);
 
-  function markVerdictVoted(scenarioId: string) {
+  function markVoted(id: string) {
     setVotedIds((prev) => {
-      if (prev.has(scenarioId)) return prev;
+      if (prev.has(id)) return prev;
       const next = new Set(prev);
-      next.add(scenarioId);
+      next.add(id);
       persistVoted(next);
       return next;
     });
@@ -98,6 +99,7 @@ export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
             <TradeListCardButton
               key={`t-${c.data.id}`}
               trade={c.data}
+              voted={votedIds.has(c.data.id)}
               onOpen={() => openByCase(c)}
             />
           ) : (
@@ -117,6 +119,7 @@ export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
           trade={openCase.data}
           position={(openIndex ?? 0) + 1}
           total={cases.length}
+          onVoted={() => markVoted(openCase.data.id)}
           onClose={() => setOpenIndex(null)}
           onNext={hasNext ? () => advance() : null}
         />
@@ -129,7 +132,7 @@ export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
           alreadyVoted={votedIds.has(openCase.data.id)}
           position={(openIndex ?? 0) + 1}
           total={cases.length}
-          onVoted={() => markVerdictVoted(openCase.data.id)}
+          onVoted={() => markVoted(openCase.data.id)}
           onClose={() => setOpenIndex(null)}
           onNext={hasNext ? () => advance() : null}
         />
