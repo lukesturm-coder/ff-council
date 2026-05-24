@@ -1033,10 +1033,51 @@ function RankRow({
             }
             className="px-3 py-4 sm:px-12"
           >
-            <div className="mb-4 overflow-x-auto">
-              <div className="mb-2 text-xs uppercase tracking-wider text-zinc-500">
-                Projection by source · season
-              </div>
+            <div className="mb-2 text-xs uppercase tracking-wider text-zinc-500">
+              Projection by source · season
+            </div>
+            {/* Mobile: one source per stacked block (no sideways scroll, no
+                misalignment with the main columns). Only sources with data. */}
+            <div className="mb-4 space-y-3 sm:hidden">
+              {PROJ_SOURCES.filter(
+                (s) => pointsFromStats(statsForSource(s.key), scoring) != null,
+              ).map((s) => {
+                const stats = statsForSource(s.key);
+                return (
+                  <div
+                    key={s.key}
+                    className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3"
+                  >
+                    <div
+                      className={`mb-2 text-[11px] font-semibold uppercase tracking-wider ${s.accent}`}
+                    >
+                      {s.label}
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-400">Proj pts</span>
+                        <span className="font-mono font-semibold tabular-nums text-emerald-300">
+                          {fmtPts(pointsFromStats(stats, scoring))}
+                        </span>
+                      </div>
+                      {projFields.map((f) => (
+                        <div
+                          key={f.key}
+                          className="flex items-center justify-between"
+                        >
+                          <span className="text-zinc-400">{f.label}</span>
+                          <span className="font-mono tabular-nums text-zinc-200">
+                            {fmtStatValue(stats[f.key], f.decimals)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Desktop: stat × source table */}
+            <div className="mb-4 hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[34rem] text-sm">
                 <thead>
                   <tr className="text-[10px] uppercase tracking-wider text-zinc-500">
