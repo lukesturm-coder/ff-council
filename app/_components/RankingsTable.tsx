@@ -779,14 +779,6 @@ function fmtStatValue(v: number | undefined, decimals: number): string {
 // projections). Accents mirror the table's column colors. Our Vegas-derived
 // implied stats fill the Vegas column today; the others get scraped per-source
 // stat projections later (dashes until then).
-const PROJ_SOURCES: { key: string; label: string; accent: string }[] = [
-  { key: "vegas", label: "Vegas", accent: "text-amber-400/90" },
-  { key: "espn", label: "ESPN", accent: "text-rose-400/90" },
-  { key: "sleeper", label: "Sleeper", accent: "text-cyan-400/80" },
-  { key: "nfl", label: "NFL", accent: "text-blue-400/80" },
-  { key: "yahoo", label: "Yahoo", accent: "text-purple-400/80" },
-];
-
 const STAT_KEYS: (keyof ImpliedStats)[] = [
   "passingYards",
   "passingTouchdowns",
@@ -883,7 +875,6 @@ function RankRow({
   // platform_player_stats — fills the matrix's ESPN/Sleeper/etc. cells.
   sourceStats?: Record<string, Partial<ImpliedStats>>;
 }) {
-  const fpts = player.fantasyPoints[scoring];
   const vbd = player.vbd[scoring];
   const showPoints = view === "Points";
 
@@ -901,6 +892,27 @@ function RankRow({
   }
   const statsForSource = (key: string): Partial<ImpliedStats> =>
     key === "vegas" ? vegasStats : sourceStats?.[key] ?? {};
+  // Source columns for the expand, in the SAME order as the main table's
+  // source columns (Vegas · ESPN? · Sleeper · NFL · Yahoo) so values line up.
+  const projCols: { key: string; label: string; accent: string }[] = [
+    { key: "vegas", label: "Vegas", accent: "text-amber-400/90" },
+    ...(hasEspn
+      ? [{ key: "espn", label: "ESPN", accent: "text-red-400/80" }]
+      : []),
+    ...EXTRA_PLATFORMS.map((p) => ({
+      key: p.key,
+      label: p.label,
+      accent: p.accent,
+    })),
+  ];
+  const projRows: { label: string; field: StatField | null }[] = [
+    { label: "Proj pts", field: null },
+    ...projFields.map((f) => ({ label: f.label, field: f })),
+  ];
+  const projCell = (key: string, field: StatField | null): string =>
+    field == null
+      ? fmtPts(pointsFromStats(statsForSource(key), scoring))
+      : fmtStatValue(statsForSource(key)[field.key], field.decimals);
   // Format points with one decimal, no padding. Rank stays integer.
   const fmtPts = (v: number | null) => (v != null ? v.toFixed(1) : "—");
   const fmtRank = (v: number | null) => (v != null ? v.toFixed(0) : "—");
@@ -1022,116 +1034,74 @@ function RankRow({
         <td aria-hidden="true" />
       </tr>
       {isExpanded && (
-        <tr className="border-t border-zinc-800/60 bg-zinc-950/50">
-          <td
-            colSpan={
-              7 +
-              (hasEspn ? 1 : 0) +
-              (hasCouncil ? 1 : 0) +
-              (hasMine ? 1 : 0) +
-              EXTRA_PLATFORMS.length
-            }
-            className="px-3 py-4 sm:px-12"
-          >
-            <div className="mb-2 text-xs uppercase tracking-wider text-zinc-500">
-              Projection by source · season
-            </div>
-            {/* Mobile: one source per stacked block (no sideways scroll, no
-                misalignment with the main columns). Only sources with data. */}
-            <div className="mb-4 space-y-3 sm:hidden">
-              {PROJ_SOURCES.filter(
-                (s) => pointsFromStats(statsForSource(s.key), scoring) != null,
-              ).map((s) => {
-                const stats = statsForSource(s.key);
-                return (
-                  <div
-                    key={s.key}
-                    className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3"
+        <>
+          {/* DESKTOP — projection rows rendered in the table's own column grid
+              so each source value lines up under its main column header. */}
+          <tr className="hidden bg-zinc-950/40 sm:table-row">
+            <td />
+            <td />
+            <td className="sticky left-0 z-10 bg-zinc-950 py-2 pl-2 text-[10px] uppercase tracking-wider text-zinc-500 sm:pl-4">
+              Projection · season
+            </td>
+            <td />
+            {hasCouncil && <td />}
+            {hasMine && <td />}
+            <td />
+            {projCols.map((c) => (
+              <td
+                key={c.key}
+                className="py-2 text-center text-[10px] uppercase tracking-wider"
+              >
+                <span className={c.accent}>{c.label}</span>
+              </td>
+            ))}
+            <td aria-hidden="true" />
+          </tr>
+          {projRows.map((r) => (
+            <tr
+              key={r.label}
+              className="hidden border-t border-zinc-800/40 bg-zinc-950/40 sm:table-row"
+            >
+              <td />
+              <td />
+              <td className="sticky left-0 z-10 bg-zinc-950 py-1.5 pl-2 text-sm text-zinc-400 sm:pl-4">
+                {r.label}
+              </td>
+              <td />
+              {hasCouncil && <td />}
+              {hasMine && <td />}
+              <td />
+              {projCols.map((c) => (
+                <td
+                  key={c.key}
+                  className="py-1.5 text-center font-mono text-sm tabular-nums"
+                >
+                  <span
+                    className={
+                      r.field == null
+                        ? `font-semibold ${c.accent}`
+                        : "text-zinc-300"
+                    }
                   >
-                    <div
-                      className={`mb-2 text-[11px] font-semibold uppercase tracking-wider ${s.accent}`}
-                    >
-                      {s.label}
-                    </div>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400">Proj pts</span>
-                        <span className="font-mono font-semibold tabular-nums text-emerald-300">
-                          {fmtPts(pointsFromStats(stats, scoring))}
-                        </span>
-                      </div>
-                      {projFields.map((f) => (
-                        <div
-                          key={f.key}
-                          className="flex items-center justify-between"
-                        >
-                          <span className="text-zinc-400">{f.label}</span>
-                          <span className="font-mono tabular-nums text-zinc-200">
-                            {fmtStatValue(stats[f.key], f.decimals)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {/* Desktop: stat × source table */}
-            <div className="mb-4 hidden overflow-x-auto sm:block">
-              <table className="w-full min-w-[34rem] text-sm">
-                <thead>
-                  <tr className="text-[10px] uppercase tracking-wider text-zinc-500">
-                    <th className="py-1 pr-3 text-left font-medium">Stat</th>
-                    {PROJ_SOURCES.map((s) => (
-                      <th
-                        key={s.key}
-                        className={`px-2 py-1 text-right font-semibold ${s.accent}`}
-                      >
-                        {s.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="font-mono tabular-nums">
-                  <tr className="border-t border-zinc-800/60">
-                    <td className="py-1.5 pr-3 font-sans font-medium text-zinc-200">
-                      Proj pts
-                    </td>
-                    {PROJ_SOURCES.map((s) => (
-                      <td
-                        key={s.key}
-                        className="px-2 py-1.5 text-right font-semibold text-emerald-300"
-                      >
-                        {fmtPts(pointsFromStats(statsForSource(s.key), scoring))}
-                      </td>
-                    ))}
-                  </tr>
-                  {projFields.map((f) => (
-                    <tr key={f.key} className="border-t border-zinc-800/60">
-                      <td className="py-1.5 pr-3 font-sans text-zinc-300">
-                        {f.label}
-                      </td>
-                      {PROJ_SOURCES.map((s) => (
-                        <td
-                          key={s.key}
-                          className="px-2 py-1.5 text-right text-zinc-300"
-                        >
-                          {fmtStatValue(statsForSource(s.key)[f.key], f.decimals)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="border-t border-zinc-800 pt-3 text-xs text-zinc-500">
-              <span className="text-zinc-300">{scoring}</span> · Season FPts:{" "}
-              <span className="font-mono text-zinc-200">{fpts.toFixed(1)}</span>{" "}
-              · Per game:{" "}
-              <span className="font-mono text-zinc-300">
-                {(fpts / 17).toFixed(1)}
-              </span>{" "}
-              · Edge:{" "}
+                    {projCell(c.key, r.field)}
+                  </span>
+                </td>
+              ))}
+              <td aria-hidden="true" />
+            </tr>
+          ))}
+          <tr className="hidden border-t border-zinc-800/40 bg-zinc-950/40 sm:table-row">
+            <td
+              colSpan={
+                7 +
+                (hasEspn ? 1 : 0) +
+                (hasCouncil ? 1 : 0) +
+                (hasMine ? 1 : 0) +
+                EXTRA_PLATFORMS.length
+              }
+              className="px-3 py-2 text-xs text-zinc-500 sm:px-12"
+            >
+              <span className="text-zinc-300">{scoring}</span> · Edge:{" "}
               <span
                 className={
                   vbd > 0
@@ -1142,9 +1112,65 @@ function RankRow({
                 {vbd > 0 ? "+" : ""}
                 {vbd.toFixed(1)}
               </span>
-            </div>
-          </td>
-        </tr>
+            </td>
+          </tr>
+
+          {/* MOBILE — one source per stacked block (no sideways scroll). */}
+          <tr className="border-t border-zinc-800/60 bg-zinc-950/50 sm:hidden">
+            <td
+              colSpan={
+                7 +
+                (hasEspn ? 1 : 0) +
+                (hasCouncil ? 1 : 0) +
+                (hasMine ? 1 : 0) +
+                EXTRA_PLATFORMS.length
+              }
+              className="px-3 py-4"
+            >
+              <div className="mb-2 text-xs uppercase tracking-wider text-zinc-500">
+                Projection by source · season
+              </div>
+              <div className="space-y-3">
+                {projCols
+                  .filter(
+                    (c) =>
+                      pointsFromStats(statsForSource(c.key), scoring) != null,
+                  )
+                  .map((c) => (
+                    <div
+                      key={c.key}
+                      className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3"
+                    >
+                      <div
+                        className={`mb-2 text-[11px] font-semibold uppercase tracking-wider ${c.accent}`}
+                      >
+                        {c.label}
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        {projRows.map((r) => (
+                          <div
+                            key={r.label}
+                            className="flex items-center justify-between"
+                          >
+                            <span className="text-zinc-400">{r.label}</span>
+                            <span
+                              className={`font-mono tabular-nums ${
+                                r.field == null
+                                  ? "font-semibold text-emerald-300"
+                                  : "text-zinc-200"
+                              }`}
+                            >
+                              {projCell(c.key, r.field)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </td>
+          </tr>
+        </>
       )}
     </>
   );

@@ -168,6 +168,7 @@ export default function TrendingBoardClient({
             activeId={activeId}
             onHover={setHoveredId}
             onSelect={toggle}
+            onBackgroundClick={() => setSelectedId(null)}
           />
           <p className="mt-1.5 text-center text-[10px] text-zinc-600">
             Hover or tap a line to trace it · lower is better

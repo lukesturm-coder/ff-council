@@ -54,12 +54,16 @@ export default function TrendingChart({
   activeId,
   onHover,
   onSelect,
+  onBackgroundClick,
 }: {
   series: TrendingSeries[];
   weeks: number;
   activeId: number | null;
   onHover: (playerId: number | null) => void;
   onSelect: (playerId: number) => void;
+  // Tap empty chart space to clear the selection (the deselect path on touch,
+  // where there's no hover to fall back to).
+  onBackgroundClick?: () => void;
 }) {
   const { yMin, yMax } = useMemo(() => {
     let min = Infinity;
@@ -128,6 +132,17 @@ export default function TrendingChart({
             </g>
           );
         })}
+
+        {/* Background hit area — tapping empty chart space clears the selection.
+            Drawn before the lines so their (later) hit paths sit on top. */}
+        <rect
+          x={PAD_LEFT}
+          y={PAD_TOP}
+          width={PLOT_W}
+          height={PLOT_H}
+          fill="transparent"
+          onClick={() => onBackgroundClick?.()}
+        />
 
         {series
           .slice()
