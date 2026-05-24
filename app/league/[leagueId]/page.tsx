@@ -681,6 +681,21 @@ export default async function LeagueAnalysisPage({
   }));
   const slotLabels = slotLineups[0]?.slots.map((s) => s.label) ?? [];
 
+  // ===== Player index board — every rostered starter with all indexes =====
+  const boardRows = teamRows
+    .flatMap((t) =>
+      t.starters
+        .filter((p) => p.projection)
+        .map((p) => ({
+          name: p.sleeperName,
+          pos: p.position,
+          team: t.teamName,
+          idx: indexValues.get(p.projection!.playerId) ?? null,
+        })),
+    )
+    .filter((r) => r.idx != null)
+    .sort((a, b) => (b.idx!.projpts ?? 0) - (a.idx!.projpts ?? 0));
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <SaveLeague id={leagueId} />
@@ -892,6 +907,78 @@ export default async function LeagueAnalysisPage({
                                 </span>
                               )}
                             </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {/* Player index board — every starter scored by every index at once. */}
+        {boardRows.length > 0 && (
+          <section className="mb-8">
+            <h3 className="mb-1 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              Player index board
+            </h3>
+            <p className="mb-3 text-xs text-zinc-500">
+              Every rostered starter across all the rankings indexes (ranks
+              shown as #; lower is better).
+            </p>
+            <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60">
+              <table className="w-full min-w-[44rem] text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-500">
+                    <th className="sticky left-0 z-10 bg-zinc-900 py-2 pl-3 text-left font-medium">
+                      Player
+                    </th>
+                    <th className="px-2 py-2 text-left font-medium">Team</th>
+                    {INDEXES.map((i) => (
+                      <th
+                        key={i.key}
+                        className="px-2 py-2 text-right font-medium"
+                      >
+                        {i.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="font-mono tabular-nums">
+                  {boardRows.map((r, ri) => (
+                    <tr
+                      key={`${r.name}-${ri}`}
+                      className="border-t border-zinc-800/60"
+                    >
+                      <td className="sticky left-0 z-10 whitespace-nowrap bg-zinc-900 py-1.5 pl-3 pr-2 font-sans">
+                        <span className="flex items-center gap-1.5">
+                          {r.pos && (
+                            <span
+                              className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                                POS_DOT[r.pos] ?? "bg-zinc-500"
+                              }`}
+                            />
+                          )}
+                          <span className="text-zinc-100">{r.name}</span>
+                        </span>
+                      </td>
+                      <td className="max-w-[8rem] truncate px-2 py-1.5 font-sans text-[11px] text-zinc-500">
+                        {r.team}
+                      </td>
+                      {INDEXES.map((i) => {
+                        const v = r.idx?.[i.key] ?? null;
+                        return (
+                          <td
+                            key={i.key}
+                            className="px-2 py-1.5 text-right text-zinc-300"
+                          >
+                            {v == null
+                              ? "—"
+                              : i.key === "projpts"
+                                ? v
+                                : `#${v}`}
                           </td>
                         );
                       })}
