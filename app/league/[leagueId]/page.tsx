@@ -50,6 +50,17 @@ const POSITION_STYLES: Record<FantasyPosition, string> = {
   TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
 };
 
+// League-relative letter grade from a 0-100 contender score.
+function letterGrade(v: number): string {
+  if (v >= 90) return "A+";
+  if (v >= 82) return "A";
+  if (v >= 73) return "A-";
+  if (v >= 64) return "B";
+  if (v >= 54) return "C";
+  if (v >= 42) return "D";
+  return "F";
+}
+
 async function loadProjections(): Promise<PlayerProjection[]> {
   const dataDir = path.join(process.cwd(), "data");
   const [futuresRaw, rosterRaw] = await Promise.all([
@@ -494,12 +505,24 @@ export default async function LeagueAnalysisPage({
     const posAxes = radar.slice(0, 4);
     const best = posAxes.reduce((a, b) => (b.value > a.value ? b : a));
     const worst = posAxes.reduce((a, b) => (b.value < a.value ? b : a));
+    const contender = norm(t.vegasFpts, maxFpts);
+    // Difference maker = the highest-projected starter on the roster.
+    const topStarter = t.starters.reduce<EnrichedPlayer | null>(
+      (bestP, p) =>
+        (p.projection?.fantasyPoints[scoring] ?? 0) >
+        (bestP?.projection?.fantasyPoints[scoring] ?? 0)
+          ? p
+          : bestP,
+      null,
+    );
     return {
       rosterId: t.rosterId,
       teamName: t.teamName,
       ownerName: t.ownerName,
       rank: i + 1,
-      contender: norm(t.vegasFpts, maxFpts),
+      contender,
+      grade: letterGrade(contender),
+      differenceMaker: topStarter?.sleeperName ?? null,
       // #1 contender wears the brand green; the rest get a muted premium hue.
       color: i === 0 ? "#34d399" : TEAM_RADAR_COLORS[i % TEAM_RADAR_COLORS.length],
       radar,
@@ -542,12 +565,20 @@ export default async function LeagueAnalysisPage({
                 className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4"
               >
                 <div className="mb-1 flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-zinc-100">
-                      {c.teamName}
-                    </div>
-                    <div className="truncate text-[11px] text-zinc-500">
-                      {c.ownerName}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-mono text-base font-bold ring-1 ring-inset"
+                      style={{ color: c.color, borderColor: `${c.color}55` }}
+                    >
+                      {c.grade}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-zinc-100">
+                        {c.teamName}
+                      </div>
+                      <div className="truncate text-[11px] text-zinc-500">
+                        {c.ownerName}
+                      </div>
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
@@ -572,8 +603,56 @@ export default async function LeagueAnalysisPage({
                   <span className="text-zinc-600">·</span>
                   <span className="text-rose-400">▼ {c.weakness}</span>
                 </div>
+                {c.differenceMaker && (
+                  <div className="mt-1 truncate text-center text-[11px] text-zinc-500">
+                    <span className="text-amber-300">★</span> {c.differenceMaker}
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Positional heatmap — every team × position at a glance. Green =
+            strong vs the league, red = weak. The shareable league-wide view. */}
+        <section className="mb-8">
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+            Positional heatmap
+          </h3>
+          <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60">
+            <table className="w-full min-w-[34rem] text-sm">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wider text-zinc-500">
+                  <th className="py-2 pl-3 text-left font-medium">Team</th>
+                  {["QB", "RB", "WR", "TE", "Depth"].map((a) => (
+                    <th key={a} className="px-2 py-2 text-center font-medium">
+                      {a}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {strengthCards.map((c) => (
+                  <tr key={c.rosterId} className="border-t border-zinc-800/60">
+                    <td className="max-w-[10rem] truncate py-1.5 pl-3 pr-2 text-zinc-200">
+                      {c.teamName}
+                    </td>
+                    {c.radar.map((ax) => (
+                      <td key={ax.label} className="px-1 py-1 text-center">
+                        <span
+                          className="inline-flex h-7 w-12 items-center justify-center rounded font-mono text-xs text-zinc-50"
+                          style={{
+                            backgroundColor: `hsl(${Math.round(ax.value * 1.2)} 48% ${20 + ax.value * 0.12}% / 0.9)`,
+                          }}
+                        >
+                          {ax.value}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
 
