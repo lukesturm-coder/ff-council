@@ -22,6 +22,7 @@ import {
 } from "@/lib/sleeper";
 import { PlayerMatcher } from "@/lib/player-matching";
 import RadarChart from "@/app/_components/charts/RadarChart";
+import SaveLeague from "../SaveLeague";
 
 /** Compute integer age from an ISO date string like "1998-02-09". */
 function ageFromBirthDate(birthDate: string | null | undefined): number | null {
@@ -261,7 +262,7 @@ export default async function LeagueAnalysisPage({
             </h2>
             <p className="mt-2 text-sm text-rose-200/80">{msg}</p>
             <Link
-              href="/league"
+              href="/league?change=1"
               className="mt-4 inline-block text-xs underline-offset-4 hover:underline"
             >
               ← Try again
@@ -509,6 +510,7 @@ export default async function LeagueAnalysisPage({
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      <SaveLeague id={leagueId} />
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
 
         <div className="mb-4 flex flex-col gap-2 border-b border-zinc-800 pb-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-0">
@@ -520,7 +522,7 @@ export default async function LeagueAnalysisPage({
             </p>
           </div>
           <Link
-            href="/league"
+            href="/league?change=1"
             className="text-xs text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
           >
             ← Different league

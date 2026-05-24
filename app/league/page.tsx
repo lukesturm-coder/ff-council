@@ -5,6 +5,7 @@ import {
   fetchLeague,
   looksLikeSleeperLeagueId,
 } from "@/lib/sleeper";
+import LeagueAutoRedirect from "./LeagueAutoRedirect";
 
 export const metadata: Metadata = {
   title: "League Analyzer · FF Council",
@@ -35,11 +36,12 @@ async function analyzeLeague(formData: FormData) {
 export default async function LeagueEntryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; change?: string }>;
 }) {
   const params = await searchParams;
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      <LeagueAutoRedirect disabled={Boolean(params.change)} />
       <div className="mx-auto max-w-3xl px-6 py-6">
 
         <div className="space-y-8">
