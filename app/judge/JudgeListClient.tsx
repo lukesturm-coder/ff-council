@@ -77,8 +77,16 @@ const STATUS_FILTERS: Array<{ value: StatusFilter; label: string }> = [
   { value: "closed", label: "Resolved" },
 ];
 
+type TypeFilter = "all" | "trade" | "verdict";
+const TYPE_FILTERS: Array<{ value: TypeFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "trade", label: "Trades" },
+  { value: "verdict", label: "Tough calls" },
+];
+
 export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
   const [votedIds, setVotedIds] = useState<Set<string>>(() => new Set());
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [voteFilter, setVoteFilter] = useState<VoteFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   // A frozen nav snapshot for the open modal: voting can move a card out of the
@@ -108,13 +116,14 @@ export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
 
   const visibleCases = useMemo(() => {
     return cases.filter((c) => {
+      if (typeFilter !== "all" && c.kind !== typeFilter) return false;
       if (statusFilter === "open" && c.closed) return false;
       if (statusFilter === "closed" && !c.closed) return false;
       if (voteFilter === "voted" && !votedIds.has(c.data.id)) return false;
       if (voteFilter === "unvoted" && votedIds.has(c.data.id)) return false;
       return true;
     });
-  }, [cases, voteFilter, statusFilter, votedIds]);
+  }, [cases, typeFilter, voteFilter, statusFilter, votedIds]);
 
   function openByCase(c: CourtCase) {
     const idx = visibleCases.findIndex(
@@ -132,41 +141,61 @@ export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
 
   return (
     <>
-      {/* Filters: voted state + open/resolved */}
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
-        <div className="flex items-center gap-1.5">
+      {/* Controls — one prominent type segmented control, then a single
+          compact line for vote-state + status so the cases stay the hero. */}
+      <div className="mb-4 space-y-2">
+        <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-900 p-0.5 text-sm">
+          {TYPE_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setTypeFilter(f.value)}
+              className={`rounded-md px-3.5 py-1.5 font-medium transition ${
+                typeFilter === f.value
+                  ? "bg-emerald-500/20 text-emerald-200"
+                  : "text-zinc-400 hover:text-zinc-100"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-zinc-500">
           {VOTE_FILTERS.map((f) => (
             <button
               key={f.value}
               type="button"
               onClick={() => setVoteFilter(f.value)}
-              className={`rounded-full px-3 py-1 font-medium transition ${
+              className={`rounded-full px-2.5 py-0.5 transition ${
                 voteFilter === f.value
-                  ? "bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
-                  : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                  ? "bg-zinc-800 text-zinc-100"
+                  : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               {f.label}
             </button>
           ))}
-        </div>
-        <div className="flex items-center gap-1.5">
-          {STATUS_FILTERS.map((f) => (
+          <span className="text-zinc-700">·</span>
+          {STATUS_FILTERS.filter((f) => f.value !== "all").map((f) => (
             <button
               key={f.value}
               type="button"
-              onClick={() => setStatusFilter(f.value)}
-              className={`rounded-full px-3 py-1 font-medium transition ${
+              onClick={() =>
+                setStatusFilter(statusFilter === f.value ? "all" : f.value)
+              }
+              className={`rounded-full px-2.5 py-0.5 transition ${
                 statusFilter === f.value
-                  ? "bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
-                  : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                  ? "bg-zinc-800 text-zinc-100"
+                  : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               {f.label}
             </button>
           ))}
+          <span className="ml-auto font-mono text-zinc-600">
+            {visibleCases.length}
+          </span>
         </div>
-        <span className="ml-auto text-zinc-600">{visibleCases.length}</span>
       </div>
 
       {visibleCases.length === 0 ? (
@@ -180,7 +209,7 @@ export default function JudgeListClient({ cases }: { cases: CourtCase[] }) {
                 : "No cases."}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {visibleCases.map((c) =>
             c.kind === "trade" ? (
               <TradeListCardButton

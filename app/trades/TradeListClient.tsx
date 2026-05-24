@@ -4,12 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { castVote, type TradeConsensus } from "./[id]/actions";
-import {
-  verdictFromCounts,
-  scoreToPercent,
-  type FairnessTier,
-  type TradeVerdict,
-} from "@/lib/trade-verdict";
+import { verdictFromCounts, type FairnessTier } from "@/lib/trade-verdict";
 import SentimentSelector from "./_components/SentimentSelector";
 import TradeConsensusReveal from "./_components/TradeConsensusReveal";
 
@@ -58,6 +53,35 @@ function pickLabel(p: SidePick): string {
   }`;
 }
 
+// Market-style sentiment phrasing (replaces the old "Slight Edge / Clear
+// Advantage" legalese). Driven by which side leads + how lopsided the lean is.
+function sentimentLabel(leader: "A" | "B" | "EVEN", zone: string): string {
+  if (leader === "EVEN") return "Dead even";
+  const team = leader === "A" ? "Team A" : "Team B";
+  if (zone === "slight") return `Council leaning ${team}`;
+  if (zone === "clear") return `Strong ${team} sentiment`;
+  return `${team} landslide`; // major / fleece
+}
+
+// 3-segment live sentiment bar: Team A (rose) · Even (zinc) · Team B (sky).
+function SentimentSplitBar({
+  aPct,
+  evenPct,
+  bPct,
+}: {
+  aPct: number;
+  evenPct: number;
+  bPct: number;
+}) {
+  return (
+    <div className="flex h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+      <div className="h-full bg-rose-500/80" style={{ width: `${aPct}%` }} />
+      <div className="h-full bg-zinc-600/70" style={{ width: `${evenPct}%` }} />
+      <div className="h-full bg-sky-500/80" style={{ width: `${bPct}%` }} />
+    </div>
+  );
+}
+
 export function TradeListCardButton({
   trade,
   onOpen,
@@ -82,64 +106,83 @@ export function TradeListCardButton({
     tiers_b: trade.summary?.tiers_b,
   });
 
-  // Only reveal the verdict (direction / zone / severity / winner highlight)
-  // once the user has voted. The vote COUNT still shows (social proof, not a
-  // result that biases the pick).
+  // Only reveal the verdict once the user has voted. The vote COUNT still shows
+  // (social proof, not a result that biases the pick).
   const showResult = voted && total > 0;
   type Winner = "A" | "B" | "EVEN" | null;
   const winner: Winner = showResult ? verdict.leader : null;
 
+  const a = trade.summary?.votes_a ?? 0;
+  const b = trade.summary?.votes_b ?? 0;
+  const aPct = total > 0 ? Math.round((a / total) * 100) : 0;
+  const bPct = total > 0 ? Math.round((b / total) * 100) : 0;
+  const evenPct = total > 0 ? 100 - aPct - bPct : 0;
+  // Controversy = how evenly A and B split (1 = dead heat). A 52/48 lights up;
+  // a 90/10 doesn't. Needs enough volume to be meaningful.
+  const decisive = a + b;
+  const controversy = decisive > 0 ? 1 - Math.abs(a - b) / decisive : 0;
+  const divided = showResult && total >= 5 && controversy >= 0.8;
+
   const bannerClass = !showResult
     ? "bg-emerald-500/10 text-emerald-200 ring-emerald-500/30"
-    : winner === "A"
-      ? "bg-rose-500/15 text-rose-100 ring-rose-500/40"
-      : winner === "B"
-        ? "bg-sky-500/15 text-sky-100 ring-sky-500/40"
-        : "bg-zinc-700/30 text-zinc-100 ring-zinc-500/40";
+    : divided
+      ? "bg-amber-500/15 text-amber-100 ring-amber-500/40"
+      : winner === "A"
+        ? "bg-rose-500/15 text-rose-100 ring-rose-500/40"
+        : winner === "B"
+          ? "bg-sky-500/15 text-sky-100 ring-sky-500/40"
+          : "bg-zinc-700/30 text-zinc-100 ring-zinc-500/40";
   const bannerLabel = !showResult
     ? total === 0
       ? "Cast the first vote →"
       : "Tap to weigh in →"
-    : winner === "A"
-      ? "Team A wins"
-      : winner === "B"
-        ? "Team B wins"
-        : "Council called it even";
+    : divided
+      ? "Highly divided"
+      : sentimentLabel(verdict.leader, verdict.zone);
 
   return (
     <button
       type="button"
       onClick={() => onOpen(trade)}
-      className="block w-full overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 text-left transition hover:border-zinc-700 hover:bg-zinc-900/60"
+      className="block w-full overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 text-left transition hover:border-zinc-700 hover:bg-zinc-900/60"
     >
-      {/* Verdict banner — compact severity readout. Direction + zone label
-          on the left, a tiny inline severity marker + vote count on the
-          right. The full meter lives on the trade detail page. */}
+      {/* Sentiment banner — market-style read of where the council leans, with
+          a controversy flag when the split is a dead heat. */}
       <div
-        className={`flex items-center justify-between gap-3 px-3 py-2 ring-1 ring-inset ${bannerClass} sm:px-4`}
+        className={`flex items-center justify-between gap-3 px-3.5 py-2.5 ring-1 ring-inset ${bannerClass} sm:px-4`}
       >
-        <span className="flex min-w-0 items-baseline gap-1.5">
+        <span className="flex min-w-0 items-center gap-2">
+          {divided && (
+            <span className="shrink-0 rounded bg-amber-500/25 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200">
+              Hot debate
+            </span>
+          )}
           <span className="truncate text-sm font-semibold sm:text-base">
             {bannerLabel}
           </span>
           {showResult && winner !== "EVEN" && (
-            <span className="shrink-0 text-xs font-medium text-zinc-300/90 sm:text-sm">
-              · {verdict.zoneLabel}
+            <span className="shrink-0 font-mono text-xs tabular-nums text-zinc-300/80">
+              {winner === "A" ? aPct : bPct}%
             </span>
           )}
         </span>
         {total > 0 && (
-          <span className="flex shrink-0 items-center gap-2">
-            {showResult && <CompactSeverityBar verdict={verdict} />}
-            <span className="font-mono text-xs tabular-nums text-zinc-400">
-              {total} vote{total === 1 ? "" : "s"}
-            </span>
+          <span className="shrink-0 font-mono text-xs tabular-nums text-zinc-400">
+            {total} vote{total === 1 ? "" : "s"}
           </span>
         )}
       </div>
 
+      {/* Live sentiment split — only after voting (pre-vote stays hidden so it
+          can't anchor the pick). */}
+      {showResult && (
+        <div className="px-3.5 pt-3 sm:px-4">
+          <SentimentSplitBar aPct={aPct} evenPct={evenPct} bPct={bPct} />
+        </div>
+      )}
+
       {/* Trade body */}
-      <div className="p-3 sm:p-4">
+      <div className="p-3.5 sm:p-4">
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3">
           <CardSidePreview
             side={trade.side_a}
@@ -155,44 +198,16 @@ export function TradeListCardButton({
             isWinner={winner === "B"}
           />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
-          <span>{trade.league_type}</span>
-          <span>·</span>
-          <span>{trade.scoring}</span>
-          <span>·</span>
-          <span>{trade.team_count} teams</span>
-          <span>·</span>
-          <span>{new Date(trade.created_at).toLocaleDateString()}</span>
+        <div className="mt-3 flex items-center gap-2 text-[10px] uppercase tracking-wider text-zinc-600">
+          <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-semibold text-amber-300/90">
+            Trade
+          </span>
+          <span>
+            {trade.team_count}T · {trade.scoring}
+          </span>
         </div>
       </div>
     </button>
-  );
-}
-
-// Tiny inline severity track for the list-card banner — a miniature of
-// the full TradeVerdictMeter. Just the gradient track + a marker at the
-// score position, no labels. Hidden on the narrowest screens.
-function CompactSeverityBar({ verdict }: { verdict: TradeVerdict }) {
-  const markerColor =
-    verdict.leader === "A"
-      ? "bg-rose-400"
-      : verdict.leader === "B"
-        ? "bg-sky-400"
-        : "bg-zinc-300";
-  return (
-    <span
-      className="relative hidden h-1.5 w-16 rounded-full bg-gradient-to-r from-rose-500/30 via-zinc-600/50 to-sky-500/30 sm:inline-block sm:w-20"
-      aria-hidden
-    >
-      <span
-        className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-1 ring-black/20 shadow-sm"
-        style={{ left: `${scoreToPercent(verdict.score)}%` }}
-      >
-        <span
-          className={`block h-full w-full rounded-full ${markerColor}`}
-        />
-      </span>
-    </span>
   );
 }
 
