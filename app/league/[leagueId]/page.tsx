@@ -24,6 +24,7 @@ import { PlayerMatcher } from "@/lib/player-matching";
 import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
 import type { PlatformRankingsMap } from "@/app/_components/RankingsTable";
 import RadarChart from "@/app/_components/charts/RadarChart";
+import ShareButton from "@/app/_components/ShareButton";
 import SaveLeague from "../SaveLeague";
 
 // The rankings-page indexes, shown as a toggle on the lineups matrix.
@@ -727,8 +728,14 @@ export default async function LeagueAnalysisPage({
             {strengthCards.map((c) => (
               <div
                 key={c.rosterId}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4"
+                id={`teamcard-${c.rosterId}`}
+                className="relative rounded-xl border border-zinc-800 bg-zinc-900/60 p-4"
               >
+                <ShareButton
+                  targetId={`teamcard-${c.rosterId}`}
+                  filename={`${c.teamName.replace(/\s+/g, "-").toLowerCase()}-ffcouncil.png`}
+                  className="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-md border border-zinc-700/70 bg-zinc-900/80 px-1.5 py-1 text-[10px] font-medium text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-100"
+                />
                 <div className="mb-1 flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <span
