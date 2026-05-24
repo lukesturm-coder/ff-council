@@ -21,8 +21,23 @@ import {
   type SleeperUser,
 } from "@/lib/sleeper";
 import { PlayerMatcher } from "@/lib/player-matching";
+import { withMockPlatformRankings } from "@/lib/mock-platform-rankings";
+import type { PlatformRankingsMap } from "@/app/_components/RankingsTable";
 import RadarChart from "@/app/_components/charts/RadarChart";
 import SaveLeague from "../SaveLeague";
+
+// The rankings-page indexes, shown as a toggle on the lineups matrix.
+const INDEXES = [
+  { key: "projpts", label: "Proj pts" },
+  { key: "council", label: "Council" },
+  { key: "market", label: "Market" },
+  { key: "vegas", label: "Vegas" },
+  { key: "espn", label: "ESPN" },
+  { key: "sleeper", label: "Sleeper" },
+  { key: "nfl", label: "NFL" },
+  { key: "yahoo", label: "Yahoo" },
+] as const;
+type IndexKey = (typeof INDEXES)[number]["key"];
 
 /** Compute integer age from an ISO date string like "1998-02-09". */
 function ageFromBirthDate(birthDate: string | null | undefined): number | null {
@@ -119,6 +134,24 @@ async function loadAdpLookups(scoring: ScoringSystem): Promise<{
     }
   }
   return { espnAdp, espnRank };
+}
+
+// All-source platform ranks (player_id → source → type → scoring → {rank}).
+// Mirrors the rankings page so the analyzer can show every index.
+async function loadPlatformRankingsMap(): Promise<PlatformRankingsMap> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("platform_rankings")
+    .select("player_id, source, ranking_type, scoring_system, rank_value");
+  const map: PlatformRankingsMap = {};
+  for (const r of (data ?? []) as PlatformRow[]) {
+    const pid = r.player_id;
+    const src = (map[pid] ??= {});
+    const byType = (src[r.source] ??= {});
+    const byScoring = (byType[r.ranking_type] ??= {});
+    byScoring[r.scoring_system] = { rank: Number(r.rank_value), points: null };
+  }
+  return map;
 }
 
 async function loadCouncilLookup(
@@ -293,15 +326,20 @@ type TeamRow = {
 
 export default async function LeagueAnalysisPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ leagueId: string }>;
+  searchParams: Promise<{ index?: string }>;
 }) {
   const { leagueId } = await params;
+  const sp = await searchParams;
+  const activeIndex: IndexKey =
+    (INDEXES.find((i) => i.key === sp.index)?.key as IndexKey) ?? "projpts";
   const scoring: ScoringSystem = "PPR"; // v1: hardcode PPR; toggle comes later
 
-  let league, users, rosters, allPlayers, projections, adp, councilLookup;
+  let league, users, rosters, allPlayers, projections, adp, councilLookup, platformMapRaw;
   try {
-    [league, users, rosters, allPlayers, projections, adp, councilLookup] =
+    [league, users, rosters, allPlayers, projections, adp, councilLookup, platformMapRaw] =
       await Promise.all([
         fetchLeague(leagueId),
         fetchLeagueUsers(leagueId),
@@ -310,6 +348,7 @@ export default async function LeagueAnalysisPage({
         loadProjections(),
         loadAdpLookups(scoring),
         loadCouncilLookup(scoring),
+        loadPlatformRankingsMap(),
       ]);
   } catch (err) {
     // If Sleeper specifically returned 404, the league doesn't exist — surface
@@ -509,6 +548,49 @@ export default async function LeagueAnalysisPage({
   [...projections]
     .sort((a, b) => b.fantasyPoints[scoring] - a.fantasyPoints[scoring])
     .forEach((p, idx) => vegasRankById.set(p.playerId, idx + 1));
+
+  // ===== All-source index values per player =====
+  // Mock-fill Sleeper/NFL/Yahoo (same as the rankings page) so every index has
+  // coverage, then build playerId → { projpts, council, vegas, espn, ... }.
+  const platformMap = withMockPlatformRankings(platformMapRaw, projections);
+  const srcRank = (pid: number, source: string): number | null => {
+    const e = platformMap[pid]?.[source];
+    if (!e) return null;
+    return e.editorial?.[scoring]?.rank ?? e.adp?.[scoring]?.rank ?? null;
+  };
+  const indexValues = new Map<number, Record<IndexKey, number | null>>();
+  for (const p of projections) {
+    const pid = p.playerId;
+    const espn =
+      srcRank(pid, "espn") ??
+      adp.espnRank.get(pid) ??
+      adp.espnAdp.get(pid) ??
+      null;
+    const sleeper = srcRank(pid, "sleeper");
+    const nfl = srcRank(pid, "nfl");
+    const yahoo = srcRank(pid, "yahoo");
+    const vegas = vegasRankById.get(pid) ?? null;
+    const council = councilLookup.get(pid) ?? null;
+    const ranks = [vegas, espn, sleeper, nfl, yahoo].filter(
+      (v): v is number => v != null,
+    );
+    const market =
+      ranks.length > 0
+        ? Math.round(ranks.reduce((a, b) => a + b, 0) / ranks.length)
+        : null;
+    indexValues.set(pid, {
+      projpts: Math.round(p.fantasyPoints[scoring]),
+      council,
+      market,
+      vegas,
+      espn,
+      sleeper,
+      nfl,
+      yahoo,
+    });
+  }
+  const cellValue = (p: EnrichedPlayer): number | null =>
+    p.projection ? indexValues.get(p.projection.playerId)?.[activeIndex] ?? null : null;
 
   // ===== Free agents =====
   // Our 80-player pool minus everyone rostered. Top 20 by Vegas FPts.
@@ -731,10 +813,27 @@ export default async function LeagueAnalysisPage({
             <h3 className="mb-1 text-sm font-semibold uppercase tracking-wider text-zinc-400">
               Starting lineups
             </h3>
-            <p className="mb-3 text-xs text-zinc-500">
-              Projected best lineup per team — scan a row (e.g. WR2) to see how
-              yours stacks up across the league.
+            <p className="mb-2 text-xs text-zinc-500">
+              Projected best lineup per team — scan a row (e.g. WR2) to compare
+              across the league. Switch the index to value each slot a different
+              way.
             </p>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {INDEXES.map((i) => (
+                <Link
+                  key={i.key}
+                  href={`?index=${i.key}`}
+                  scroll={false}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                    activeIndex === i.key
+                      ? "bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
+                      : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                  }`}
+                >
+                  {i.label}
+                </Link>
+              ))}
+            </div>
             <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60">
               <table className="text-sm">
                 <thead>
@@ -772,7 +871,7 @@ export default async function LeagueAnalysisPage({
                             </td>
                           );
                         const last = p.sleeperName.split(/\s+/).slice(-1)[0];
-                        const pts = p.projection?.fantasyPoints[scoring];
+                        const val = cellValue(p);
                         return (
                           <td
                             key={s.team.rosterId}
@@ -787,9 +886,9 @@ export default async function LeagueAnalysisPage({
                                 />
                               )}
                               <span className="text-zinc-200">{last}</span>
-                              {pts != null && pts > 0 && (
+                              {val != null && (
                                 <span className="font-mono text-[10px] text-zinc-500">
-                                  {pts.toFixed(0)}
+                                  {activeIndex === "projpts" ? val : `#${val}`}
                                 </span>
                               )}
                             </span>
