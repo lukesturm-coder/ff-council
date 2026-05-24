@@ -21,6 +21,7 @@ import {
   type SleeperUser,
 } from "@/lib/sleeper";
 import { PlayerMatcher } from "@/lib/player-matching";
+import RadarChart from "@/app/_components/charts/RadarChart";
 
 /** Compute integer age from an ISO date string like "1998-02-09". */
 function ageFromBirthDate(birthDate: string | null | undefined): number | null {
@@ -455,6 +456,57 @@ export default async function LeagueAnalysisPage({
     .sort((a, b) => b.fantasyPoints[scoring] - a.fantasyPoints[scoring])
     .slice(0, 20);
 
+  // ===== Roster strength radars + contender scores =====
+  // Each team gets a QB/RB/WR/TE/Depth radar (normalized to the league best on
+  // each axis) and a 0-100 contender score (starter points vs the league best).
+  const psById = new Map(positionStrength.map((p) => [p.rosterId, p]));
+  const benchValueById = new Map<number, number>();
+  for (const t of teamRows) {
+    const bv = t.bench
+      .map((p) => p.projection?.fantasyPoints[scoring] ?? 0)
+      .sort((a, b) => b - a)
+      .slice(0, 6)
+      .reduce((a, b) => a + b, 0);
+    benchValueById.set(t.rosterId, bv);
+  }
+  const maxBench = Math.max(1, ...Array.from(benchValueById.values()));
+  const maxFpts = Math.max(1, ...teamRows.map((t) => t.vegasFpts));
+  const norm = (v: number, max: number) =>
+    max > 0 ? Math.round((v / max) * 100) : 0;
+  const TEAM_RADAR_COLORS = [
+    "#2dd4bf", "#60a5fa", "#fbbf24", "#f472b6", "#a78bfa",
+    "#22d3ee", "#fb7185", "#5eead4", "#f59e0b", "#818cf8",
+    "#4ade80", "#e879f9", "#38bdf8", "#facc15",
+  ];
+  const strengthCards = teamRows.map((t, i) => {
+    const ps = psById.get(t.rosterId);
+    const radar = [
+      { label: "QB", value: norm(ps?.scores.QB ?? 0, positionMinMax.QB.max) },
+      { label: "RB", value: norm(ps?.scores.RB ?? 0, positionMinMax.RB.max) },
+      { label: "WR", value: norm(ps?.scores.WR ?? 0, positionMinMax.WR.max) },
+      { label: "TE", value: norm(ps?.scores.TE ?? 0, positionMinMax.TE.max) },
+      {
+        label: "Depth",
+        value: norm(benchValueById.get(t.rosterId) ?? 0, maxBench),
+      },
+    ];
+    const posAxes = radar.slice(0, 4);
+    const best = posAxes.reduce((a, b) => (b.value > a.value ? b : a));
+    const worst = posAxes.reduce((a, b) => (b.value < a.value ? b : a));
+    return {
+      rosterId: t.rosterId,
+      teamName: t.teamName,
+      ownerName: t.ownerName,
+      rank: i + 1,
+      contender: norm(t.vegasFpts, maxFpts),
+      // #1 contender wears the brand green; the rest get a muted premium hue.
+      color: i === 0 ? "#34d399" : TEAM_RADAR_COLORS[i % TEAM_RADAR_COLORS.length],
+      radar,
+      strength: best.label,
+      weakness: worst.label,
+    };
+  });
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
@@ -474,6 +526,54 @@ export default async function LeagueAnalysisPage({
             ← Different league
           </Link>
         </div>
+
+        {/* Roster strength radars — each team's QB/RB/WR/TE/Depth shape + a
+            contender score, all relative to the league. */}
+        <section className="mb-8">
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+            Roster strength
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {strengthCards.map((c) => (
+              <div
+                key={c.rosterId}
+                className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4"
+              >
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-zinc-100">
+                      {c.teamName}
+                    </div>
+                    <div className="truncate text-[11px] text-zinc-500">
+                      {c.ownerName}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div
+                      className="font-mono text-xl font-bold leading-none"
+                      style={{ color: c.color }}
+                    >
+                      {c.contender}
+                    </div>
+                    <div className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-600">
+                      contender · #{c.rank}
+                    </div>
+                  </div>
+                </div>
+                <RadarChart
+                  data={c.radar}
+                  color={c.color}
+                  className="mx-auto h-44 w-full"
+                />
+                <div className="mt-1 flex items-center justify-center gap-3 text-[11px]">
+                  <span className="text-emerald-400">▲ {c.strength}</span>
+                  <span className="text-zinc-600">·</span>
+                  <span className="text-rose-400">▼ {c.weakness}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Power rankings table */}
         <div className="mb-8 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
