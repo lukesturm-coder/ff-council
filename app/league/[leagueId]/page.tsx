@@ -50,6 +50,13 @@ const POSITION_STYLES: Record<FantasyPosition, string> = {
   TE: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
 };
 
+const POS_DOT: Record<string, string> = {
+  QB: "bg-rose-400",
+  RB: "bg-emerald-400",
+  WR: "bg-sky-400",
+  TE: "bg-amber-400",
+};
+
 // League-relative letter grade from a 0-100 contender score.
 function letterGrade(v: number): string {
   if (v >= 90) return "A+";
@@ -219,6 +226,54 @@ function buildOptimalLineup(
   }
 
   return lineup;
+}
+
+type SlotFill = { label: string; player: EnrichedPlayer | null };
+
+/**
+ * Like buildOptimalLineup but returns labeled, position-numbered slots
+ * (QB1, RB1, RB2, WR1, WR2, TE1, FLX1, SFLX1…) and keeps a null entry for any
+ * slot the team can't fill — so the labels line up across every team in the
+ * starters comparison matrix.
+ */
+function buildStarterSlots(
+  roster: EnrichedPlayer[],
+  slots: string[],
+  scoring: ScoringSystem,
+): SlotFill[] {
+  const used = new Set<string>();
+  const out: SlotFill[] = [];
+  const counts: Record<string, number> = {};
+  const label = (base: string) => {
+    counts[base] = (counts[base] ?? 0) + 1;
+    return `${base}${counts[base]}`;
+  };
+  for (const slot of slots) {
+    if (
+      slot === "FLEX" ||
+      slot === "SUPER_FLEX" ||
+      slot === "BN" ||
+      slot === "IR" ||
+      slot === "TAXI"
+    )
+      continue;
+    if (!FANTASY_POSITIONS.has(slot)) continue;
+    const best = pickBest(roster, used, [slot as FantasyPosition], scoring);
+    if (best) used.add(best.sleeperId);
+    out.push({ label: label(slot), player: best });
+  }
+  for (const slot of slots) {
+    if (slot === "FLEX") {
+      const best = pickBest(roster, used, ["RB", "WR", "TE"], scoring);
+      if (best) used.add(best.sleeperId);
+      out.push({ label: label("FLX"), player: best });
+    } else if (slot === "SUPER_FLEX") {
+      const best = pickBest(roster, used, ["QB", "RB", "WR", "TE"], scoring);
+      if (best) used.add(best.sleeperId);
+      out.push({ label: label("SFLX"), player: best });
+    }
+  }
+  return out;
 }
 
 type TeamRow = {
@@ -531,6 +586,19 @@ export default async function LeagueAnalysisPage({
     };
   });
 
+  // ===== Starting lineups comparison matrix =====
+  // Same labeled slot order for every team so a row (e.g. WR2) compares across
+  // the league. Built from each full roster (starters + bench).
+  const slotLineups = teamRows.map((t) => ({
+    team: t,
+    slots: buildStarterSlots(
+      [...t.starters, ...t.bench],
+      league.roster_positions,
+      scoring,
+    ),
+  }));
+  const slotLabels = slotLineups[0]?.slots.map((s) => s.label) ?? [];
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <SaveLeague id={leagueId} />
@@ -655,6 +723,86 @@ export default async function LeagueAnalysisPage({
             </table>
           </div>
         </section>
+
+        {/* Starting lineups — slot x team matrix. Scan a row (e.g. WR2) to see
+            how your slot compares to everyone else's. */}
+        {slotLabels.length > 0 && (
+          <section className="mb-8">
+            <h3 className="mb-1 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              Starting lineups
+            </h3>
+            <p className="mb-3 text-xs text-zinc-500">
+              Projected best lineup per team — scan a row (e.g. WR2) to see how
+              yours stacks up across the league.
+            </p>
+            <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60">
+              <table className="text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800">
+                    <th className="sticky left-0 z-10 bg-zinc-900 px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+                      Slot
+                    </th>
+                    {slotLineups.map((s) => (
+                      <th
+                        key={s.team.rosterId}
+                        className="px-3 py-2 text-left text-[11px] font-semibold text-zinc-300"
+                      >
+                        <span className="block max-w-[8rem] truncate">
+                          {s.team.teamName}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {slotLabels.map((lbl, i) => (
+                    <tr key={lbl} className="border-t border-zinc-800/60">
+                      <td className="sticky left-0 z-10 bg-zinc-900 px-3 py-1.5 font-mono text-[11px] text-zinc-500">
+                        {lbl}
+                      </td>
+                      {slotLineups.map((s) => {
+                        const p = s.slots[i]?.player ?? null;
+                        if (!p)
+                          return (
+                            <td
+                              key={s.team.rosterId}
+                              className="px-3 py-1.5 text-zinc-700"
+                            >
+                              —
+                            </td>
+                          );
+                        const last = p.sleeperName.split(/\s+/).slice(-1)[0];
+                        const pts = p.projection?.fantasyPoints[scoring];
+                        return (
+                          <td
+                            key={s.team.rosterId}
+                            className="whitespace-nowrap px-3 py-1.5"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              {p.position && (
+                                <span
+                                  className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                                    POS_DOT[p.position] ?? "bg-zinc-500"
+                                  }`}
+                                />
+                              )}
+                              <span className="text-zinc-200">{last}</span>
+                              {pts != null && pts > 0 && (
+                                <span className="font-mono text-[10px] text-zinc-500">
+                                  {pts.toFixed(0)}
+                                </span>
+                              )}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {/* Power rankings table */}
         <div className="mb-8 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
